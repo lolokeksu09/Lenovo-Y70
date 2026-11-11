@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'source/chunk-06.b64'
+      - 'source/**'
+      - '.github/workflows/build-preview.yml'
   workflow_dispatch:
 
 permissions:
