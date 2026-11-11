@@ -1,17 +1,23 @@
-# Lenovo Y70 — Android companion
+# Lenovo Y70 Clone
 
-Реконструированный Android-проект Lenovo Y70 Clone v2.7 с Shizuku. Это новая реализация, **не оригинальные исходники APK v2.6**.
+Реконструированный Android-проект Lenovo Y70 с Shizuku. Визуальная структура v2.8 восстановлена по референсу v2.6, но исходники оригинального APK не получены.
 
-## Установка
+## v2.8 — Visual Parity Preview
 
-[Скачать APK из успешной GitHub Actions сборки](https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43055169862).
+**[Скачать проверенную тестовую сборку v2.8](https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43059052372)** → Artifacts → `LenovoY70-v2.8-Preview-APK` → `app-debug.apk`.
 
-Откройте **Artifacts** → `LenovoY70-v2.7-Preview-APK`, скачайте ZIP и установите вложенный `app-debug.apk`. Debug-версия имеет ID `com.moto.resolution.clone.preview` и устанавливается отдельно от рабочего клона v2.6; она подписана стандартным отладочным ключом Android, а не ключом релиза. Время хранения артефакта — 14 дней.
+- Вернулся фирменный главный экран: логотип, системная сводка, две карточки с кнопками.
+- Функции профилей экрана, снимков, восстановления и девяти разрешённых пакетов размещены в отдельных разделах.
+- Отдельный package ID `com.moto.resolution.clone.preview` — рабочая v2.6 не заменяется.
+- Пройдены 29 тестов безопасности, сборка Gradle и `apksigner verify` (APK Signature Scheme v2).
+- Настоящий запуск, Shizuku и визуальная точность на физическом устройстве ещё требуют проверки.
 
-## Исходный код и сборка
+## Исходники
 
-Android Studio-проект хранится в архиве, разбитом на шесть частей `source/chunk-01.b64` … `source/chunk-06.b64`. GitHub Actions восстанавливает его с проверкой SHA-256, накладывает исправление `patches/app/src/main/aidl/com/moto/resolution/clone/shizuku/ICommandService.aidl` и запускает `gradle :app:assembleDebug` с Android SDK 35.
+Базовый проект расположен в `source/chunk-01.b64` … `source/chunk-06.b64` (архив с контрольной суммой), а обновления v2.8 — в `overlays/v2.8/chunk-01.b64` … `chunk-08.b64`. GitHub Actions восстанавливает проект, накладывает исправление AIDL и v2.8 overlay, проверяет тесты и собирает APK.
 
-Workflow: `.github/workflows/build-preview.yml`.
+Workflow: `.github/workflows/build-preview.yml`. Оригинальные ключи подписи старого клона в репозитории отсутствуют. Массовые операции с системными пакетами не используются.
 
-**Безопасность:** ключ подписи существующей v2.6 в репозиторий не загружен. Перед использованием системных функций протестируйте v2.7 отдельно на устройстве.
+## История
+
+[v2.7 Preview CI](https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43055169862) — независимая первоначальная реконструкция, интерфейс которой отличался от v2.6.
