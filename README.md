@@ -4,11 +4,11 @@
 
 ## v2.8 — Visual Parity Preview
 
-**[Скачать проверенную тестовую сборку v2.8](https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43059052372)** → Artifacts → `LenovoY70-v2.8-Preview-APK` → `app-debug.apk`.
+**[Скачать проверенную тестовую сборку v2.8](https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43059600404)** → Artifacts → `LenovoY70-v2.8-Preview-APK` → `app-debug.apk`.
 
 - Вернулся фирменный главный экран: логотип, системная сводка, две карточки с кнопками.
 - Функции профилей экрана, снимков, восстановления и девяти разрешённых пакетов размещены в отдельных разделах.
-- Отдельный package ID `com.moto.resolution.clone.preview` — рабочая v2.6 не заменяется.
+- Отдельный package ID `com.moto.resolution.clone.preview28` — рабочая v2.6 и тестовая v2.7 не заменяются.
 - Пройдены 29 тестов безопасности, сборка Gradle и `apksigner verify` (APK Signature Scheme v2).
 - Настоящий запуск, Shizuku и визуальная точность на физическом устройстве ещё требуют проверки.
 
