@@ -1,4 +1,4 @@
-name: Build Lenovo Y70 v2.8 Visual Parity Preview APK
+name: Build Lenovo Y70 v2.9 Detailed UI Preview APK
 
 on:
   push:
@@ -26,10 +26,12 @@ jobs:
           cat overlays/v2.8/chunk-*.b64 | base64 --decode > /tmp/y70-v28-overlay.tar.xz
           echo "21011c900672f8fe5e798bfe5f60278ce1d228d417eabc5089ccdfd2124af0ad  /tmp/y70-v28-overlay.tar.xz" | sha256sum --check
           tar -xJf /tmp/y70-v28-overlay.tar.xz
-          # Keep debug v2.8 installable beside both v2.6 and v2.7.
-          sed -i "s/applicationIdSuffix '.preview'/applicationIdSuffix '.preview28'/" app/build.gradle tests/validate-project.py
-          grep -F "applicationIdSuffix '.preview28'" app/build.gradle
+          cat overlays/v2.9/chunk-*.b64 | base64 --decode > /tmp/y70-v29-overlay.tar.xz
+          echo "4601674ff164f3dc7866a54f8a7c7272318d49d22f4f3826315d0fe7658b2aa5  /tmp/y70-v29-overlay.tar.xz" | sha256sum --check
+          tar -xJf /tmp/y70-v29-overlay.tar.xz
+          grep -F "applicationIdSuffix '.preview29'" app/build.gradle
           python3 tests/validate-project.py
+          python3 tests/verify_ui_parity.py
           mkdir -p /tmp/y70-core-test-classes
           javac -encoding UTF-8 -d /tmp/y70-core-test-classes app/src/main/java/com/moto/resolution/clone/core/*.java tests/CorePolicyTest.java
           java -cp /tmp/y70-core-test-classes CorePolicyTest
@@ -57,11 +59,12 @@ jobs:
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | grep -E "package: name=|sdkVersion:|targetSdkVersion:"
+          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | grep -F "com.moto.resolution.clone.preview29"
           sha256sum app/build/outputs/apk/debug/app-debug.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LenovoY70-v2.8-Preview-APK
+          name: LenovoY70-v2.9-Preview-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
