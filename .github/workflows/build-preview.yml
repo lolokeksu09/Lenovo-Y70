@@ -27,7 +27,9 @@ jobs:
           echo "21011c900672f8fe5e798bfe5f60278ce1d228d417eabc5089ccdfd2124af0ad  /tmp/y70-v28-overlay.tar.xz" | sha256sum --check
           tar -xJf /tmp/y70-v28-overlay.tar.xz
           python3 tests/validate-project.py
-          bash tests/run-core-tests.sh
+          mkdir -p /tmp/y70-core-test-classes
+          javac -encoding UTF-8 -d /tmp/y70-core-test-classes app/src/main/java/com/moto/resolution/clone/core/*.java tests/CorePolicyTest.java
+          java -cp /tmp/y70-core-test-classes CorePolicyTest
           test -f app/build.gradle
       - name: Set up Java 17
         uses: actions/setup-java@v4
