@@ -26,6 +26,9 @@ jobs:
           cat overlays/v2.8/chunk-*.b64 | base64 --decode > /tmp/y70-v28-overlay.tar.xz
           echo "21011c900672f8fe5e798bfe5f60278ce1d228d417eabc5089ccdfd2124af0ad  /tmp/y70-v28-overlay.tar.xz" | sha256sum --check
           tar -xJf /tmp/y70-v28-overlay.tar.xz
+          # Keep debug v2.8 installable beside both v2.6 and v2.7.
+          sed -i "s/applicationIdSuffix '.preview'/applicationIdSuffix '.preview28'/" app/build.gradle tests/validate-project.py
+          grep -F "applicationIdSuffix '.preview28'" app/build.gradle
           python3 tests/validate-project.py
           mkdir -p /tmp/y70-core-test-classes
           javac -encoding UTF-8 -d /tmp/y70-core-test-classes app/src/main/java/com/moto/resolution/clone/core/*.java tests/CorePolicyTest.java
