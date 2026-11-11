@@ -22,6 +22,7 @@ jobs:
           cat source/chunk-0*.b64 | base64 --decode > /tmp/y70-source.tar.xz
           echo "e40936fc0b25316a0661bee5554bf13100aee71d03366df53097f7925643fe24  /tmp/y70-source.tar.xz" | sha256sum --check
           tar -xJf /tmp/y70-source.tar.xz
+          cp patches/app/src/main/aidl/com/moto/resolution/clone/shizuku/ICommandService.aidl app/src/main/aidl/com/moto/resolution/clone/shizuku/ICommandService.aidl
           test -f app/build.gradle
       - name: Set up Java 17
         uses: actions/setup-java@v4
