@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Build;
 import android.os.Bundle;
 import android.graphics.Color;
+import android.util.Log;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
@@ -26,6 +27,7 @@ import java.util.Locale;
 
 /** User-guided Android special access diagnostics: read-only, no hidden bypass. */
 public final class AccessCenterActivity extends Activity {
+    private static final String LOG_TAG="LegionAccessCenter";
     private static final int BG=0xFF060609;
     private static final int CARD=0xFF121218;
     private static final int RAISED=0xFF202028;
@@ -109,6 +111,7 @@ public final class AccessCenterActivity extends Activity {
     }
 
     private void refreshByUser(){
+        Log.i(LOG_TAG,"refresh_tap");
         scheduleRefresh(false,true);
     }
 
@@ -118,6 +121,7 @@ public final class AccessCenterActivity extends Activity {
             return;
         }
         refreshInFlight=true;
+        Log.i(LOG_TAG,"refresh_started");
         for(Button b:checkButtons){
             b.setEnabled(false);
             b.setText("Проверка…");
@@ -148,6 +152,8 @@ public final class AccessCenterActivity extends Activity {
                     String message=AccessRefreshSummary.summary(completed.readable,
                         completed.services.size(),changed);
                     if(manual)manualCheckCount++;
+                    Log.i(LOG_TAG,"refresh_completed readable="+completed.readable+
+                        " count="+completed.services.size()+" changed="+changed);
                     refreshFeedback=(manual?"Проверка №"+manualCheckCount+": ":"")+
                         new SimpleDateFormat("HH:mm:ss",Locale.getDefault())
                             .format(new Date(lastRefreshMillis))+" · "+message;
@@ -156,6 +162,7 @@ public final class AccessCenterActivity extends Activity {
                 });
             });
         }catch(java.util.concurrent.RejectedExecutionException e){
+            Log.w(LOG_TAG,"refresh_executor_rejected");
             refreshInFlight=false;
             refreshFeedback="Не удалось запустить проверку. Открой раздел заново.";
             render();
