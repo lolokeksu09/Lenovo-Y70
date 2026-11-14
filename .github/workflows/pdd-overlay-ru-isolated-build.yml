@@ -36,7 +36,7 @@ jobs:
           cp "$SIGNER" apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: PddOverlayRU-0.1.4-unsigned-and-signer
+          name: PddOverlayRU-0.1.5-unsigned-and-signer
           path: |
             pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
             apksigner.jar
