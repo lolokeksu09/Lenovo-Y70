@@ -38,7 +38,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/legion-tests"
           javac -encoding UTF-8 -d "$RUNNER_TEMP/legion-tests" \
             "$BASE/CommandPolicy.java" "$BASE/QuickProfile.java" "$BASE/MutationTransaction.java" "$BASE/SystemInspector.java" "$BASE/ActionHistory.java" "$BASE/AccessStatus.java" "$BASE/AccessRefreshSummary.java" \
-            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java" "$TEST/SystemInspectorTest.java" "$TEST/ActionHistoryTest.java" "$TEST/DeviceOverviewTest.java" "$TEST/AccessStatusTest.java "$TEST/AccessRefreshSummaryTest.java"
+            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java" "$TEST/SystemInspectorTest.java" "$TEST/ActionHistoryTest.java" "$TEST/DeviceOverviewTest.java" "$TEST/AccessStatusTest.java" "$TEST/AccessRefreshSummaryTest.java"
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.PolicyTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.QuickProfileTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.MutationTransactionTest
