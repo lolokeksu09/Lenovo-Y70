@@ -222,10 +222,9 @@ public final class MainActivity extends Activity {
     private void overview(){
         section("Устройство", "Актуальные значения считываются через Shizuku, а не из прошлых отчётов.");
         LinearLayout c=card();
-        line(c,"АППАРАТНАЯ ПЛАТФОРМА","Lenovo Legion Y70 / XT2611-1");
-        line(c,"ПРОШИВКА","Motorola Edge 70 Max ROM · идентификация из отчёта");
-        liveSummary=line(c,"ТЕКУЩИЕ ПОКАЗАТЕЛИ","Нажми «Обновить фактические данные»");
-        button(c,"Обновить фактические данные",true,()->runOverviewRead("printf 'Shell: '; id; printf 'Model: '; getprop ro.product.model; printf 'SKU: '; getprop ro.boot.hardware.sku; printf 'SoC: '; getprop ro.soc.model; printf 'Android: '; getprop ro.build.version.release; printf 'Power saving: '; settings get global low_power; printf 'Peak refresh: '; settings get system peak_refresh_rate; printf 'Minimum refresh: '; settings get system min_refresh_rate", "Данные устройства"));
+        line(c,"ИНФОРМАЦИЯ","Определение аппаратного кода, прошивки и настроек экрана. Значение Motorola не подменяет модель телефона.");
+        liveSummary=line(c,"ТЕКУЩЕЕ СОСТОЯНИЕ","Нажми «Обновить данные устройства»");
+        button(c,"Обновить данные устройства",true,this::runOverviewRead);
         button(c,"Сформировать диагностический отчёт",false,this::exportDiagnostic);
         container.addView(c,withTop(dp(12)));
         LinearLayout profile=card();
@@ -237,10 +236,15 @@ public final class MainActivity extends Activity {
         container.addView(profile,withTop(dp(12)));
         LinearLayout tip=card();line(tip,"Игровой режим", "По последнему аудиту Wild Rift поддерживает standard/custom. Режим performance не предлагается. Проверить текущее состояние можно во вкладке «Игры».");container.addView(tip,withTop(dp(12)));
     }
-    private void runOverviewRead(String command,String title){
+    private void runOverviewRead(){
         executeAsync(()->{
-            String output=exec(command);
-            onUi(()->{if(liveSummary!=null)liveSummary.setText(output);showDialog(title,formatDialogContent(title,output));});
+            String output=exec(CommandPolicy.DEVICE_SUMMARY_COMMAND);
+            SystemInspector.Result result=SystemInspector.device(output);
+            onUi(()->{
+                if(currentTab==0 && liveSummary!=null && liveSummary.isAttachedToWindow())
+                    liveSummary.setText(SystemInspector.deviceBrief(result));
+                showStructuredResults("Данные устройства",result);
+            });
         });
     }
     private void games(){
@@ -385,6 +389,10 @@ public final class MainActivity extends Activity {
             onUi(()->showStructuredResults(title,result));
         });
     }
+    private String installedVersion(){
+        try {return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}
+        catch(Exception e){return "версия не определена";}
+    }
     private String shortName(String pkg){return pkg.equals("org.telegram.messenger")?"Telegram":pkg.equals("dev.monolith.launcher")?"MONOLITH":"Wild Rift";}
     private void history(){
         section("Восстановление и откат","Снимок сохраняется до первой системной команды и остаётся после перезапуска приложения.");
@@ -422,6 +430,12 @@ public final class MainActivity extends Activity {
         container.addView(journal,withTop(dp(12)));
 
         LinearLayout info=card();line(info,"ЗАЩИТНЫЕ ОГРАНИЧЕНИЯ","Нет удаления/отключения пакетов, правок thermal/CPU/GPU, скрытых настроек ядра или автоматического отключения энергосбережения.");container.addView(info,withTop(dp(12)));
+        LinearLayout about=card();
+        line(about,"О ПРИЛОЖЕНИИ", "Legion Control · " + installedVersion());
+        line(about,"ДОСТУП", "Shizuku (ADB Shell). Root не требуется.");
+        line(about,"КОНФИДЕНЦИАЛЬНОСТЬ", "Без доступа к интернету и аналитики. Журнал хранится на устройстве, TXT экспортируется только вручную.");
+        line(about,"СОВМЕСТИМОСТЬ", "Разработано для Lenovo Legion Y70 (XT2611-1) с прошивкой Motorola. Работа с другими устройствами не подтверждена.");
+        container.addView(about,withTop(dp(12)));
     }
     private void runRead(String command,String title){
         executeAsync(()->{
@@ -718,7 +732,7 @@ public final class MainActivity extends Activity {
     }
     private void exportDiagnostic(){
         executeAsync(()->{
-            lastDiagnostic="LEGION CONTROL 1.6.0 / READ ONLY\n"+new Date()+"\n\n"+
+            lastDiagnostic="LEGION CONTROL 1.7.0 / READ ONLY\n"+new Date()+"\n\n"+
                     exec("id; getprop ro.product.model; getprop ro.boot.hardware.sku; getprop ro.soc.model; getprop ro.build.version.release")+"\n\nDISPLAY / POWER\n"+
                     exec("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density")+"\n\nGAME MODES\n"+
                     exec("cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift")+"\n\nOVERLAYS\n"+
@@ -784,14 +798,24 @@ public final class MainActivity extends Activity {
             entry.setPadding(dp(14),dp(13),dp(14),dp(12));
             entry.setOrientation(LinearLayout.VERTICAL);
             entry.setBackground(round(RAISED,14,BORDER));
-            LinearLayout top=new LinearLayout(this);
-            top.setOrientation(LinearLayout.HORIZONTAL);
-            TextView name=text(item.name,15,WHITE,true);
-            top.addView(name,new LinearLayout.LayoutParams(0,-2,1f));
-            TextView state=text(item.state,12,item.positive?GREEN:WARN,true);
-            state.setGravity(Gravity.END);
-            top.addView(state);
-            entry.addView(top);
+            boolean isDevice="Данные устройства".equals(title);
+            if(isDevice){
+                TextView name=text(item.name,12,MUTED,false);
+                entry.addView(name);
+                TextView value=text(item.state,17,WHITE,true);
+                value.setPadding(0,dp(5),0,0);
+                value.setTextIsSelectable(true);
+                entry.addView(value);
+            }else{
+                LinearLayout top=new LinearLayout(this);
+                top.setOrientation(LinearLayout.HORIZONTAL);
+                TextView name=text(item.name,15,WHITE,true);
+                top.addView(name,new LinearLayout.LayoutParams(0,-2,1f));
+                TextView state=text(item.state,12,item.positive?GREEN:WARN,true);
+                state.setGravity(Gravity.END);
+                top.addView(state);
+                entry.addView(top);
+            }
             if(!item.detail.isEmpty()){
                 TextView detail=text(item.detail,12,MUTED,false);
                 detail.setPadding(0,dp(5),0,0);
