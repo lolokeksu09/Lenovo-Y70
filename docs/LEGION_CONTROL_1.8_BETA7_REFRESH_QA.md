@@ -39,3 +39,16 @@
 ## Параметры выпуска
 - `dev.legion.control`, `versionCode 16`, `versionName 1.8.0-beta7`.
 - Публичную сборку для 4PDA не выпускать до фактического smoke-тестирования.
+
+## Verified CI evidence — 2026-11-14
+
+- GitHub Actions run: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43589034197 — **success**.
+- Source revision tested and built: `cdee38f73bcd8e5dd2b48e2de960f8d5242071ae`. Subsequent documentation-only changes do not alter its APK.
+- Focused `AccessRefreshSummaryTest`: 10 checks passed.
+- Focused `AccessRefreshCoordinatorTest`: 17 checks passed.
+- Gradle Release: **BUILD SUCCESSFUL**.
+- `apksigner verify --verbose` and pinned release signing fingerprint: **PASS**.
+- `aapt dump badging`: `dev.legion.control`, code `16`, name `1.8.0-beta7`.
+- Exact APK size: **230023 bytes**; SHA-256: `7f70776a305fe31c924526112ac62dc4d51610a7029e8a586af8e3bd09563a02`.
+- ZIP archive integrity and APK ZIP integrity: **PASS**; APK manifest present; native ELF libraries: 0.
+- Runtime UI on Motorola XT2611-1: **NOT RUN**.
