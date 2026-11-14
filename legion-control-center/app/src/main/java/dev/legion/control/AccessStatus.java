@@ -27,13 +27,19 @@ public final class AccessStatus {
         public final String serviceName;
         public final String applicationName;
         public final boolean system;
+        public final int uid;
 
         public Record(String id, String packageName, String serviceName, String applicationName, boolean system) {
+            this(id,packageName,serviceName,applicationName,system,-1);
+        }
+        public Record(String id, String packageName, String serviceName, String applicationName,
+                      boolean system, int uid) {
             this.id=id;
             this.packageName=packageName;
             this.serviceName=serviceName;
             this.applicationName=applicationName;
             this.system=system;
+            this.uid=uid;
         }
     }
 
@@ -43,6 +49,7 @@ public final class AccessStatus {
         public final String serviceName;
         public final String applicationName;
         public final boolean system;
+        public final int uid;
         public final State state;
         private Service(Record record, State state) {
             this.id=record.id;
@@ -50,6 +57,7 @@ public final class AccessStatus {
             this.serviceName=record.serviceName;
             this.applicationName=record.applicationName;
             this.system=record.system;
+            this.uid=record.uid;
             this.state=state;
         }
     }
