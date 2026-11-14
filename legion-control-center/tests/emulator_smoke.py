@@ -114,7 +114,7 @@ try:
     pass_check("Signed versionCode 19 installed via adb")
 
     print(adb("shell","am","start","-W","-n",ACTIVITY,timeout=40),flush=True)
-    wait_text("LEGION / CONTROL",seconds=30)
+    wait_text("Система под контролем.",seconds=30)
     take_screenshot("main")
     pass_check("Main Activity actually launched and rendered")
 
