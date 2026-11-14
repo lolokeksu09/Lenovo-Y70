@@ -3,6 +3,8 @@ package dev.legion.control;
 import android.app.Activity;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.graphics.Color;
 import android.util.Log;
 import android.graphics.Typeface;
@@ -48,7 +50,13 @@ public final class AccessCenterActivity extends Activity {
     private int manualCheckCount;
     private String refreshFeedback="";
     private boolean refreshInFlight;
-    private final ExecutorService refreshExecutor=Executors.newSingleThreadExecutor();
+    private static final long REFRESH_TIMEOUT_MS=12000L;
+    private static final int MAX_STALLED_READS=2;
+    private ExecutorService refreshExecutor=Executors.newSingleThreadExecutor();
+    private final Handler refreshHandler=new Handler(Looper.getMainLooper());
+    private final AccessRefreshCoordinator refreshCoordinator=new AccessRefreshCoordinator();
+    private int stalledReads;
+    private boolean refreshUnavailable;
     private final List<Button> checkButtons=new ArrayList<>();
     private final List<TextView> checkFeedbackViews=new ArrayList<>();
 
@@ -116,10 +124,19 @@ public final class AccessCenterActivity extends Activity {
     }
 
     private void scheduleRefresh(boolean returnTop,boolean manual){
-        if(refreshInFlight){
-            if(manual)Toast.makeText(this,"Проверка уже выполняется",Toast.LENGTH_SHORT).show();
+        if(refreshUnavailable){
+            Toast.makeText(this,"Android не отвечает. Закрой и снова открой «Доступ приложений».",Toast.LENGTH_LONG).show();
             return;
         }
+        AccessRefreshCoordinator.Ticket ticket=refreshCoordinator.request(manual,returnTop);
+        if(ticket==null){
+            if(manual)Toast.makeText(this,"Проверка уже выполняется. Повторный запрос сохранён.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        startRefresh(ticket);
+    }
+
+    private void startRefresh(AccessRefreshCoordinator.Ticket ticket){
         refreshInFlight=true;
         Log.i(LOG_TAG,"refresh_started");
         for(Button b:checkButtons){
@@ -127,50 +144,88 @@ public final class AccessCenterActivity extends Activity {
             b.setText("Проверка…");
         }
         for(TextView note:checkFeedbackViews)note.setText("Считываю состояния служб Android…");
-        if(manual)Toast.makeText(this,"Проверяю доступы…",Toast.LENGTH_SHORT).show();
+        if(ticket.manual)Toast.makeText(this,"Проверяю доступы…",Toast.LENGTH_SHORT).show();
 
         final AccessRepository.Snapshot oldSnapshot=snapshot;
+        final android.content.Context appContext=getApplicationContext();
+        final Runnable watchdog=()->{
+            if(!refreshCoordinator.isCurrent(ticket.id))return;
+            Log.w(LOG_TAG,"refresh_timeout");
+            stalledReads++;
+            refreshExecutor.shutdownNow();
+            if(stalledReads<MAX_STALLED_READS){
+                refreshExecutor=Executors.newSingleThreadExecutor();
+            }else refreshUnavailable=true;
+            refreshInFlight=false;
+            lastRefreshMillis=System.currentTimeMillis();
+            if(snapshot==null)
+                snapshot=new AccessRepository.Snapshot(Collections.emptyList(),false,
+                    "Android не ответил на запрос. Попробуй повторить или перезапусти раздел.");
+            if(ticket.manual)manualCheckCount++;
+            refreshFeedback="Проверка "+(ticket.manual?"№"+manualCheckCount+" ":"")+
+                "прервана: Android не ответил за 12 секунд."+
+                (refreshUnavailable?" Закрой и открой центр доступа заново.":"");
+            render();
+            Toast.makeText(this,"Проверка превысила 12 секунд",Toast.LENGTH_LONG).show();
+            AccessRefreshCoordinator.Ticket next=refreshCoordinator.finish(ticket.id);
+            if(next!=null){
+                if(refreshUnavailable)refreshCoordinator.close();
+                else startRefresh(next);
+            }
+        };
+        refreshHandler.postDelayed(watchdog,REFRESH_TIMEOUT_MS);
+
         try{
             refreshExecutor.execute(()->{
                 AccessRepository.Snapshot next;
                 try{
-                    next=AccessRepository.read(getApplicationContext());
+                    next=AccessRepository.read(appContext);
                 }catch(Exception e){
                     next=new AccessRepository.Snapshot(Collections.emptyList(),false,
                         "Ошибка запроса Android. Попробуй повторить проверку.");
                 }
                 final AccessRepository.Snapshot completed=next;
                 runOnUiThread(()->{
-                    if(isFinishing()||isDestroyed())return;
+                    if(isFinishing()||isDestroyed()||!refreshCoordinator.isCurrent(ticket.id))return;
+                    refreshHandler.removeCallbacks(watchdog);
                     refreshInFlight=false;
                     snapshot=completed;
                     lastRefreshMillis=System.currentTimeMillis();
-                    if(returnTop)selectedId=null;
+                    if(ticket.returnTop)selectedId=null;
                     boolean changed=oldSnapshot==null ||
                         oldSnapshot.readable!=completed.readable ||
                         AccessRefreshSummary.changed(oldSnapshot.services,completed.services);
                     String message=AccessRefreshSummary.summary(completed.readable,
                         completed.services.size(),changed);
-                    if(manual)manualCheckCount++;
+                    if(ticket.manual)manualCheckCount++;
                     Log.i(LOG_TAG,"refresh_completed readable="+completed.readable+
                         " count="+completed.services.size()+" changed="+changed);
-                    refreshFeedback=(manual?"Проверка №"+manualCheckCount+": ":"")+
+                    refreshFeedback=(ticket.manual?"Проверка №"+manualCheckCount+": ":"")+
                         new SimpleDateFormat("HH:mm:ss",Locale.getDefault())
                             .format(new Date(lastRefreshMillis))+" · "+message;
                     render();
-                    if(manual)Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                    if(ticket.manual)Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                    AccessRefreshCoordinator.Ticket queued=refreshCoordinator.finish(ticket.id);
+                    if(queued!=null)startRefresh(queued);
                 });
             });
         }catch(java.util.concurrent.RejectedExecutionException e){
+            refreshHandler.removeCallbacks(watchdog);
             Log.w(LOG_TAG,"refresh_executor_rejected");
             refreshInFlight=false;
             refreshFeedback="Не удалось запустить проверку. Открой раздел заново.";
+            if(snapshot==null)
+                snapshot=new AccessRepository.Snapshot(Collections.emptyList(),false,refreshFeedback);
             render();
             Toast.makeText(this,"Проверка не запущена",Toast.LENGTH_LONG).show();
+            AccessRefreshCoordinator.Ticket queued=refreshCoordinator.finish(ticket.id);
+            if(queued!=null)refreshCoordinator.close();
         }
     }
 
     @Override protected void onDestroy(){
+        refreshCoordinator.close();
+        refreshHandler.removeCallbacksAndMessages(null);
         refreshExecutor.shutdownNow();
         super.onDestroy();
     }
