@@ -1,10 +1,13 @@
-name: Release Legion Control (stable signing)
+name: Build Legion Control v1.2.0 (stable signing)
 
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'legion-control-v*'
+    branches:
+      - 'feat/legion-control-v1.2.0'
+    paths:
+      - '.github/workflows/release-control-center.yml'
+      - 'legion-overrides/v1.2/**'
 
 permissions:
   contents: read
@@ -38,16 +41,27 @@ jobs:
           base64 --decode legion-control-source.b64 > "$RUNNER_TEMP/legion-control-source.tar.xz"
           echo 'c6cee95d751784482d03a8c0fdf35c1c04b7acbe9c7a3887d215abdd9d96d7f5  '"$RUNNER_TEMP"'/legion-control-source.tar.xz' | sha256sum -c
           tar -xJf "$RUNNER_TEMP/legion-control-source.tar.xz"
+          SRC=legion-overrides/v1.2
+          DEST=legion-control-center/app/src/main/java/dev/legion/control
+          cp "$SRC/MainActivity.java" "$DEST/MainActivity.java"
+          cp "$SRC/CommandPolicy.java" "$DEST/CommandPolicy.java"
+          cp "$SRC/MutationTransaction.java" "$DEST/MutationTransaction.java"
+          cp "$SRC/PolicyTest.java" legion-control-center/tests/PolicyTest.java
+          cp "$SRC/MutationTransactionTest.java" legion-control-center/tests/MutationTransactionTest.java
+          sed -i "s/versionCode 2/versionCode 3/; s/versionName '1.1.0'/versionName '1.2.0'/" legion-control-center/app/build.gradle
           grep -F "applicationId 'dev.legion.control'" legion-control-center/app/build.gradle
-          grep -F 'versionCode 2' legion-control-center/app/build.gradle
-          grep -F "versionName '1.1.0'" legion-control-center/app/build.gradle
+          grep -F 'versionCode 3' legion-control-center/app/build.gradle
+          grep -F "versionName '1.2.0'" legion-control-center/app/build.gradle
           ! grep -q 'applicationIdSuffix' legion-control-center/app/build.gradle
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
           mkdir -p "$RUNNER_TEMP/legion-tests"
           javac -encoding UTF-8 -d "$RUNNER_TEMP/legion-tests" \
             legion-control-center/app/src/main/java/dev/legion/control/CommandPolicy.java \
-            legion-control-center/tests/PolicyTest.java
+            legion-control-center/app/src/main/java/dev/legion/control/MutationTransaction.java \
+            legion-control-center/tests/PolicyTest.java \
+            legion-control-center/tests/MutationTransactionTest.java
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.PolicyTest
+          java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.MutationTransactionTest
 
       - uses: actions/setup-java@v4
         with:
@@ -82,7 +96,7 @@ jobs:
           UNSIGNED='legion-control-center/app/build/outputs/apk/release/app-release-unsigned.apk'
           ALIGNED="$RUNNER_TEMP/legion-control-release-aligned.apk"
           KEYSTORE="$RUNNER_TEMP/legion-control-release.p12"
-          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.1.0-release.apk"
+          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.2.0-release.apk"
           test -s "$UNSIGNED"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
           test -s "$KEYSTORE"
@@ -103,14 +117,14 @@ jobs:
             echo 'Release signing certificate does not match the pinned identity.'
             exit 1
           }
-          "$BUILD_TOOLS/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='2' versionName='1.1.0'"
+          "$BUILD_TOOLS/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='3' versionName='1.2.0'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
       - name: Upload stable signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.1.0-Release-Signed
-          path: Legion-Control-v1.1.0-release.apk
+          name: Legion-Control-v1.2.0-Release-Signed
+          path: Legion-Control-v1.2.0-release.apk
           if-no-files-found: error
           retention-days: 30
