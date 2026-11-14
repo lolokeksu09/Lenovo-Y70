@@ -104,6 +104,15 @@ Official Android API: https://developer.android.com/reference/android/provider/S
 
 **Version:** `1.8.0-beta3`, versionCode `12`, release signing fingerprint unchanged. Hardware verification remains pending.
 
+### Beta 3 build verification
+
+- GitHub Actions run: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43582604588 — **PASS** for JVM policy tests, Android build, APK signing and certificate pin.
+- Package: `dev.legion.control`, versionCode `12`, versionName `1.8.0-beta3`.
+- Artifact: `Legion-Control-v1.8.0-beta3-release.apk`; 221,831 bytes.
+- SHA-256: `e9583ecba47e58d44cacd62d6d5d620fbdca87c3692162a868c9540a49559e7a`.
+- Zip integrity: PASS; native `.so` binaries: 0.
+- **NOT RUN:** direct Settings UI navigation on the physical Motorola ROM; actual visibility of the Restricted Settings menu.
+
 ## Security / release invariants
 
 No `WRITE_SECURE_SETTINGS`, no accessibility toggling, no changes to `ACCESS_RESTRICTED_SETTINGS`, no hidden app-op writes, no shell injection for arbitrary packages. Opening Settings does not prove that permissions were granted. Existing Shizuku allowlist remains unchanged. The Activity is `exported=false`. No internet permission or analytics. No private signing material in source.
