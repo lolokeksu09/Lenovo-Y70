@@ -19,6 +19,8 @@ jobs:
           base64 -d legion-control-source.b64 > /tmp/legion_control_source.tar.xz
           echo 'c6cee95d751784482d03a8c0fdf35c1c04b7acbe9c7a3887d215abdd9d96d7f5  /tmp/legion_control_source.tar.xz' | sha256sum -c
           tar -xJf /tmp/legion_control_source.tar.xz
+          bash scripts/prepare-legion-preview.sh
+          grep -F "applicationIdSuffix '.preview11'" legion-control-center/app/build.gradle
           mkdir -p /tmp/policy-tests
           javac -encoding UTF-8 -d /tmp/policy-tests legion-control-center/app/src/main/java/dev/legion/control/CommandPolicy.java legion-control-center/tests/PolicyTest.java
           java -cp /tmp/policy-tests dev.legion.control.PolicyTest
@@ -43,11 +45,11 @@ jobs:
           test -s "$APK"
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose "$APK"
-          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "dev.legion.control"
+          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "dev.legion.control.preview11"
           sha256sum "$APK"
       - uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.1-debug-APK
+          name: Legion-Control-v1.1-preview-APK
           path: legion-control-center/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
