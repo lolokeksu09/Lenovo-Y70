@@ -47,7 +47,6 @@ jobs:
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.DeviceOverviewTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.AccessStatusTest
           grep -F 'android:exported="false"' legion-control-center/app/src/main/AndroidManifest.xml
-          grep -F 'Пункт отсутствует — что делать?' "$BASE/AccessCenterActivity.java"
           grep -F 'Settings.ACTION_APPLICATION_SETTINGS' "$BASE/SettingsNavigator.java"
           grep -F 'Пункт отсутствует — открыть ' "$BASE/AccessCenterActivity.java"
           grep -F 'openSelectedAppInfo(service)' "$BASE/AccessCenterActivity.java"
