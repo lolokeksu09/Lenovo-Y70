@@ -1,10 +1,10 @@
-name: Build Legion Control v1.8.0-beta8 (stable signing)
+name: Build Legion Control v1.8.0-beta9 (stable signing)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'feat/legion-control-v1.8.0-beta8'
+      - 'feat/legion-control-v1.8.0-beta9'
     paths:
       - '.github/workflows/release-control-center.yml'
       - 'legion-control-center/**'
@@ -29,16 +29,16 @@ jobs:
           set -euo pipefail
           APP=legion-control-center/app/build.gradle
           grep -F "applicationId 'dev.legion.control'" "$APP"
-          grep -F 'versionCode 17' "$APP"
-          grep -F "versionName '1.8.0-beta8'" "$APP"
+          grep -F 'versionCode 18' "$APP"
+          grep -F "versionName '1.8.0-beta9'" "$APP"
           ! grep -q 'applicationIdSuffix' "$APP"
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
           BASE=legion-control-center/app/src/main/java/dev/legion/control
           TEST=legion-control-center/tests
           mkdir -p "$RUNNER_TEMP/legion-tests"
           javac -encoding UTF-8 -d "$RUNNER_TEMP/legion-tests" \
-            "$BASE/CommandPolicy.java" "$BASE/QuickProfile.java" "$BASE/MutationTransaction.java" "$BASE/SystemInspector.java" "$BASE/ActionHistory.java" "$BASE/AccessStatus.java" "$BASE/AccessRefreshSummary.java" "$BASE/AccessRefreshCoordinator.java" "$BASE/AccessDiagnostics.java" \
-            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java" "$TEST/SystemInspectorTest.java" "$TEST/ActionHistoryTest.java" "$TEST/DeviceOverviewTest.java" "$TEST/AccessStatusTest.java" "$TEST/AccessRefreshSummaryTest.java" "$TEST/AccessRefreshCoordinatorTest.java" "$TEST/AccessDiagnosticsTest.java"
+            "$BASE/CommandPolicy.java" "$BASE/QuickProfile.java" "$BASE/MutationTransaction.java" "$BASE/SystemInspector.java" "$BASE/ActionHistory.java" "$BASE/AccessStatus.java" "$BASE/AccessRefreshSummary.java" "$BASE/AccessRefreshCoordinator.java" "$BASE/AccessDiagnostics.java" "$BASE/AccessEvidence.java" \
+            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java" "$TEST/SystemInspectorTest.java" "$TEST/ActionHistoryTest.java" "$TEST/DeviceOverviewTest.java" "$TEST/AccessStatusTest.java" "$TEST/AccessRefreshSummaryTest.java" "$TEST/AccessRefreshCoordinatorTest.java" "$TEST/AccessDiagnosticsTest.java" "$TEST/AccessEvidenceTest.java"
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.PolicyTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.QuickProfileTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.MutationTransactionTest
@@ -49,6 +49,7 @@ jobs:
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.AccessRefreshSummaryTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.AccessRefreshCoordinatorTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.AccessDiagnosticsTest
+          java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.AccessEvidenceTest
           grep -F 'android:exported="false"' legion-control-center/app/src/main/AndroidManifest.xml
           grep -F 'Settings.ACTION_APPLICATION_SETTINGS' "$BASE/SettingsNavigator.java"
           grep -F 'Пункт отсутствует — открыть ' "$BASE/AccessCenterActivity.java"
@@ -78,6 +79,10 @@ jobs:
           grep -F 'private String makeDiagnosticReport()' "$BASE/AccessCenterActivity.java"
           grep -F 'DIAGNOSTIC_DOCUMENT_REQUEST' "$BASE/AccessCenterActivity.java"
           grep -F 'SystemClock.elapsedRealtime()-startedElapsed' "$BASE/AccessCenterActivity.java"
+          grep -F 'AccessEvidence.Verdict observed=manualEvidence(service)' "$BASE/AccessCenterActivity.java"
+          grep -F 'showSystemServices' "$BASE/AccessCenterActivity.java"
+          grep -F 'Показать системные службы' "$BASE/AccessCenterActivity.java"
+          grep -F 'Сбросить мою отметку' "$BASE/AccessCenterActivity.java"
 
       - uses: actions/setup-java@v4
         with:
@@ -119,7 +124,7 @@ jobs:
           UNSIGNED='legion-control-center/app/build/outputs/apk/release/app-release-unsigned.apk'
           ALIGNED="$RUNNER_TEMP/legion-control-aligned.apk"
           KEYSTORE="$RUNNER_TEMP/legion-control-release.p12"
-          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.8.0-beta8-release.apk"
+          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.8.0-beta9-release.apk"
           test -s "$UNSIGNED"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
           keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
@@ -135,14 +140,14 @@ jobs:
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
             echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='17' versionName='1.8.0-beta8'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='18' versionName='1.8.0-beta9'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
       - name: Upload compatible signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.8.0-beta8-Release-Signed
-          path: Legion-Control-v1.8.0-beta8-release.apk
+          name: Legion-Control-v1.8.0-beta9-Release-Signed
+          path: Legion-Control-v1.8.0-beta9-release.apk
           if-no-files-found: error
           retention-days: 30
