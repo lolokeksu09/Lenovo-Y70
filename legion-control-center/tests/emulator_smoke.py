@@ -136,7 +136,7 @@ try:
     take_screenshot("refresh_completed")
     pass_check("Refresh click actually produces a completed result")
 
-    tap_when_visible("Самопроверка кнопки",max_scroll=8)
+    tap_when_visible("Самопроверка кнопки",exact=True,max_scroll=8)
     wait_text("Нажатий обработано: 1",seconds=12)
     take_screenshot("selftest")
     pass_check("Self-test click is dispatched and reflected in UI")
