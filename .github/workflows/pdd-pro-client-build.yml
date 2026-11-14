@@ -1,0 +1,52 @@
+name: PDD Overlay RU PRO client v0.1.9
+on:
+  push:
+    branches: [pdd-overlay-ru-pro-client-20261114]
+    paths:
+      - 'pdd-overlay-ru/source_bundle.base64'
+      - '.github/workflows/pdd-pro-client-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+      PDD_KEYSTORE_B64: ${{ secrets.PDD_KEYSTORE_B64 }}
+      PDD_RELEASE_STORE_PASSWORD: ${{ secrets.PDD_RELEASE_STORE_PASSWORD }}
+      PDD_RELEASE_KEY_ALIAS: ${{ secrets.PDD_RELEASE_KEY_ALIAS }}
+      PDD_RELEASE_KEY_PASSWORD: ${{ secrets.PDD_RELEASE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Restore versioned Android sources
+        run: |
+          base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-pro-source.zip
+          unzip -q /tmp/pdd-pro-source.zip
+      - name: Verify existing translation behavior
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+      - name: Verify signed license token and compile release
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+      - name: Export Android signer and release
+        shell: bash
+        run: |
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner.jar | head -n 1)
+          test -n "$SIGNER"
+          cp "$SIGNER" ./apksigner.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PDD-RU-v0.1.9-PRO-client-unsigned-and-signer
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            apksigner.jar
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: error
