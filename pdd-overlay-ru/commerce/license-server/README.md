@@ -43,7 +43,8 @@ Generate signing keys locally **on the VDS** (do not send the private key to Git
 cd license-server
 mkdir -p secrets data
 python3 -m overlay_license.admin init-keypair --private secrets/private.pem --public secrets/public.pem
-sudo chown -R 10001:10001 secrets/private.pem data
+sudo chown -R 10001:10001 secrets data
+chmod 700 secrets data
 chmod 600 secrets/private.pem
 export LICENSE_LOOKUP_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 # Persist this environment variable in a protected local .env with chmod 600.
