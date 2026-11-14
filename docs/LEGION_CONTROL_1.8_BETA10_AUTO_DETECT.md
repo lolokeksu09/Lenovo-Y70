@@ -42,3 +42,15 @@ Beta 8/9 correctly enumerate installed/enabled Accessibility services through pu
 - Physical device validation: install Beta 10 over Beta 9, launch Shizuku, open "Система → Доступ приложений", refresh, inspect Kimi and SCENE. Collect the built-in diagnostic TXT to distinguish `checked N` from `API_NOT_AVAILABLE`.
 
 **Do not label fully automatic eligibility as device-verified or announce a final 4PDA release until both Kimi and SCENE agree with Settings on the physical device.**
+
+## Verified build evidence — 2026-11-14
+
+- GitHub Actions: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43593196500 — **success**.
+- Build source revision: `200048cf1333d78f6189822af291e4698ec06fe3`; any subsequent documentation-only commit does not modify APK source.
+- `AccessAutoProbeTest`: 17 checks PASS; `AccessEvidenceTest`: 20 checks PASS; remaining repository JVM tests PASS.
+- Android SDK 35 / Gradle Release: **BUILD SUCCESSFUL**.
+- Stable pinned Release certificate and `apksigner verify`: **PASS**.
+- `aapt` APK identity: `dev.legion.control`, code `19`, version `1.8.0-beta10`.
+- Exact APK: `Legion-Control-v1.8.0-beta10.apk`, **254599 bytes**; SHA-256: `743a79ba2f9f10bca14b698e7c0ffa1147b865e7ef404c1c9d790a67b3c27649`.
+- ZIP/APK integrity: PASS; native libraries: 0.
+- **NOT RUN:** real-device Binder and UI validation on Lenovo XT2611-1 / Motorola ROM. If the shell-accessible AIDL method differs, status remains `DISABLED_UNVERIFIED`; never claim verified automatic detection solely from CI.
