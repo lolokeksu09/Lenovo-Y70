@@ -33,12 +33,16 @@ public final class AccessCenterActivity extends Activity {
     private AccessRepository.Snapshot snapshot;
     private String selectedId;
     private String navigationWarning;
+    private boolean missingRestrictionMenu;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
-        if(state!=null)selectedId=state.getString("selected_access_service");
+        if(state!=null){
+            selectedId=state.getString("selected_access_service");
+            missingRestrictionMenu=state.getBoolean("missing_restriction_menu",false);
+        }
         buildRoot();
         showLoading();
     }
@@ -50,6 +54,7 @@ public final class AccessCenterActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putString("selected_access_service",selectedId);
+        out.putBoolean("missing_restriction_menu",missingRestrictionMenu);
         super.onSaveInstanceState(out);
     }
 
@@ -165,6 +170,7 @@ public final class AccessCenterActivity extends Activity {
                         AccessStatus.label(service.state)+", открыть подробности");
                 entry.setOnClickListener(v->{
                     selectedId=service.id;
+                    missingRestrictionMenu=false;
                     navigationWarning=null;
                     render();
                     scroll.smoothScrollTo(0,0);
@@ -177,6 +183,7 @@ public final class AccessCenterActivity extends Activity {
 
     private void renderDetails(AccessStatus.Service service){
         button(content,"К списку служб",false,()->{
+            missingRestrictionMenu=false;
             selectedId=null;
             render();
             scroll.smoothScrollTo(0,0);
@@ -195,13 +202,29 @@ public final class AccessCenterActivity extends Activity {
         if(AccessStatus.showManualGuide(service.state)){
             LinearLayout wizard=card();
             addHeading(wizard,"Как настроить доступ");
-            info(wizard,"1. Убедись, что доверяешь разработчику и понимаешь, что служба может читать экран и управлять устройством.",WHITE);
-            info(wizard,"2. Если Android показывает запрет, открой сведения о приложении и проверь меню ⋮ → «Разрешить ограниченные настройки». Пункт может отсутствовать.",WHITE);
-            info(wizard,"3. Открой специальные возможности, найди нужную службу и включи её самостоятельно.",WHITE);
-            info(wizard,"4. Вернись сюда: приложение повторно проверит, включена ли служба.",WHITE);
-            button(wizard,"1. Информация о приложении",true,()->openAppInfo(service.packageName));
-            button(wizard,"2. Специальные возможности",false,this::openAccessibility);
+            info(wizard,"1. Сначала открой специальные возможности, нажми на серую службу и вызови предупреждение Android об ограниченных настройках. Это важно: до предупреждения пункта в меню может не быть.",WHITE);
+            info(wizard,"2. После предупреждения открой НАСТРОЙКИ → ПРИЛОЖЕНИЯ → ВСЕ ПРИЛОЖЕНИЯ и найди «"+service.applicationName+"». Не используй прямой переход из другого приложения.",WHITE);
+            info(wizard,"3. Если появилось ⋮ → «Разрешить ограниченные настройки», подтверди действие Android. Включай службу только доверенного приложения.",WHITE);
+            info(wizard,"4. Вернись в специальные возможности, включи службу вручную и перепроверь её статус здесь.",WHITE);
+            button(wizard,"1. Открыть специальные возможности",true,this::openAccessibility);
+            button(wizard,"2. Открыть список приложений",false,this::openAppsList);
+            button(wizard,"Пункт отсутствует — что делать?",false,()->{
+                missingRestrictionMenu=!missingRestrictionMenu;
+                render();
+                scroll.smoothScrollTo(0,0);
+            });
             content.addView(wizard,top(12));
+            if(missingRestrictionMenu){
+                LinearLayout missing=card();
+                addHeading(missing,"Если пункта нет");
+                info(missing,"Сначала обязательно открой предупреждение Android в списке специальных возможностей, затем войди в карточку приложения через системный список «Все приложения».",WHITE);
+                info(missing,"Если после этих действий пункт всё ещё отсутствует, возможна неисправность или особенность настроек установленной прошивки Motorola. Это не доказывает, что приложение небезопасно или что ограничение можно снять через Legion Control.",WARN);
+                info(missing,"Android 17 использует Enhanced Confirmation: в новых сборках право показать этот пункт определяется системной службой. Обычному приложению недоступно изменение этого состояния.",MUTED);
+                info(missing,"Не используй случайные команды ADB или автоматическое включение Accessibility: доступ может разрешать чтение экрана и управление устройством.",MUTED);
+                button(missing,"Открыть список всех приложений",true,this::openAppsList);
+                button(missing,"Проверить ещё раз",false,()->refresh(false));
+                content.addView(missing,top(12));
+            }
         }else if(service.state==AccessStatus.State.ENABLED){
             LinearLayout enabled=card();
             addHeading(enabled,"Служба уже включена");
@@ -220,6 +243,13 @@ public final class AccessCenterActivity extends Activity {
         button(actions,"Информация о приложении",false,()->openAppInfo(service.packageName));
         content.addView(actions,top(12));
         info(content,"Legion Control не снимает ограничения Android, не выдаёт разрешения и не запускает ADB-команды для включения Accessibility.",MUTED);
+    }
+
+    private void openAppsList(){
+        if(!SettingsNavigator.openAppList(this)){
+            navigationWarning="Не удалось открыть список приложений Android. Перейди вручную: Настройки → Приложения → Все приложения.";
+            render();
+        }
     }
 
     private void openAccessibility(){
@@ -323,6 +353,7 @@ public final class AccessCenterActivity extends Activity {
     @Override public void onBackPressed(){
         if(selectedId!=null){
             selectedId=null;
+            missingRestrictionMenu=false;
             render();
             scroll.smoothScrollTo(0,0);
         }else super.onBackPressed();
