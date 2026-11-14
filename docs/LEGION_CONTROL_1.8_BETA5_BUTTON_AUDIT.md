@@ -37,3 +37,14 @@ Status: source fixes committed, Android runtime verification pending.
 5. In Access Center press `Check again`. Timestamp should update even if the service status stays unchanged.
 6. In History without any applied changes, check the Undo button is absent and a reason is shown.
 7. Confirm last-change undo, profiles and GameManager still behave correctly.
+
+## CI evidence — Beta 5
+
+- Workflow: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43586611046
+- Result: SUCCESS. Java tests, Android Gradle Release, certificate pin, APK package/version and artifact upload passed.
+- Package/version: `dev.legion.control`, versionCode `14`, versionName `1.8.0-beta5`.
+- Artifact: `Legion-Control-v1.8.0-beta5-Release-Signed`.
+- Extracted APK size: `225927` bytes.
+- SHA-256: `156180cbc811dacac80473e17bc6a3bc89eb837aa74e856ccb874d35bdd45b27`.
+- **NOT RUN:** physical device touch event and Shizuku connection smoke test.
+
