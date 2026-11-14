@@ -37,3 +37,15 @@ This demonstrates the **lack of visible feedback and main-thread I/O** from sour
 5. Test the same on **Список активности (Clone)** and on the top-level **Проверить снова**.
 6. Test with Accessibility Settings temporarily unavailable: the screen must report a read error, not a false success.
 7. Confirm the detected blocked/allowed/unknown states are still distinguished.
+
+## Read-only logging when a tap still has no effect
+
+The activity writes non-sensitive diagnostic markers under Android log tag `LegionAccessCenter`: `refresh_tap`, `refresh_started`, and `refresh_completed readable=... count=... changed=...`. No package names or Accessibility screen contents are logged.
+
+Use the already configured Shizuku rish shell from Termux and save output as one text file:
+
+```sh
+./rish -c 'logcat -d -v time -s LegionAccessCenter:I' > /storage/emulated/0/Download/legion_refresh_log.txt
+```
+
+If a tap creates **no** `refresh_tap`, investigate gesture dispatch, an overlay or wrong installed build. If a tap logs `refresh_started` without `refresh_completed`, investigate a blocking Android service call. If completion is logged but no feedback is displayed, investigate the Activity/UI lifecycle and view rebuild. Do not claim any of these causes without the corresponding log.
