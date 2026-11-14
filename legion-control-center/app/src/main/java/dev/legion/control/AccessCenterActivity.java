@@ -203,25 +203,26 @@ public final class AccessCenterActivity extends Activity {
             LinearLayout wizard=card();
             addHeading(wizard,"Как настроить доступ");
             info(wizard,"1. Сначала открой специальные возможности, нажми на серую службу и вызови предупреждение Android об ограниченных настройках. Это важно: до предупреждения пункта в меню может не быть.",WHITE);
-            info(wizard,"2. После предупреждения открой НАСТРОЙКИ → ПРИЛОЖЕНИЯ → ВСЕ ПРИЛОЖЕНИЯ и найди «"+service.applicationName+"». Не используй прямой переход из другого приложения.",WHITE);
+            info(wizard,"2. Нажми «Открыть настройки "+service.applicationName+"»: Legion Control откроет карточку именно этого приложения. Искать его в списке не нужно.",WHITE);
             info(wizard,"3. Если появилось ⋮ → «Разрешить ограниченные настройки», подтверди действие Android. Включай службу только доверенного приложения.",WHITE);
             info(wizard,"4. Вернись в специальные возможности, включи службу вручную и перепроверь её статус здесь.",WHITE);
-            button(wizard,"1. Открыть специальные возможности",true,this::openAccessibility);
-            button(wizard,"2. Открыть список приложений",false,this::openAppsList);
-            button(wizard,"Пункт отсутствует — что делать?",false,()->{
-                missingRestrictionMenu=!missingRestrictionMenu;
-                render();
-                scroll.smoothScrollTo(0,0);
+            button(wizard,"1. Открыть специальные возможности",false,this::openAccessibility);
+            button(wizard,"2. Настройки "+service.applicationName,true,()->openSelectedAppInfo(service));
+            button(wizard,"Пункт отсутствует — открыть "+service.applicationName,false,()->{
+                missingRestrictionMenu=true;
+                openSelectedAppInfo(service);
             });
             content.addView(wizard,top(12));
             if(missingRestrictionMenu){
                 LinearLayout missing=card();
                 addHeading(missing,"Если пункта нет");
-                info(missing,"Сначала обязательно открой предупреждение Android в списке специальных возможностей, затем войди в карточку приложения через системный список «Все приложения».",WHITE);
+                info(missing,"Открыта карточка «"+service.applicationName+"». Сначала должно появиться предупреждение Android в специальных возможностях; затем проверь меню ⋮ в карточке приложения.",WHITE);
                 info(missing,"Если после этих действий пункт всё ещё отсутствует, возможна неисправность или особенность настроек установленной прошивки Motorola. Это не доказывает, что приложение небезопасно или что ограничение можно снять через Legion Control.",WARN);
                 info(missing,"Android 17 использует Enhanced Confirmation: в новых сборках право показать этот пункт определяется системной службой. Обычному приложению недоступно изменение этого состояния.",MUTED);
                 info(missing,"Не используй случайные команды ADB или автоматическое включение Accessibility: доступ может разрешать чтение экрана и управление устройством.",MUTED);
-                button(missing,"Открыть список всех приложений",true,this::openAppsList);
+                button(missing,"Открыть «"+service.applicationName+"» ещё раз",true,()->openSelectedAppInfo(service));
+                info(missing,"Если прямой переход скрывает пункт ⋮ на этой прошивке, попробуй открыть карточку вручную через «Все приложения». Это резервный способ, не обязательный шаг.",MUTED);
+                button(missing,"Резерв: Все приложения",false,this::openAppsList);
                 button(missing,"Проверить ещё раз",false,()->refresh(false));
                 content.addView(missing,top(12));
             }
@@ -235,14 +236,28 @@ public final class AccessCenterActivity extends Activity {
             addHeading(unknown,"Состояние не подтверждено");
             info(unknown,"Нельзя утверждать, что служба выключена или заблокирована. Проверь её напрямую в настройках Android.",WARN);
             button(unknown,"Открыть спец. возможности",false,this::openAccessibility);
+            button(unknown,"Настройки "+service.applicationName,false,()->openSelectedAppInfo(service));
             content.addView(unknown,top(12));
         }
         LinearLayout actions=card();
         addHeading(actions,"Проверка и настройки");
         button(actions,"Проверить повторно",true,()->refresh(false));
-        button(actions,"Информация о приложении",false,()->openAppInfo(service.packageName));
+        button(actions,"Открыть «"+service.applicationName+"» в настройках",false,()->openSelectedAppInfo(service));
         content.addView(actions,top(12));
         info(content,"Legion Control не снимает ограничения Android, не выдаёт разрешения и не запускает ADB-команды для включения Accessibility.",MUTED);
+    }
+
+    /** Directly opens the chosen package's App Info. No package lookup by the user. */
+    private void openSelectedAppInfo(AccessStatus.Service service){
+        if(service==null||!AccessStatus.validPackage(service.packageName)){
+            navigationWarning="Нельзя открыть настройки: некорректный идентификатор приложения.";
+            render();
+            return;
+        }
+        if(!SettingsNavigator.openAppInfo(this,service.packageName)){
+            navigationWarning="Android не открыл карточку «"+service.applicationName+"». Используй резервный список приложений.";
+            if(!SettingsNavigator.openAppList(this))render();
+        }
     }
 
     private void openAppsList(){
@@ -261,9 +276,14 @@ public final class AccessCenterActivity extends Activity {
     }
 
     private void openAppInfo(String pkg){
-        if(!SettingsNavigator.openAppInfo(this,pkg)){
-            navigationWarning="Не удалось открыть информацию о приложении. Найди его вручную в «Настройки → Приложения».";
+        if(!AccessStatus.validPackage(pkg)){
+            navigationWarning="Некорректный идентификатор приложения.";
             render();
+            return;
+        }
+        if(!SettingsNavigator.openAppInfo(this,pkg)){
+            navigationWarning="Android не открыл информацию о приложении. Используй резервный список.";
+            if(!SettingsNavigator.openAppList(this))render();
         }
     }
 
