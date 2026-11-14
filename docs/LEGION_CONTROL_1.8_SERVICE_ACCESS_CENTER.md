@@ -1,6 +1,6 @@
 # Legion Control 1.8.0 — Service Access Center
 
-Status: **Implementation in progress**. Phase 1: Accessibility inventory and user-guided recovery. Target: Lenovo Legion Y70 (XT2611-1) with Motorola Edge 70 Max ROM, Android 17, no root, Shizuku (ADB Shell). Scope extends to other Android devices on a best-effort basis with explicit unknown states.
+Status: **Beta 1 built (2026-11-14)**. Phase 1: Accessibility inventory and user-guided recovery; not yet tested on the target handset. Target: Lenovo Legion Y70 (XT2611-1) with Motorola Edge 70 Max ROM, Android 17, no root, Shizuku (ADB Shell). Scope extends to other Android devices on a best-effort basis with explicit unknown states.
 
 ## Problem and constraints
 
@@ -50,12 +50,12 @@ The app uses `ACTION_APPLICATION_DETAILS_SETTINGS` with a `package:` URI and `AC
 ## Phase plan / acceptance gates
 
 ### Phase 1: Functional beta
-- [ ] Commit documentation and design constraints.
-- [ ] Implement inventory and status normalization with negative tests.
-- [ ] Implement native list/details/wizard + safe Settings navigation and empty/error states.
-- [ ] Link from "Система"; preserve back navigation and all existing tabs.
-- [ ] Run pure-Java focused tests plus existing tests.
-- [ ] CI build signed APK, check stable certificate and `dev.legion.control` / versionCode 10.
+- [x] Commit documentation and design constraints.
+- [x] Implement inventory and status normalization with negative tests.
+- [x] Implement native list/details/wizard + safe Settings navigation and empty/error states.
+- [x] Link from "Система"; preserve back navigation and all existing tabs.
+- [x] Run pure-Java focused tests plus existing tests.
+- [x] CI build signed APK, check stable certificate and `dev.legion.control` / versionCode 10.
 
 ### Phase 2: Capability diagnostics
 - [ ] Check Overlay / Notification Listener / Background constraints only through supported APIs; report "unknown" when status cannot be read.
@@ -74,3 +74,12 @@ The app uses `ACTION_APPLICATION_DETAILS_SETTINGS` with a `package:` URI and `AC
 No `WRITE_SECURE_SETTINGS`, no accessibility toggling, no changes to `ACCESS_RESTRICTED_SETTINGS`, no hidden app-op writes, no shell injection for arbitrary packages. Opening Settings does not prove that permissions were granted. Existing Shizuku allowlist remains unchanged. The Activity is `exported=false`. No internet permission or analytics. No private signing material in source.
 
 New first-phase APK uses the existing release keystore and package `dev.legion.control`, versionCode 10. First build should be labeled `1.8.0-beta1` until real-device testing.
+
+## First implementation evidence
+
+- Branch: `feat/legion-control-v1.8.0`; first beta's build commit: `b578cd4e7e72fa8e965bfaf70617b2de5c350322`.
+- GitHub Actions: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43575293821 — PASS (JVM tests, Android Gradle, pinned release certificate, APK export).
+- Artifact name: `Legion-Control-v1.8.0-beta1-Release-Signed`, API 28+, `dev.legion.control`, versionCode 10, versionName `1.8.0-beta1`.
+- Exact unpacked APK SHA-256: `9754d5b724bbab6d8c7e446d60eee1a3442a6b600f6ca643abe10d6e5ad930b7`.
+- **NOT RUN:** handset installation, accessibility list comparability with the Motorola ROM screenshot, user-initiated settings wizard, real screenshots and accessibility screen-reader evaluation.
+- Do not publish as a fully validated 4PDA release until these checks pass. Technical source/JVM checks do not establish runtime behavior.
