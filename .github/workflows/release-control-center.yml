@@ -1,10 +1,10 @@
-name: Build Legion Control v1.6.0 (stable signing)
+name: Build Legion Control v1.7.0 (stable signing)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'feat/legion-control-v1.6.0'
+      - 'feat/legion-control-v1.7.0'
     paths:
       - '.github/workflows/release-control-center.yml'
       - 'legion-control-center/**'
@@ -29,8 +29,8 @@ jobs:
           set -euo pipefail
           APP=legion-control-center/app/build.gradle
           grep -F "applicationId 'dev.legion.control'" "$APP"
-          grep -F 'versionCode 8' "$APP"
-          grep -F "versionName '1.6.0'" "$APP"
+          grep -F 'versionCode 9' "$APP"
+          grep -F "versionName '1.7.0'" "$APP"
           ! grep -q 'applicationIdSuffix' "$APP"
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
           BASE=legion-control-center/app/src/main/java/dev/legion/control
@@ -38,12 +38,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/legion-tests"
           javac -encoding UTF-8 -d "$RUNNER_TEMP/legion-tests" \
             "$BASE/CommandPolicy.java" "$BASE/QuickProfile.java" "$BASE/MutationTransaction.java" "$BASE/SystemInspector.java" "$BASE/ActionHistory.java" \
-            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java" "$TEST/SystemInspectorTest.java" "$TEST/ActionHistoryTest.java"
+            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java" "$TEST/SystemInspectorTest.java" "$TEST/ActionHistoryTest.java" "$TEST/DeviceOverviewTest.java"
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.PolicyTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.QuickProfileTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.MutationTransactionTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.SystemInspectorTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.ActionHistoryTest
+          java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.DeviceOverviewTest
           grep -F "private void showStructuredResults(" "$BASE/MainActivity.java"
 
       - uses: actions/setup-java@v4
@@ -86,7 +87,7 @@ jobs:
           UNSIGNED='legion-control-center/app/build/outputs/apk/release/app-release-unsigned.apk'
           ALIGNED="$RUNNER_TEMP/legion-control-aligned.apk"
           KEYSTORE="$RUNNER_TEMP/legion-control-release.p12"
-          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.6.0-release.apk"
+          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.7.0-release.apk"
           test -s "$UNSIGNED"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
           keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
@@ -102,14 +103,14 @@ jobs:
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
             echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='8' versionName='1.6.0'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='9' versionName='1.7.0'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
       - name: Upload compatible signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.6.0-Release-Signed
-          path: Legion-Control-v1.6.0-release.apk
+          name: Legion-Control-v1.7.0-Release-Signed
+          path: Legion-Control-v1.7.0-release.apk
           if-no-files-found: error
           retention-days: 30
