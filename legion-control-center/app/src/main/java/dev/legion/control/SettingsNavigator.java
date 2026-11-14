@@ -22,6 +22,18 @@ public final class SettingsNavigator {
         }
     }
 
+    /** Open the actual system app list instead of direct App Info.
+     * Some Settings implementations hide 'Allow restricted settings' on deep-linked App Info.
+     */
+    public static boolean openAppList(Activity activity) {
+        try {
+            activity.startActivity(new Intent(Settings.ACTION_APPLICATION_SETTINGS));
+            return true;
+        }catch(ActivityNotFoundException|SecurityException e){
+            return false;
+        }
+    }
+
     public static boolean openAccessibility(Activity activity) {
         try {
             activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
