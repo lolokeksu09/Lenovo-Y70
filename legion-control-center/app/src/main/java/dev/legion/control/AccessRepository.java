@@ -2,6 +2,8 @@ package dev.legion.control;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.Context;
+import android.os.Process;
+import java.lang.reflect.Method;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -9,10 +11,12 @@ import android.view.accessibility.AccessibilityManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
-/** Android public API only; does not request Shizuku or modify accessibility privileges. */
+/** Read-only Android APIs; optional protected hidden query degrades to unknown. */
 public final class AccessRepository {
     private AccessRepository() {}
 
@@ -58,7 +62,33 @@ public final class AccessRepository {
                 }
                 records.add(new AccessStatus.Record(info.getId(),pkg,serviceName,appName,system));
             }
-            List<AccessStatus.Service> result=AccessStatus.resolve(records,enabledIds,enabled!=null);
+            // The public SDK does not expose Android's ECM eligibility. The underlying
+            // AccessibilityManager has a read-only, hidden isAccessibilityTargetAllowed
+            // method. Try it without modifying hidden-API policy. If the ROM denies this
+            // call, do not infer that the service is unrestricted or blocked.
+            Map<String,Boolean> allowedTargets=new HashMap<>();
+            if(enabled!=null){
+                Method targetMethod=null;
+                try {
+                    targetMethod=AccessibilityManager.class.getMethod(
+                        "isAccessibilityTargetAllowed",String.class,int.class,int.class);
+                }catch(ReflectiveOperationException|RuntimeException ignored){}
+                if(targetMethod!=null){
+                    int userId=Process.myUserHandle().getIdentifier();
+                    for(AccessStatus.Record record:records){
+                        if(enabledIds.contains(record.id)||allowedTargets.containsKey(record.packageName))continue;
+                        try{
+                            ApplicationInfo app=pm.getApplicationInfo(record.packageName,0);
+                            Object answer=targetMethod.invoke(manager,record.packageName,app.uid,userId);
+                            if(answer instanceof Boolean)allowedTargets.put(record.packageName,(Boolean)answer);
+                        }catch(ReflectiveOperationException|RuntimeException ignored){
+                            // Hidden API denied, missing package or vendor implementation.
+                            // Preserve UNKNOWN classification for this package.
+                        }
+                    }
+                }
+            }
+            List<AccessStatus.Service> result=AccessStatus.resolve(records,enabledIds,enabled!=null,allowedTargets);
             String message=enabled==null?"Android не подтвердил список включённых служб.":
                     result.isEmpty()?"Службы Accessibility не обнаружены. Список может зависеть от прошивки.":"";
             return new Snapshot(result,true,message);
