@@ -113,7 +113,11 @@ public final class AccessStatus {
     }
 
     /** Only actually denied services get the restricted-settings help wizard. */
-    public static boolean showManualGuide(State state) { return state==State.RESTRICTED; }
+    public static boolean showManualGuide(State state) {
+        // When Android hides its internal check, still offer an explicit
+        // troubleshooting path, but never label the service restricted.
+        return state==State.RESTRICTED||state==State.DISABLED_UNVERIFIED;
+    }
 
     public static boolean validPackage(String pkg) {
         return pkg!=null&&pkg.length()>=3&&pkg.length()<=255&&pkg.indexOf('.')>0
