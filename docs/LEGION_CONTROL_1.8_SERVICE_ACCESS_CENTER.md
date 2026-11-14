@@ -113,6 +113,36 @@ Official Android API: https://developer.android.com/reference/android/provider/S
 - Zip integrity: PASS; native `.so` binaries: 0.
 - **NOT RUN:** direct Settings UI navigation on the physical Motorola ROM; actual visibility of the Restricted Settings menu.
 
+## Beta 4: distinct enabled / disabled / Android-blocked status
+
+### User-observed regression
+- **Kimi Claw:** Android's Accessibility list displays `Контролируется настройками с ограниченным доступом` and greys out the service.
+- **Список активности (Clone):** Android shows an available toggle that is currently off (`Отключено`).
+- Previous Legion Control used only Android's enabled-service list, so both appeared simply `Выключена`.
+
+### Status model / exact evidence semantics
+- `ENABLED` — enabled-service list contains the service.
+- `DISABLED` — not enabled, **AND** Android's read-only `AccessibilityManager.isAccessibilityTargetAllowed(package, uid, user)` returned true.
+- `RESTRICTED` — not enabled, **AND** Android's target-allowed query returned false. The cause may be ECM / Restricted Settings **or** an administrator policy. The UI must say **Ограничена Android**, not automatically ECM.
+- `DISABLED_UNVERIFIED` — not enabled but the internal eligibility query was absent/blocked/failed. UI: **Выключена · доступ не проверен**. Never silently downgrade to an "ordinary disabled" or assert a restriction.
+- `UNKNOWN` — Android did not provide a readable enabled-service list.
+
+`isAccessibilityTargetAllowed` is an internal, undocumented SDK method with no standard Android app-level API. Legion Control tries a read-only reflection call; vendor hidden-API enforcement might deny this on Android 17. The beta must NOT claim to distinguish ECM versus DPM or classify a false/unknown result as a trusted grant.
+
+Refs:
+- AOSP: https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/view/accessibility/IAccessibilityManager.aidl
+- Android: https://android.googlesource.com/platform/frameworks/base/+/master/services/accessibility/java/com/android/server/accessibility/AccessibilityManagerService.java
+- ECM: https://android.googlesource.com/platform/prebuilts/fullsdk/sources/+/refs/heads/androidx-constraintlayout-release/android-35/android/app/ecm/EnhancedConfirmationManager.java
+
+### UX acceptance
+1. Known-allowed-off shows green `Выключена · доступна` and an ordinary Android Accessibility Settings shortcut, without unnecessary ECM instructions.
+2. Known-disallowed-off shows amber `Ограничена Android` and the manual review wizard.
+3. Unknown hidden API shows neutral `Выключена · доступ не проверен`, never a false "blocked" or "allowed" claim; offers non-invasive checks.
+4. Already enabled remains `Включена`.
+5. Device behavior on Motorola Edge 70 Max ROM must be compared against two real screens above. A passing Java mock test does not prove the reflection call works there.
+
+**Beta 4:** `dev.legion.control`, `versionCode 13`, `versionName 1.8.0-beta4`; permanent certificate unchanged. Do not public-release until real-device checks complete.
+
 ## Security / release invariants
 
 No `WRITE_SECURE_SETTINGS`, no accessibility toggling, no changes to `ACCESS_RESTRICTED_SETTINGS`, no hidden app-op writes, no shell injection for arbitrary packages. Opening Settings does not prove that permissions were granted. Existing Shizuku allowlist remains unchanged. The Activity is `exported=false`. No internet permission or analytics. No private signing material in source.
