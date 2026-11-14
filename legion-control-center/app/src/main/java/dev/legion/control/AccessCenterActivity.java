@@ -331,7 +331,6 @@ public final class AccessCenterActivity extends Activity {
         info(summary,"* Включая подтверждённые вручную состояния. Не все результаты определяет Android API.",MUTED);
         refreshButton(summary,"Проверить снова",true);
         content.addView(summary,top(20));
-        addDiagnosticCard();
 
         if(services.isEmpty()){
             LinearLayout empty=card();
@@ -383,6 +382,7 @@ public final class AccessCenterActivity extends Activity {
                 });
             }
         }
+        addDiagnosticCard();
         info(content,"Shizuku через ADB работает независимо от состояния его службы Accessibility. Ничего не включается автоматически.",MUTED);
     }
 
