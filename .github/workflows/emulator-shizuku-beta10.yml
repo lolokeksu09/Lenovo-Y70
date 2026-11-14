@@ -1,0 +1,56 @@
+name: Shizuku Binder probe — signed Legion Beta10 on Emulator
+on:
+  push:
+    branches: ['test/legion-control-beta10-emulator']
+    paths:
+      - '.github/workflows/emulator-shizuku-beta10.yml'
+      - 'legion-control-center/tests/emulator_shizuku.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  shizuku-android-15:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download signed Legion release exactly as published
+        uses: actions/download-artifact@v4
+        with:
+          name: Legion-Control-v1.8.0-beta10-Release-Signed
+          run-id: 43593196500
+          github-token: ${{ github.token }}
+          path: /tmp/legion-apk
+      - name: Download official Shizuku APK
+        run: |
+          set -e
+          echo '743a79ba2f9f10bca14b698e7c0ffa1147b865e7ef404c1c9d790a67b3c27649  /tmp/legion-apk/Legion-Control-v1.8.0-beta10-release.apk' | sha256sum -c -
+          curl -fsSL --retry 3 -o /tmp/shizuku-official.apk https://github.com/RikkaApps/Shizuku/releases/download/v13.6.0/shizuku-v13.6.0.r1086.2650830c-release.apk
+          test -s /tmp/shizuku-official.apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Start emulator and test actual Shizuku automatic access detection
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SHIZUKU_APK: /tmp/shizuku-official.apk
+          SMOKE_OUTPUT: /tmp/legion-shizuku-evidence
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: true
+          script: bash -lc 'adb install -r /tmp/legion-apk/Legion-Control-v1.8.0-beta10-release.apk && python3 legion-control-center/tests/emulator_shizuku.py'
+      - name: Upload Shizuku emulator diagnostics and screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legion-beta10-shizuku-emulator-evidence
+          path: /tmp/legion-shizuku-evidence/
+          if-no-files-found: warn
+          retention-days: 7
