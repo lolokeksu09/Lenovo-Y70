@@ -69,6 +69,25 @@ The app uses `ACTION_APPLICATION_DETAILS_SETTINGS` with a `package:` URI and `AC
 - [ ] Package accessible release notes, screenshots, SHA-256, compatibility/limitations, APK.
 - [ ] Release stable 1.8.0 only after physical tests.
 
+## Beta 2: missing `Allow restricted settings` entry on Motorola ROM
+
+**User-observed symptom:** On Lenovo Legion Y70 with Motorola Edge 70 Max Android 17 ROM, the `Allow restricted settings` option is absent from an application's App Info page, despite the Accessibility service appearing restricted.
+
+**Underlying Android mechanism:** AOSP EnhancedConfirmationManager uses `isClearRestrictionAllowed(packageName)` to determine whether App Info should offer this menu item. In this flow, attempting to open the blocked Accessibility service first shows a system "Restricted setting" warning; the system warning makes the app eligible for user confirmation. Different ROM builds may fail to expose the menu even after the warning. This is a possible ROM integration issue, not a proven diagnosis.
+
+**New user flow in Beta 2:**
+1. Open Android Accessibility and *tap the disabled service* to trigger its Restricted Settings warning.
+2. Return to the system **Settings → Apps → All apps → [affected app]** list (not a deep link to App Info from Legion Control).
+3. Look for the three-dot menu `Allow restricted settings`.
+4. If missing, use the **`Пункт отсутствует — что делать?`** disclosure; the app explains the expected ECM trigger, permits opening the system Apps list, and offers rechecking the service state.
+5. If absent after the documented sequence, report a likely Settings/ECM integration limitation and collect diagnostic evidence; never pretend a direct Settings intent or an AppOps read fixes it.
+
+Android 17 compatibility definition requires user confirmation for restricted settings to originate in the target app's AppInfo with EnhancedConfirmationManager; do not present a silent Shizuku/ADB AppOps write or Android Secure Settings modification as the official or safe equivalent. The fallback is **instructional and diagnostic**, not a privilege bypass.
+
+Refs: https://android.googlesource.com/platform/packages/modules/Permission/+/b27b1901d/framework-s/java/android/app/ecm/EnhancedConfirmationManager.java ; https://source.android.com/docs/compatibility/17/android-17-cdd ; https://android.googlesource.com/platform/packages/apps/Settings/+/master/src/com/android/settings/applications/appinfo/AppInfoDashboardFragment.java .
+
+**Beta2 build:** `dev.legion.control`, versionCode `11`, versionName `1.8.0-beta2`, same pinned release certificate; physical-device verification still required.
+
 ## Security / release invariants
 
 No `WRITE_SECURE_SETTINGS`, no accessibility toggling, no changes to `ACCESS_RESTRICTED_SETTINGS`, no hidden app-op writes, no shell injection for arbitrary packages. Opening Settings does not prove that permissions were granted. Existing Shizuku allowlist remains unchanged. The Activity is `exported=false`. No internet permission or analytics. No private signing material in source.
