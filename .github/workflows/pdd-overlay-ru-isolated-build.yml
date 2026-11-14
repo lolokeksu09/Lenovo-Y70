@@ -24,6 +24,8 @@ jobs:
         run: |
           base64 --decode pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-source.zip
           unzip -q /tmp/pdd-source.zip
+      - name: Fix Accessibility service status (v0.1.3)
+        run: python3 pdd-overlay-ru/upgrade_accessibility_013.py
       - name: Test source invariants
         run: bash pinduoduo_overlay_ru/scripts/test_local.sh
       - name: Build unsigned release APK
@@ -36,7 +38,7 @@ jobs:
           cp "$SIGNER" apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: PddOverlayRU-0.1.2-unsigned-and-signer
+          name: PddOverlayRU-0.1.3-unsigned-and-signer
           path: |
             pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
             apksigner.jar
