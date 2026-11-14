@@ -16,6 +16,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
 import java.util.ArrayList;
 import java.util.List;
 import android.widget.LinearLayout;
@@ -34,9 +35,9 @@ import rikka.shizuku.Shizuku;
 /** Fully native, no web UI; vetted operations only, via Shizuku UserService. */
 public final class MainActivity extends Activity {
     // Consistent AMOLED surfaces and semantic state colors. No colored ornaments or invented metrics.
-    private static final int BG=0xFF060608, CARD=0xFF151518, BORDER=0xFF303038;
-    private static final int WHITE=0xFFF4F3F7, MUTED=0xFFBAB8C4, PURPLE=0xFFD1C3FF, GREEN=0xFF94EBC6, WARN=0xFFFFCC91;
-    private static final int RAISED=0xFF202025;
+    private static final int BG=0xFF060609, CARD=0xFF121218, BORDER=0xFF24242B;
+    private static final int WHITE=0xFFF6F5FC, MUTED=0xFF92919F, PURPLE=0xFFC3B3FF, GREEN=0xFF7BE2B2, WARN=0xFFFFC78C;
+    private static final int RAISED=0xFF202028;
     private static final String[] TABS={"Обзор","Игры","Дисплей","Система","История"};
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private LinearLayout container, main, tabs;
@@ -90,7 +91,7 @@ public final class MainActivity extends Activity {
     private void updateConnection(){
         if(connectionText==null)return;
         boolean ready=remote!=null&&authorized();
-        connectionText.setText(ready?"Shizuku подключён":authorized()?"Подключение к службе…":"Требуется доступ Shizuku");
+        connectionText.setText(ready?"● SHIZUKU ПОДКЛЮЧЁН":authorized()?"● ПОДКЛЮЧЕНИЕ К СЛУЖБЕ":"● ТРЕБУЕТСЯ ДОСТУП SHIZUKU");
         connectionText.setTextColor(ready?GREEN:WARN);
     }
     private void connectIfPossible(){
@@ -109,39 +110,68 @@ public final class MainActivity extends Activity {
             Shizuku.requestPermission(1021);
         }catch(Throwable t){showError("Ошибка Shizuku: "+t.getMessage());}
     }
+    /** Restored v1.2 top navigation, header and compact connection card; v1.3 controls remain. */
     private void buildRoot(){
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);
-        bodyScroll=new ScrollView(this);bodyScroll.setFillViewport(true);bodyScroll.setClipToPadding(false);
-        main=new LinearLayout(this);main.setOrientation(LinearLayout.VERTICAL);main.setPadding(dp(20),dp(24),dp(20),dp(25));
+        bodyScroll=new ScrollView(this);
+        bodyScroll.setFillViewport(true);
+        bodyScroll.setBackgroundColor(BG);
+        bodyScroll.setClipToPadding(false);
+        main=new LinearLayout(this);
+        main.setOrientation(LinearLayout.VERTICAL);
+        main.setPadding(dp(20),dp(25),dp(20),dp(40));
         bodyScroll.addView(main);
-        root.addView(bodyScroll,new LinearLayout.LayoutParams(-1,0,1f));
-        tabs=new LinearLayout(this);tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setPadding(dp(8),dp(7),dp(8),dp(10));tabs.setBackgroundColor(RAISED);
-        root.addView(tabs,new LinearLayout.LayoutParams(-1,dp(70)));
-        setContentView(root);
-        TextView title=text("Legion Control",32,WHITE,true); title.setLetterSpacing(-0.025f); main.addView(title);
-        TextView subtitle=text("Lenovo Legion Y70  /  Motorola ROM",14,MUTED,false);
-        subtitle.setPadding(0,dp(3),0,dp(0));main.addView(subtitle);
-        LinearLayout conn=card();conn.setBackground(round(RAISED,18,BORDER));
-        TextView connTitle=text("Права управления",12,MUTED,false); conn.addView(connTitle);
-        connectionText=text("Проверка Shizuku…",17,WARN,true);connectionText.setPadding(0,dp(6),0,dp(2));conn.addView(connectionText);
-        button(conn,"Подключить / проверить",true,()->{requestAccess();updateConnection();});
-        main.addView(conn,withTop(dp(22)));
-        container=new LinearLayout(this);container.setOrientation(LinearLayout.VERTICAL);main.addView(container,withTop(dp(20)));
+        setContentView(bodyScroll);
+
+        TextView eyebrow=text("L E G I O N  /  C O N T R O L",12,PURPLE,true);
+        main.addView(eyebrow);
+        TextView title=text("Система под контролем.",30,WHITE,true);
+        title.setPadding(0,dp(10),0,dp(5));
+        main.addView(title);
+        main.addView(text("Lenovo Legion Y70  ·  Motorola ROM  ·  без root",13,MUTED,false));
+
+        LinearLayout conn=card();
+        conn.setPadding(dp(15),dp(15),dp(15),dp(15));
+        connectionText=text("● ПРОВЕРКА SHIZUKU",12,WARN,true);
+        conn.addView(connectionText);
+        button(conn,"Проверить подключение",false,()->{requestAccess();updateConnection();});
+        main.addView(conn,withTop(dp(19)));
+
+        HorizontalScrollView navScroll=new HorizontalScrollView(this);
+        navScroll.setHorizontalScrollBarEnabled(false);
+        tabs=new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        navScroll.addView(tabs);
+        main.addView(navScroll,withTop(dp(18)));
+
+        container=new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        main.addView(container,withTop(dp(12)));
         footer=text("Изменения только по подтверждению. Без root, без управления ядром, без удаления пакетов.",12,MUTED,false);
-        footer.setPadding(0,dp(22),0,0);main.addView(footer);
+        footer.setPadding(0,dp(22),0,0);
+        main.addView(footer);
     }
     private void renderTab(){
         if(container==null)return;
         tabs.removeAllViews();
         for(int i=0;i<TABS.length;i++){
-            final int tab=i;TextView b=text(TABS[i],13,i==currentTab?BG:MUTED,true);
-            b.setTextSize(12);b.setGravity(Gravity.CENTER);b.setPadding(dp(2),dp(8),dp(2),dp(8));
-            b.setMinHeight(dp(50));b.setFocusable(true);b.setSelected(i==currentTab);
-            b.setContentDescription("Раздел: "+TABS[i]+(i==currentTab?", выбран":""));
-            b.setBackground(round(i==currentTab?PURPLE:RAISED,12,i==currentTab?PURPLE:RAISED));
-            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(52),1f);lp.setMargins(dp(2),0,dp(2),0);
-            tabs.addView(b,lp);b.setOnClickListener(v->{if(busy)return;currentTab=tab;renderTab();bodyScroll.post(()->bodyScroll.scrollTo(0,0));});
+            final int tab=i;
+            TextView chip=text(TABS[i],13,i==currentTab?BG:MUTED,true);
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(15),dp(11),dp(15),dp(11));
+            chip.setMinHeight(dp(48));
+            chip.setBackground(round(i==currentTab?PURPLE:CARD,14,BORDER));
+            chip.setFocusable(true);
+            chip.setSelected(i==currentTab);
+            chip.setContentDescription("Раздел "+TABS[i]+(i==currentTab?", выбран":""));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);
+            lp.setMargins(0,0,dp(8),0);
+            tabs.addView(chip,lp);
+            chip.setOnClickListener(v->{
+                if(busy)return;
+                currentTab=tab;
+                renderTab();
+                bodyScroll.post(()->bodyScroll.smoothScrollTo(0,0));
+            });
         }
         container.removeAllViews();
         actionButtons.clear();
@@ -162,8 +192,8 @@ public final class MainActivity extends Activity {
         updateBusyState();
     }
     private void section(String heading,String desc){
-        TextView t=text(heading,23,WHITE,true);t.setPadding(0,dp(19),0,dp(5));container.addView(t);
-        TextView d=text(desc,14,MUTED,false);container.addView(d);
+        TextView t=text(heading,20,WHITE,true);t.setPadding(0,dp(15),0,dp(4));container.addView(t);
+        TextView d=text(desc,13,MUTED,false);container.addView(d);
     }
     private void overview(){
         section("Устройство", "Актуальные значения считываются через Shizuku, а не из прошлых отчётов.");
@@ -200,9 +230,13 @@ public final class MainActivity extends Activity {
     private void display(){
         section("Дисплей","Применяются только поддерживаемые профили. Энергосбережение не отключается автоматически.");
         LinearLayout c=card();line(c,"РАЗРЕШЕНИЕ","По последнему аудиту: 1440 × 3168 · 442 dpi");
-        line(c,"ЧАСТОТА","Доступные профили: 60, 90 и 120 Гц");
+        line(c,"ЧАСТОТА","60, 90 и 120 Гц. Режим 144 Гц проверяется на устройстве перед применением.");
         button(c,"Проверить текущие значения",true,()->runRead("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density","Дисплей"));
-        for(int hz:new int[]{60,90,120}) button(c,"Установить "+hz+" Гц",false,()->confirm("Установить "+hz+" Гц?","Будут изменены min_refresh_rate и peak_refresh_rate. При энергосбережении система может ограничивать частоту до 60 Гц.",()->changeRate(hz)));
+        for(int hz:new int[]{60,90,120,144})
+            button(c,"Установить "+hz+" Гц"+(hz==144?" (проверка поддержки)":""),false,
+                ()->confirm("Установить "+hz+" Гц?","Будут изменены min_refresh_rate и peak_refresh_rate. При энергосбережении система может ограничить частоту до 60 Гц. Для 144 Гц сначала проверяется фактическая поддержка дисплея.",()->changeRate(hz)));
+        button(c,"Вернуть системный выбор частоты",false,
+            ()->confirm("Вернуть автоматическую частоту?","Будут удалены только пользовательские переопределения min_refresh_rate и peak_refresh_rate. Android снова выберет частоту по настройкам прошивки. Откат доступен в «История».",this::changeRateAuto));
         container.addView(c,withTop(dp(12)));
         LinearLayout anim=card();line(anim,"АНИМАЦИЯ ИНТЕРФЕЙСА","Три стандартных системных коэффициента");
         button(anim,"0× — без анимаций",false,()->changeAnimations("0.0"));
@@ -331,6 +365,11 @@ public final class MainActivity extends Activity {
     private void changeRate(int hz){
         if(!CommandPolicy.supportedRate(hz))return;
         executeAsync(()->{
+            if(hz==144){
+                String modes=exec(CommandPolicy.DISPLAY_144_CHECK);
+                if(!CommandPolicy.display144Supported(modes))
+                    throw new IllegalStateException("Дисплей не подтвердил режим 144 Гц. Настройки не изменены.");
+            }
             String oldMin=setting("system","min_refresh_rate");String oldPeak=setting("system","peak_refresh_rate");
             CommandPolicy.restoreValue("min_refresh_rate",oldMin);
             CommandPolicy.restoreValue("peak_refresh_rate",oldPeak);
@@ -342,6 +381,26 @@ public final class MainActivity extends Activity {
                 if(!setting("system","min_refresh_rate").equals(hz+".0")||!setting("system","peak_refresh_rate").equals(hz+".0")) throw new IllegalStateException("Проверка записи не пройдена");
             },()->restoreAndVerify(undo));
             onUi(()->showDialog("Готово","Установлено "+hz+" Гц. Энергосбережение может ограничивать активный режим."));
+        });
+    }
+    /** Clears only our two refresh-rate overrides, preserving an exact undo snapshot. */
+    private void changeRateAuto(){
+        executeAsync(()->{
+            String oldMin=setting("system","min_refresh_rate");
+            String oldPeak=setting("system","peak_refresh_rate");
+            CommandPolicy.restoreValue("min_refresh_rate",oldMin);
+            CommandPolicy.restoreValue("peak_refresh_rate",oldPeak);
+            JSONObject undo=new JSONObject().put("kind","settings").put("ns","system")
+                .put("keys",new org.json.JSONArray().put("min_refresh_rate").put("peak_refresh_rate"))
+                .put("values",new org.json.JSONArray().put(oldMin).put(oldPeak));
+            transact(undo,"Системный выбор частоты",()->{
+                exec(CommandPolicy.deleteSetting("system","min_refresh_rate"));
+                exec(CommandPolicy.deleteSetting("system","peak_refresh_rate"));
+                if(!"null".equals(setting("system","min_refresh_rate")) ||
+                   !"null".equals(setting("system","peak_refresh_rate")))
+                   throw new IllegalStateException("Android не подтвердил удаление переопределений");
+            },()->restoreAndVerify(undo));
+            onUi(()->showDialog("Системный режим", "Переопределения удалены. Частоту снова выбирает прошивка. Откат — в разделе «История»."));
         });
     }
     private void changeAnimations(String value){
@@ -476,7 +535,7 @@ public final class MainActivity extends Activity {
     }
     private void exportDiagnostic(){
         executeAsync(()->{
-            lastDiagnostic="LEGION CONTROL 1.3 / READ ONLY\n"+new Date()+"\n\n"+
+            lastDiagnostic="LEGION CONTROL 1.4 / READ ONLY\n"+new Date()+"\n\n"+
                     exec("id; getprop ro.product.model; getprop ro.boot.hardware.sku; getprop ro.soc.model; getprop ro.build.version.release")+"\n\nDISPLAY / POWER\n"+
                     exec("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density")+"\n\nGAME MODES\n"+
                     exec("cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift")+"\n\nOVERLAYS\n"+
@@ -505,18 +564,18 @@ public final class MainActivity extends Activity {
     private void onUi(Runnable r){runOnUiThread(r);}
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
     private GradientDrawable round(int fill,int radius,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
-    private LinearLayout card(){LinearLayout v=new LinearLayout(this);v.setOrientation(LinearLayout.VERTICAL);v.setPadding(dp(18),dp(18),dp(18),dp(17));v.setBackground(round(CARD,18,BORDER));return v;}
+    private LinearLayout card(){LinearLayout v=new LinearLayout(this);v.setOrientation(LinearLayout.VERTICAL);v.setPadding(dp(17),dp(18),dp(17),dp(16));v.setBackground(round(CARD,20,BORDER));return v;}
     private LinearLayout.LayoutParams withTop(int mt){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=mt;return p;}
-    private TextView text(String text,int size,int color,boolean bold){TextView v=new TextView(this);v.setText(text);v.setTextSize(size);v.setTextColor(color);v.setLineSpacing(dp(3),1.0f);if(bold)v.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));return v;}
+    private TextView text(String text,int size,int color,boolean bold){TextView v=new TextView(this);v.setText(text);v.setTextSize(size);v.setTextColor(color);v.setLineSpacing(dp(2),1.0f);if(bold)v.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));return v;}
     private TextView line(LinearLayout c,String name,String value){
-        TextView n=text(name,13,MUTED,true);c.addView(n,withTop(dp(8)));
-        TextView v=text(value,15,WHITE,false);v.setPadding(0,dp(3),0,dp(12));v.setTextIsSelectable(true);c.addView(v);return v;
+        TextView n=text(name,11,PURPLE,true);n.setLetterSpacing(0.05f);c.addView(n,withTop(dp(6)));
+        TextView v=text(value,14,WHITE,false);v.setPadding(0,dp(3),0,dp(11));v.setTextIsSelectable(true);c.addView(v);return v;
     }
     private Button button(LinearLayout parent,String label,boolean primary,Runnable action){
         Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
         b.setTextColor(primary?BG:WHITE);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
         b.setGravity(Gravity.CENTER);b.setMinHeight(dp(52));b.setPadding(dp(13),dp(11),dp(13),dp(11));
-        b.setBackground(round(primary?PURPLE:RAISED,13,primary?PURPLE:BORDER));
+        b.setBackground(round(primary?PURPLE:RAISED,13,primary?PURPLE:0xFF303039));
         LinearLayout.LayoutParams lp=withTop(dp(10));parent.addView(b,lp);
         b.setOnClickListener(v->{if(busy){showError("Дождись завершения предыдущего действия.");return;}action.run();});
         if(container!=null)actionButtons.add(b);
@@ -525,8 +584,15 @@ public final class MainActivity extends Activity {
     private void updateBusyState(){
         for(Button b:actionButtons) {
             // Respect controls intentionally disabled by their own content state.
-            if(busy) {b.setTag(b.isEnabled());b.setEnabled(false);b.setAlpha(0.55f);}
-            else {if(Boolean.TRUE.equals(b.getTag()))b.setEnabled(true);b.setTag(null);b.setAlpha(b.isEnabled()?1f:0.45f);}
+            if(busy) {
+                if(b.getTag()==null) b.setTag(Boolean.valueOf(b.isEnabled()));
+                b.setEnabled(false);
+                b.setAlpha(0.55f);
+            } else {
+                if(b.getTag() instanceof Boolean) b.setEnabled((Boolean)b.getTag());
+                b.setTag(null);
+                b.setAlpha(b.isEnabled()?1f:0.45f);
+            }
         }
     }
 }

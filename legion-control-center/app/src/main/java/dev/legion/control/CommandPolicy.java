@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 /** Pure command policy: all user-selected arguments are allowlisted. */
 public final class CommandPolicy {
     private CommandPolicy() {}
+    public static final String DISPLAY_144_CHECK = "dumpsys display | grep -m 1 'fps=144'";
     public static final String WILD_RIFT = "com.riotgames.league.wildrift";
     public static final List<String> BACKGROUND_PACKAGES = Arrays.asList(
             "com.riotgames.league.wildrift", "org.telegram.messenger", "dev.monolith.launcher", "com.termux");
@@ -16,7 +17,7 @@ public final class CommandPolicy {
     /** Service boundary: reject commands outside our exact UI operations, even from another binder client. */
     public static boolean permittedCommand(String c) {
         if (c == null || c.isEmpty() || c.length() > 500 || c.indexOf('\n') >= 0 || c.indexOf('\r') >= 0) return false;
-        if (READ_COMMANDS.contains(c)) return true;
+        if (READ_COMMANDS.contains(c) || DISPLAY_144_CHECK.equals(c)) return true;
         for (String pkg : BACKGROUND_PACKAGES) {
             if (c.equals(appOpsGet(pkg))) return true;
             for (String mode : Arrays.asList("allow", "ignore", "default")) if (c.equals(appOpsSet(pkg, mode))) return true;
@@ -31,7 +32,7 @@ public final class CommandPolicy {
             for (String key : Arrays.asList("min_refresh_rate", "peak_refresh_rate", "window_animation_scale", "transition_animation_scale", "animator_duration_scale")) {
                 if (!validSetting(ns, key)) continue;
                 if (c.equals(getSetting(ns,key)) || c.equals(deleteSetting(ns,key))) return true;
-                for (String v : Arrays.asList("60.0", "90.0", "120.0", "0.0", "0.5", "1.0")) {
+                for (String v : Arrays.asList("60.0", "90.0", "120.0", "144.0", "0.0", "0.5", "1.0")) {
                     try { if (c.equals(putSetting(ns,key,v))) return true; } catch (IllegalArgumentException ignored) {}
                 }
             }
@@ -62,7 +63,10 @@ public final class CommandPolicy {
             return normalized;
         } catch (NumberFormatException e) { throw new IllegalArgumentException("Unsupported saved value",e); }
     }
-    public static boolean supportedRate(int hz) { return hz == 60 || hz == 90 || hz == 120; }
+    public static boolean supportedRate(int hz) { return hz == 60 || hz == 90 || hz == 120 || hz == 144; }
+    public static boolean display144Supported(String modes) {
+        return modes != null && Pattern.compile("fps=144(?:\\.0+)?(?:\\d+)?(?:[, }\\]]|$)").matcher(modes).find();
+    }
     public static String getSetting(String namespace, String key) {
         if (!validSetting(namespace, key)) throw new IllegalArgumentException("Setting not allowed");
         return "settings get " + namespace + " " + key;
@@ -81,7 +85,7 @@ public final class CommandPolicy {
     }
     private static boolean safeSettingValue(String key,String val) {
         if (val == null) return false;
-        if (key.endsWith("refresh_rate")) return val.equals("60.0") || val.equals("90.0") || val.equals("120.0") || val.equals("null");
+        if (key.endsWith("refresh_rate")) return val.equals("60.0") || val.equals("90.0") || val.equals("120.0") || val.equals("144.0") || val.equals("null");
         return val.equals("0.0") || val.equals("0.5") || val.equals("1.0") || val.equals("null");
     }
     public static String appOpsGet(String pkg) {

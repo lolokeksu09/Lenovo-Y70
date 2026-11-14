@@ -30,3 +30,13 @@ java -cp /tmp/legion-test-classes dev.legion.control.MutationTransactionTest
 ```
 
 Device test status: **not yet run on physical Lenovo Y70**. Verify Shizuku permission, screen values, recovery after interrupted profile application, and TalkBack before treating UI/operations as device-validated.
+
+
+## 1.4.0 — restored layout and guarded refresh control
+
+- Restored 1.2.0 header, top scrollable category chips and original AMOLED palette.
+- Kept v1.3.0 quick profiles, pending-mutation recovery, AppOps default and native buttons.
+- Added optional 144 Hz with on-device display mode verification before mutation.
+- Added system-default refresh mode (delete only min/peak refresh overrides), with transactional rollback.
+- Fixed idempotent busy-state locking so repeated updates cannot permanently disable buttons.
+- Signed release retains `dev.legion.control` and original certificate; `versionCode=5`.

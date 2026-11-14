@@ -6,6 +6,6 @@
 <item name="android:windowActionModeOverlay">true</item>
 <item name="android:fontFamily">sans</item>
 <item name="android:windowBackground">#060609</item>
-<item name="android:colorAccent">#B4A3FF</item>
+<item name="android:colorAccent">#C3B3FF</item>
 </style>
 </resources>
