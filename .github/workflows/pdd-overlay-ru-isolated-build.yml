@@ -26,10 +26,18 @@ jobs:
           unzip -q /tmp/pdd-source.zip
       - name: Test source invariants
         run: bash pinduoduo_overlay_ru/scripts/test_local.sh
-      - name: Build APK
-        run: gradle -p pinduoduo_overlay_ru :app:assembleDebug --no-daemon --stacktrace
+      - name: Build unsigned release APK
+        run: gradle -p pinduoduo_overlay_ru :app:assembleRelease --no-daemon --stacktrace
+      - name: Export Android signing tool
+        shell: bash
+        run: |
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner.jar | head -n 1)
+          test -n "$SIGNER"
+          cp "$SIGNER" apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: PddOverlayRU-0.1.0-debug-apk
-          path: pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+          name: PddOverlayRU-0.1.0-unsigned-and-signer
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            apksigner.jar
           if-no-files-found: error
