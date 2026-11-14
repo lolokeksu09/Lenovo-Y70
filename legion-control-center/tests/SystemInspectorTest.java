@@ -31,13 +31,13 @@ public final class SystemInspectorTest {
         check(SystemInspector.appOpState("RUN_ANY_IN_BACKGROUND: allow").equals("Разрешён"),"allowed state");
         check(SystemInspector.appOpState("").equals("Не определено"),"empty state");
         SystemInspector.Result g=SystemInspector.gameModes("com.riotgames.league.wildrift current mode: standard, available game modes: [standard,custom]");
-        check(g.headline.equals("Активен: standard"),"game current mode");
+        check(g.headline.equals("Активен: Стандартный"),"game current mode");
         check(g.items.size()==3,"game available modes only");
         check(SystemInspector.gameModes("").items.isEmpty(),"game empty");
         SystemInspector.Result display=SystemInspector.display("0\n120.0\n120.0\nPhysical size: 1440x3168\nOverride density: 442");
         check(display.items.size()==5,"display parsed");
         check(display.items.get(0).state.equals("Выключено"),"power saver state");
-        check(display.items.get(1).state.equals("120.0 Гц"),"rate not real fps");
+        check(display.items.get(1).state.equals("120 Гц"),"rate not real fps");
         check(SystemInspector.display("").items.isEmpty(),"display empty");
         System.out.println("SystemInspectorTest PASS ("+count+" checks)");
     }
