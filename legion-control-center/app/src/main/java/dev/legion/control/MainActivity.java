@@ -273,6 +273,11 @@ public final class MainActivity extends Activity {
     }
     private void system(){
         section("Системные инструменты", "Проверка функций Motorola, шрифтов и разрешений через Shizuku.");
+        LinearLayout accessCenter=card();
+        line(accessCenter,"ДОСТУП ПРИЛОЖЕНИЙ","Проверка служб специальных возможностей и пошаговая помощь с ограниченными настройками Android. Не требует Shizuku.");
+        button(accessCenter,"Открыть центр доступа",true,
+            ()->startActivity(new Intent(this,AccessCenterActivity.class)));
+        container.addView(accessCenter,withTop(dp(12)));
 
         LinearLayout mods=card();
         line(mods,"MOTOROLA", "Пять компонентов прошивки. Показываем фактическую установку, не системные пути.");
