@@ -135,7 +135,8 @@ public final class AccessCenterActivity extends Activity {
     private Shizuku.UserServiceArgs autoProbeArgs(){
         return new Shizuku.UserServiceArgs(
                 new ComponentName(getPackageName(),ShellUserService.class.getName()))
-                .processNameSuffix("legion_control").daemon(false).debuggable(false).version(4);
+                .processNameSuffix("legion_access_probe").tag("legion_access_probe")
+                .daemon(false).debuggable(false).version(4);
     }
 
     private void bindAutoProbeIfPossible(){
@@ -272,8 +273,13 @@ public final class AccessCenterActivity extends Activity {
                 int probedCount=0;
                 try{
                     next=AccessRepository.read(appContext);
-                    ICommandService service=autoProbeService;
-                    if(service!=null&&next.readable){
+                }catch(Exception e){
+                    next=new AccessRepository.Snapshot(Collections.emptyList(),false,
+                        "Android не предоставил список служб. Попробуй повторить проверку.");
+                }
+                ICommandService service=autoProbeService;
+                if(service!=null&&next.readable){
+                    try{
                         AccessAutoProbe.Targets targets=AccessAutoProbe.targets(next.services);
                         if(targets.packages.length>0){
                             String raw=service.queryAccessibilityTargets(targets.packages,targets.uids,
@@ -283,13 +289,12 @@ public final class AccessCenterActivity extends Activity {
                             probedCount=result.confirmed;
                             next=new AccessRepository.Snapshot(result.services,next.readable,next.message);
                         }else{
-                            probeSummary="Все службы уже имеют определённый статус.";
+                            probeSummary="Службы уже имеют проверенный статус.";
                         }
+                    }catch(Exception e){
+                        // An optional Shizuku read must never erase the Android inventory.
+                        probeSummary="Shizuku: системный запрос недоступен, данные Android сохранены.";
                     }
-                }catch(Exception e){
-                    next=new AccessRepository.Snapshot(Collections.emptyList(),false,
-                        "Ошибка запроса Android. Попробуй повторить проверку.");
-                    probeSummary="Не удалось выполнить системную проверку Shizuku.";
                 }
                 final String probeResult=probeSummary;
                 final int checkedCount=probedCount;
