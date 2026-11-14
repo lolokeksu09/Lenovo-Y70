@@ -137,6 +137,63 @@ public final class SystemInspector {
         String v=text.trim();
         return v.equals("null")?"Выбирает Android":v+" Гц";
     }
+    /** Parsed device facts are intentionally separated from the low-level Shizuku identity. */
+    public static Result device(String output) {
+        String raw=output==null?"":output.trim();
+        java.util.Map<String,String> fields=new java.util.HashMap<>();
+        for(String line:raw.split("\\r?\\n")){
+            int colon=line.indexOf(':');
+            if(colon<=0)continue;
+            String key=line.substring(0,colon).trim();
+            if(!(key.equals("Model")||key.equals("SKU")||key.equals("SoC")||key.equals("Android")||
+                    key.equals("Power saving")||key.equals("Peak refresh")||key.equals("Minimum refresh")))continue;
+            String value=line.substring(colon+1).trim();
+            if(value.isEmpty()||value.length()>90)continue;
+            fields.put(key,value);
+        }
+        if(fields.size()<3)return new Result("Данные не получены", "Повтори проверку при подключённом Shizuku.",Collections.emptyList(),raw);
+        List<Item> items=new ArrayList<>();
+        String sku=fields.get("SKU"),model=fields.get("Model");
+        String title="Данные устройства";
+        if("XT2611-1".equalsIgnoreCase(sku))title="Lenovo Legion Y70";
+        if(sku!=null)items.add(new Item("Аппаратный код",sku,"Идентификатор устройства, независимый от имени прошивки",true));
+        if(model!=null)items.add(new Item("Установленная прошивка",model,"Имя, указанное прошивкой; это не аппаратная модель",true));
+        if(fields.containsKey("SoC"))items.add(new Item("Платформа SoC",fields.get("SoC"),"Идентификатор процессорной платформы",true));
+        if(fields.containsKey("Android"))items.add(new Item("Версия Android",fields.get("Android"),"Версия установленной системы",true));
+        String power=fields.get("Power saving");
+        if(power!=null){
+            String state="1".equals(power)?"Включено":"0".equals(power)?"Выключено":"Не определено";
+            String note="1".equals(power)?"60 Гц при энергосбережении — нормальная политика системы":"Состояние энергосбережения, а не показатель производительности";
+            items.add(new Item("Энергосбережение",state,note,true));
+        }
+        String min=fields.get("Minimum refresh"),max=fields.get("Peak refresh");
+        if(min!=null||max!=null){
+            String first=refreshValue(min),last=refreshValue(max);
+            String state=first.equals(last)?first:first+" — "+last;
+            items.add(new Item("Частота в настройках",state,"Границы min/peak, а НЕ фактическая частота дисплея или FPS",true));
+        }
+        return new Result(title,"Сведения прочитаны через Shizuku. Для диагностики доступен технический вывод.",items,raw);
+    }
+    private static String refreshValue(String value){
+        if(value==null||value.equalsIgnoreCase("null"))return "Авто";
+        try{
+            double n=Double.parseDouble(value);
+            if(!Double.isFinite(n)||n<1||n>1000)return "Не определено";
+            return Math.rint(n)==n?String.format(Locale.ROOT,"%.0f Гц",n):String.format(Locale.ROOT,"%.1f Гц",n);
+        }catch(NumberFormatException e){return "Не определено";}
+    }
+    public static String deviceBrief(Result result){
+        if(result==null||result.items.isEmpty())return "Не удалось получить данные устройства.";
+        String android="—",soc="—",power="—",refresh="—";
+        for(Item i:result.items){
+            if(i.name.equals("Версия Android"))android=i.state;
+            if(i.name.equals("Платформа SoC"))soc=i.state;
+            if(i.name.equals("Энергосбережение"))power=i.state.toLowerCase(Locale.ROOT);
+            if(i.name.equals("Частота в настройках"))refresh=i.state;
+        }
+        return result.headline+"  ·  Android "+android+"\nSoC "+soc+"  ·  энергосбережение "+power+"\nЧастота в настройках: "+refresh+" (не текущая частота)";
+    }
+
     public static String appOpState(String output){
         if(output==null||output.trim().isEmpty())return "Не определено";
         switch(CommandPolicy.appOpsMode(output)){
