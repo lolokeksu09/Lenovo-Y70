@@ -105,14 +105,23 @@ public final class SystemInspector {
         String current=CommandPolicy.currentGameMode(raw);
         List<Item> items=new ArrayList<>();
         if(!current.equals("unknown")){
-            items.add(new Item("Текущий режим",current,"Выбран системой Android",true));
+            items.add(new Item("Текущий режим",friendlyGameMode(current),"Выбран системой Android",true));
             for(String mode:new String[]{"standard","custom","performance","battery"}){
                 if(CommandPolicy.gameModeAvailable(raw,mode))
-                    items.add(new Item(mode,"Доступен","GameManager допускает этот режим",true));
+                    items.add(new Item(friendlyGameMode(mode),"Доступен","Режим подтверждён GameManager",true));
             }
         }
-        return new Result(current.equals("unknown")?"Режим не определён":"Активен: "+current,
+        return new Result(current.equals("unknown")?"Режим не определён":"Активен: "+friendlyGameMode(current),
             current.equals("unknown")?"GameManager не вернул ожидаемые данные.":"Доступность режимов определяется GameManager, а не названием телефона.",items,raw);
+    }
+    private static String friendlyGameMode(String mode){
+        switch(mode){
+            case "standard":return "Стандартный";
+            case "custom":return "Пользовательский";
+            case "performance":return "Производительность";
+            case "battery":return "Экономия батареи";
+            default:return "Не определён";
+        }
     }
     public static Result display(String output){
         String raw=output==null?"":output.trim();
@@ -126,7 +135,12 @@ public final class SystemInspector {
                 String line=lines[i].trim();
                 if(line.startsWith("Physical size:")||line.startsWith("Override size:")||line.startsWith("Physical density:")||line.startsWith("Override density:")){
                     String[] parts=line.split(":",2);
-                    items.add(new Item(parts[0].trim(),parts[1].trim(),"Показатель WindowManager",true));
+                    String name=parts[0].trim();
+                    if(name.equals("Physical size"))name="Разрешение экрана";
+                    if(name.equals("Override size"))name="Переопределённое разрешение";
+                    if(name.equals("Physical density"))name="Плотность экрана";
+                    if(name.equals("Override density"))name="Переопределённая плотность";
+                    items.add(new Item(name,parts[1].trim(),"Параметры WindowManager",true));
                 }
             }
         }
@@ -134,8 +148,7 @@ public final class SystemInspector {
             "Частоты в настройках не всегда равны фактически активной частоте дисплея.",items,raw);
     }
     private static String displayValue(String text){
-        String v=text.trim();
-        return v.equals("null")?"Выбирает Android":v+" Гц";
+        return refreshValue(text.trim());
     }
     /** Parsed device facts are intentionally separated from the low-level Shizuku identity. */
     public static Result device(String output) {
