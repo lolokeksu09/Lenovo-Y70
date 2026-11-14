@@ -498,6 +498,7 @@ public final class AccessCenterActivity extends Activity {
         info(status,AccessEvidence.label(service.state,observed),statusColor(service.state,observed));
         info(status,AccessEvidence.explanation(service.state,observed),
                 service.state==AccessStatus.State.RESTRICTED?WARN:MUTED);
+        info(status,autoProbeStatus,autoProbed>0?GREEN:MUTED);
         if(service.state==AccessStatus.State.RESTRICTED)
             info(status,"Ограничение подтверждено системной проверкой, но это может быть как ECM, так и политика администратора.",MUTED);
         if(service.state==AccessStatus.State.DISABLED_UNVERIFIED)
@@ -623,6 +624,8 @@ public final class AccessCenterActivity extends Activity {
         data.timeouts=stalledReads;
         data.lastDurationMs=lastDurationMs;
         data.lastResult=lastReadResult.isEmpty()?"Нет данных":lastReadResult;
+        data.autoProbeSource=autoProbeStatus;
+        data.automaticallyChecked=autoProbed;
         return AccessDiagnostics.format(data);
     }
 
