@@ -1,10 +1,15 @@
 package dev.legion.control;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.graphics.Color;
 import android.util.Log;
 import android.graphics.Typeface;
@@ -26,6 +31,8 @@ import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /** User-guided Android special access diagnostics: read-only, no hidden bypass. */
 public final class AccessCenterActivity extends Activity {
@@ -57,6 +64,13 @@ public final class AccessCenterActivity extends Activity {
     private final AccessRefreshCoordinator refreshCoordinator=new AccessRefreshCoordinator();
     private int stalledReads;
     private boolean refreshUnavailable;
+    private static final int DIAGNOSTIC_DOCUMENT_REQUEST=3218;
+    private long lastDurationMs=-1;
+    private String lastReadResult="";
+    private int buttonSelfTests;
+    private long lastButtonTestMillis;
+    private String preparedDiagnostics="";
+    private TextView buttonSelfTestStatus;
     private final List<Button> checkButtons=new ArrayList<>();
     private final List<TextView> checkFeedbackViews=new ArrayList<>();
 
@@ -69,6 +83,11 @@ public final class AccessCenterActivity extends Activity {
             missingRestrictionMenu=state.getBoolean("missing_restriction_menu",false);
             manualCheckCount=state.getInt("manual_check_count",0);
             refreshFeedback=state.getString("refresh_feedback","");
+            lastReadResult=state.getString("last_read_result","");
+            lastDurationMs=state.getLong("last_duration_ms",-1);
+            buttonSelfTests=state.getInt("button_self_tests",0);
+            lastButtonTestMillis=state.getLong("last_button_test_millis",0);
+            preparedDiagnostics=state.getString("prepared_diagnostics","");
         }
         buildRoot();
         showLoading();
@@ -84,6 +103,11 @@ public final class AccessCenterActivity extends Activity {
         out.putBoolean("missing_restriction_menu",missingRestrictionMenu);
         out.putInt("manual_check_count",manualCheckCount);
         out.putString("refresh_feedback",refreshFeedback);
+        out.putString("last_read_result",lastReadResult);
+        out.putLong("last_duration_ms",lastDurationMs);
+        out.putInt("button_self_tests",buttonSelfTests);
+        out.putLong("last_button_test_millis",lastButtonTestMillis);
+        out.putString("prepared_diagnostics",preparedDiagnostics);
         super.onSaveInstanceState(out);
     }
 
@@ -146,12 +170,14 @@ public final class AccessCenterActivity extends Activity {
         for(TextView note:checkFeedbackViews)note.setText("Считываю состояния служб Android…");
         if(ticket.manual)Toast.makeText(this,"Проверяю доступы…",Toast.LENGTH_SHORT).show();
 
+        final long startedElapsed=SystemClock.elapsedRealtime();
         final AccessRepository.Snapshot oldSnapshot=snapshot;
         final android.content.Context appContext=getApplicationContext();
         final Runnable watchdog=()->{
             if(!refreshCoordinator.isCurrent(ticket.id))return;
             Log.w(LOG_TAG,"refresh_timeout");
             stalledReads++;
+            lastDurationMs=SystemClock.elapsedRealtime()-startedElapsed;
             refreshExecutor.shutdownNow();
             if(stalledReads<MAX_STALLED_READS){
                 refreshExecutor=Executors.newSingleThreadExecutor();
@@ -162,6 +188,7 @@ public final class AccessCenterActivity extends Activity {
                 snapshot=new AccessRepository.Snapshot(Collections.emptyList(),false,
                     "Android не ответил на запрос. Попробуй повторить или перезапусти раздел.");
             if(ticket.manual)manualCheckCount++;
+            lastReadResult="Тайм-аут 12 секунд";
             refreshFeedback="Проверка "+(ticket.manual?"№"+manualCheckCount+" ":"")+
                 "прервана: Android не ответил за 12 секунд."+
                 (refreshUnavailable?" Закрой и открой центр доступа заново.":"");
@@ -189,6 +216,7 @@ public final class AccessCenterActivity extends Activity {
                     if(isFinishing()||isDestroyed()||!refreshCoordinator.isCurrent(ticket.id))return;
                     refreshHandler.removeCallbacks(watchdog);
                     refreshInFlight=false;
+                    lastDurationMs=SystemClock.elapsedRealtime()-startedElapsed;
                     snapshot=completed;
                     lastRefreshMillis=System.currentTimeMillis();
                     if(ticket.returnTop)selectedId=null;
@@ -197,6 +225,7 @@ public final class AccessCenterActivity extends Activity {
                         AccessRefreshSummary.changed(oldSnapshot.services,completed.services);
                     String message=AccessRefreshSummary.summary(completed.readable,
                         completed.services.size(),changed);
+                    lastReadResult=message;
                     if(ticket.manual)manualCheckCount++;
                     Log.i(LOG_TAG,"refresh_completed readable="+completed.readable+
                         " count="+completed.services.size()+" changed="+changed);
@@ -214,6 +243,8 @@ public final class AccessCenterActivity extends Activity {
             Log.w(LOG_TAG,"refresh_executor_rejected");
             refreshInFlight=false;
             refreshFeedback="Не удалось запустить проверку. Открой раздел заново.";
+            lastReadResult=refreshFeedback;
+            lastDurationMs=-1;
             if(snapshot==null)
                 snapshot=new AccessRepository.Snapshot(Collections.emptyList(),false,refreshFeedback);
             render();
@@ -241,6 +272,7 @@ public final class AccessCenterActivity extends Activity {
         content.removeAllViews();
         checkButtons.clear();
         checkFeedbackViews.clear();
+        buttonSelfTestStatus=null;
         AccessStatus.Service selected=findSelected();
         if(selectedId!=null && selected==null){
             selectedId=null;
@@ -269,6 +301,7 @@ public final class AccessCenterActivity extends Activity {
             refreshButton(error,"Повторить проверку",true);
             button(error,"Открыть спец. возможности",false,this::openAccessibility);
             content.addView(error,top(18));
+            addDiagnosticCard();
             return;
         }
 
@@ -288,6 +321,7 @@ public final class AccessCenterActivity extends Activity {
         if(unverified>0)info(summary,"Не удалось проверить ограничения: "+unverified,MUTED);
         refreshButton(summary,"Проверить снова",true);
         content.addView(summary,top(20));
+        addDiagnosticCard();
 
         if(services.isEmpty()){
             LinearLayout empty=card();
@@ -402,6 +436,7 @@ public final class AccessCenterActivity extends Activity {
         refreshButton(actions,"Проверить повторно",true);
         button(actions,"Открыть «"+service.applicationName+"» в настройках",false,()->openSelectedAppInfo(service));
         content.addView(actions,top(12));
+        addDiagnosticCard();
         info(content,"Legion Control не снимает ограничения Android, не выдаёт разрешения и не запускает ADB-команды для включения Accessibility.",MUTED);
     }
 
