@@ -5,6 +5,11 @@ import android.content.Intent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.ComponentName;
+import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.os.IBinder;
+import rikka.shizuku.Shizuku;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -52,6 +57,30 @@ public final class AccessCenterActivity extends Activity {
     private AccessRepository.Snapshot snapshot;
     private String selectedId;
     private String navigationWarning;
+    private volatile ICommandService autoProbeService;
+    private boolean autoProbeConnecting;
+    private boolean autoProbeBound;
+    private String autoProbeStatus="Shizuku: проверка подключения…";
+    private int autoProbed;
+    private final Shizuku.OnBinderReceivedListener shizukuReceived=()->runOnUiThread(this::bindAutoProbeIfPossible);
+    private final Shizuku.OnBinderDeadListener shizukuDead=()->runOnUiThread(()->{
+        autoProbeService=null;autoProbeConnecting=false;
+        autoProbeStatus="Shizuku не запущен. Автоопределение недоступно.";
+        refresh(false);
+    });
+    private final ServiceConnection autoProbeConnection=new ServiceConnection(){
+        @Override public void onServiceConnected(ComponentName name,IBinder binder){
+            autoProbeService=ICommandService.Stub.asInterface(binder);
+            autoProbeConnecting=false;
+            autoProbeStatus="Shizuku подключён. Получаю решение Android…";
+            refresh(false);
+        }
+        @Override public void onServiceDisconnected(ComponentName name){
+            autoProbeService=null;autoProbeConnecting=false;
+            autoProbeStatus="Соединение с Shizuku прервано";
+            refresh(false);
+        }
+    };
     private boolean missingRestrictionMenu;
     private boolean showSystemServices;
     private long lastRefreshMillis;
@@ -93,11 +122,41 @@ public final class AccessCenterActivity extends Activity {
         }
         buildRoot();
         showLoading();
+        Shizuku.addBinderReceivedListenerSticky(shizukuReceived);
+        Shizuku.addBinderDeadListener(shizukuDead);
     }
 
     @Override protected void onResume() {
         super.onResume();
+        bindAutoProbeIfPossible();
         refresh(false);
+    }
+
+    private Shizuku.UserServiceArgs autoProbeArgs(){
+        return new Shizuku.UserServiceArgs(
+                new ComponentName(getPackageName(),ShellUserService.class.getName()))
+                .processNameSuffix("legion_control").daemon(false).debuggable(false).version(4);
+    }
+
+    private void bindAutoProbeIfPossible(){
+        if(autoProbeService!=null||autoProbeConnecting||isFinishing())return;
+        try{
+            if(!Shizuku.pingBinder()){
+                autoProbeStatus="Shizuku не запущен. Автоопределение недоступно.";
+                return;
+            }
+            if(Shizuku.checkSelfPermission()!=PackageManager.PERMISSION_GRANTED){
+                autoProbeStatus="Разреши Legion Control доступ к Shizuku в главном экране.";
+                return;
+            }
+            autoProbeConnecting=true;
+            Shizuku.bindUserService(autoProbeArgs(),autoProbeConnection);
+            autoProbeBound=true;
+            autoProbeStatus="Shizuku: подключение к системной проверке…";
+        }catch(Throwable error){
+            autoProbeConnecting=false;
+            autoProbeStatus="Shizuku: подключение недоступно. Ручная проверка работает.";
+        }
     }
 
     @Override protected void onSaveInstanceState(Bundle out) {
@@ -208,12 +267,32 @@ public final class AccessCenterActivity extends Activity {
         try{
             refreshExecutor.execute(()->{
                 AccessRepository.Snapshot next;
+                String probeSummary=autoProbeService==null?
+                    "Автоопределение через Shizuku недоступно":autoProbeStatus;
+                int probedCount=0;
                 try{
                     next=AccessRepository.read(appContext);
+                    ICommandService service=autoProbeService;
+                    if(service!=null&&next.readable){
+                        AccessAutoProbe.Targets targets=AccessAutoProbe.targets(next.services);
+                        if(targets.packages.length>0){
+                            String raw=service.queryAccessibilityTargets(targets.packages,targets.uids,
+                                    android.os.Process.myUid()/100000);
+                            AccessAutoProbe.Result result=AccessAutoProbe.apply(next.services,raw);
+                            probeSummary=result.explanation;
+                            probedCount=result.confirmed;
+                            next=new AccessRepository.Snapshot(result.services,next.readable,next.message);
+                        }else{
+                            probeSummary="Все службы уже имеют определённый статус.";
+                        }
+                    }
                 }catch(Exception e){
                     next=new AccessRepository.Snapshot(Collections.emptyList(),false,
                         "Ошибка запроса Android. Попробуй повторить проверку.");
+                    probeSummary="Не удалось выполнить системную проверку Shizuku.";
                 }
+                final String probeResult=probeSummary;
+                final int checkedCount=probedCount;
                 final AccessRepository.Snapshot completed=next;
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed()||!refreshCoordinator.isCurrent(ticket.id))return;
@@ -221,6 +300,8 @@ public final class AccessCenterActivity extends Activity {
                     refreshInFlight=false;
                     lastDurationMs=SystemClock.elapsedRealtime()-startedElapsed;
                     snapshot=completed;
+                    autoProbeStatus=probeResult;
+                    autoProbed=checkedCount;
                     lastRefreshMillis=System.currentTimeMillis();
                     if(ticket.returnTop)selectedId=null;
                     boolean changed=oldSnapshot==null ||
@@ -261,6 +342,13 @@ public final class AccessCenterActivity extends Activity {
         refreshCoordinator.close();
         refreshHandler.removeCallbacksAndMessages(null);
         refreshExecutor.shutdownNow();
+        Shizuku.removeBinderReceivedListener(shizukuReceived);
+        Shizuku.removeBinderDeadListener(shizukuDead);
+        if(autoProbeBound){
+            try{Shizuku.unbindUserService(autoProbeArgs(),autoProbeConnection,false);}
+            catch(Throwable ignored){}
+        }
+        autoProbeService=null;
         super.onDestroy();
     }
 
@@ -329,6 +417,7 @@ public final class AccessCenterActivity extends Activity {
                 restricted>0?WARN:MUTED);
         if(unverified>0)info(summary,"Статус не уточнён: "+unverified,MUTED);
         info(summary,"* Включая подтверждённые вручную состояния. Не все результаты определяет Android API.",MUTED);
+        info(summary,autoProbeStatus,autoProbed>0?GREEN:MUTED);
         refreshButton(summary,"Проверить снова",true);
         content.addView(summary,top(20));
 
