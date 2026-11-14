@@ -1,0 +1,9 @@
+# Signing material — never commit private release keys or secrets
+*.jks
+*.keystore
+*.p12
+*.pkcs12
+legion-github-secrets.env
+Legion-Control-signing-kit.zip
+.env
+.env.*
