@@ -48,7 +48,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private LinearLayout container, main, tabs;
     private ScrollView bodyScroll;
-    private TextView connectionText, footer, liveSummary, profileSummary;
+    private TextView connectionText, footer, liveSummary, profileSummary, activeFontStatus;
     private final List<Button> actionButtons = new ArrayList<>();
     private ICommandService remote;
     private int currentTab=0;
@@ -250,26 +250,122 @@ public final class MainActivity extends Activity {
         button(anim,"1× — штатная",false,()->changeAnimations("1.0"));container.addView(anim,withTop(dp(12)));
     }
     private void system(){
-        section("Системные инструменты","Доступные функции Motorola и выборочные AppOps без вмешательства в критические службы.");
-        LinearLayout mods=card();line(mods,"MOTOROLA","GameMode · Freeform · Mobile Desktop · Battery Care · Personalize");
-        button(mods,"Проверить установленные модули",true,()->runRead("for p in com.motorola.gamemode com.motorola.freeform com.motorola.mobiledesktop com.motorola.batterycare com.motorola.personalize; do echo ===$p; pm path $p | head -1; done","Модули Motorola"));container.addView(mods,withTop(dp(12)));
-        LinearLayout font=card();line(font,"ШРИФТЫ ANDROID","Используются только установленные RRO без записи в /system");
-        button(font,"Проверить оверлеи",true,()->runRead("cmd overlay list --user 0 | grep -E 'com.android.theme.font'","Системные шрифты"));
-        for(String p:CommandPolicy.FONTS){String label=p.substring(p.lastIndexOf('.')+1);button(font,"Шрифт · "+label,false,()->confirm("Применить "+label+"?","Изменение системного шрифта может быть переопределено темой Motorola.",()->changeFont(p)));}
-        container.addView(font,withTop(dp(12)));
-        LinearLayout apps=card();line(apps,"ФОНОВЫЕ ПРОЦЕССЫ","Ограничения могут нарушить уведомления и работу приложений");
-        button(apps,"Проверить AppOps",true,()->runRead("cmd appops get com.termux RUN_ANY_IN_BACKGROUND; cmd appops get dev.monolith.launcher RUN_ANY_IN_BACKGROUND; cmd appops get org.telegram.messenger RUN_ANY_IN_BACKGROUND","AppOps"));
-        for(String p:CommandPolicy.BACKGROUND_PACKAGES){
-            if(p.equals("com.termux")) continue;
-            button(apps,"Разрешить фон · "+shortName(p),false,()->changeAppOp(p,"allow"));
-            button(apps,"Ограничить фон · "+shortName(p),false,()->confirm("Ограничить фон для "+shortName(p)+"?","Уведомления могут перестать приходить. Изменение обратимо.",()->changeAppOp(p,"ignore")));
-            button(apps,"Вернуть настройку Android · "+shortName(p),false,()->confirm("Сбросить AppOps для "+shortName(p)+"?","Будет установлен режим default для RUN_ANY_IN_BACKGROUND. Остальные разрешения не изменятся.",()->changeAppOp(p,"default")));
+        section("Системные инструменты", "Проверка функций Motorola, шрифтов и разрешений через Shizuku.");
+
+        LinearLayout mods=card();
+        line(mods,"MOTOROLA", "Пять компонентов прошивки. Показываем фактическую установку, не системные пути.");
+        button(mods,"Проверить компоненты Motorola",true,()->runStructuredRead(
+            "for p in com.motorola.gamemode com.motorola.freeform com.motorola.mobiledesktop com.motorola.batterycare com.motorola.personalize; do echo ===$p; pm path $p | head -1; done", "Модули Motorola"));
+        container.addView(mods,withTop(dp(12)));
+
+        LinearLayout font=card();
+        line(font,"СИСТЕМНЫЕ ШРИФТЫ", "Выбор только из установленного набора Android. Изменения можно откатить.");
+        activeFontStatus=line(font,"ТЕКУЩИЙ ШРИФТ", "Не проверен · нажми «Проверить шрифты»");
+        button(font,"Проверить шрифты",true,()->readFonts());
+        LinearLayout fontChoices=new LinearLayout(this);
+        fontChoices.setOrientation(LinearLayout.VERTICAL);
+        for(int i=0;i<CommandPolicy.FONTS.size();i+=2){
+            LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setPadding(0,dp(9),0,0);
+            for(int j=i;j<Math.min(i+2,CommandPolicy.FONTS.size());j++){
+                String pkg=CommandPolicy.FONTS.get(j);
+                String name=fontLabel(pkg);
+                actionChip(row,name,false,()->confirm("Установить шрифт «"+name+"»?", "Системное оформление Motorola может заменить выбранный шрифт.",()->changeFont(pkg)));
+            }
+            fontChoices.addView(row);
         }
+        font.addView(fontChoices,withTop(dp(8)));
+        container.addView(font,withTop(dp(12)));
+
+        LinearLayout apps=card();
+        line(apps,"ФОНОВЫЕ ПРОЦЕССЫ", "Ограничение может задерживать уведомления. Управление разрешено только выбранным приложениям.");
+        java.util.Map<String,TextView> appStates=new java.util.LinkedHashMap<>();
+        for(String pkg:CommandPolicy.BACKGROUND_PACKAGES){
+            if(pkg.equals("com.termux"))continue;
+            LinearLayout item=new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(dp(13),dp(12),dp(13),dp(12));
+            item.setBackground(round(RAISED,14,BORDER));
+            TextView name=text(shortName(pkg),16,WHITE,true);
+            item.addView(name);
+            TextView state=text("Состояние не проверено",13,MUTED,false);
+            state.setPadding(0,dp(4),0,dp(9));
+            item.addView(state);
+            appStates.put(pkg,state);
+            LinearLayout options=new LinearLayout(this);
+            options.setOrientation(LinearLayout.HORIZONTAL);
+            actionChip(options,"Разрешить",false,()->changeAppOp(pkg,"allow"));
+            actionChip(options,"Ограничить",false,()->confirm("Ограничить "+shortName(pkg)+"?","Это может повлиять на уведомления. Вернуть настройку можно здесь или через «История».",()->changeAppOp(pkg,"ignore")));
+            actionChip(options,"Сброс",false,()->changeAppOp(pkg,"default"));
+            item.addView(options);
+            apps.addView(item,withTop(dp(10)));
+        }
+        button(apps,"Обновить состояния AppOps",true,()->readAppOpStates(appStates));
         container.addView(apps,withTop(dp(12)));
+
         LinearLayout safety=card();
-        line(safety,"СИСТЕМНЫЕ СЛУЖБЫ","Проверка без исправлений: экстренные вызовы, предупреждения и SIM Toolkit. Отключённые службы могут влиять на безопасность и связь.");
-        button(safety,"Проверить отключённые службы",true,()->runRead("pm list packages -d","Отключённые системные пакеты"));
+        line(safety,"БЕЗОПАСНОСТЬ СИСТЕМЫ", "Отчёт об отключённых пакетах. Экстренные службы и остальные компоненты здесь не изменяются.");
+        button(safety,"Проверить отключённые службы",false,()->runStructuredRead("pm list packages -d","Отключённые службы"));
         container.addView(safety,withTop(dp(12)));
+    }
+    private String fontLabel(String pkg){
+        String name=pkg.substring(pkg.lastIndexOf('.')+1);
+        return name.equals("notoserifsource")?"Noto Serif":name;
+    }
+    /** Compact buttons preserve tap targets and are blocked during a Shizuku write. */
+    private void actionChip(LinearLayout row,String caption,boolean primary,Runnable action){
+        Button b=new Button(this);
+        b.setAllCaps(false);b.setText(caption);b.setTextSize(12);
+        b.setTextColor(primary?BG:WHITE);
+        b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+        b.setMinHeight(dp(48));b.setMinimumHeight(dp(48));
+        b.setPadding(dp(5),dp(7),dp(5),dp(7));
+        b.setBackground(round(primary?PURPLE:CARD,11,primary?PURPLE:BORDER));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);
+        if(row.getChildCount()>0)lp.leftMargin=dp(7);
+        row.addView(b,lp);
+        actionButtons.add(b);
+        b.setOnClickListener(v->{if(busy)return;action.run();});
+    }
+    private void readFonts(){
+        executeAsync(()->{
+            String raw=exec("cmd overlay list --user 0 | grep -E 'com.android.theme.font'");
+            SystemInspector.Result result=SystemInspector.fonts(raw);
+            onUi(()->{
+                if(currentTab==3&&activeFontStatus!=null&&activeFontStatus.isAttachedToWindow())
+                    activeFontStatus.setText(result.headline);
+                showStructuredResults("Системные шрифты",result);
+            });
+        });
+    }
+    private void readAppOpStates(java.util.Map<String,TextView> states){
+        executeAsync(()->{
+            java.util.Map<String,String> results=new java.util.LinkedHashMap<>();
+            for(String pkg:states.keySet()){
+                String output=exec(CommandPolicy.appOpsGet(pkg));
+                results.put(pkg,SystemInspector.appOpState(output));
+            }
+            onUi(()->{
+                if(currentTab!=3)return;
+                for(java.util.Map.Entry<String,String> item:results.entrySet()){
+                    TextView view=states.get(item.getKey());
+                    if(view!=null&&view.isAttachedToWindow()){
+                        view.setText("Фоновая работа: "+item.getValue());
+                        view.setTextColor(item.getValue().equals("Ограничен")?WARN:item.getValue().equals("Разрешён")?GREEN:MUTED);
+                    }
+                }
+            });
+        });
+    }
+    private void runStructuredRead(String cmd,String title){
+        executeAsync(()->{
+            String raw=exec(cmd);
+            SystemInspector.Result result;
+            if(title.equals("Модули Motorola"))result=SystemInspector.motorola(raw);
+            else if(title.equals("Системные шрифты"))result=SystemInspector.fonts(raw);
+            else result=SystemInspector.disabled(raw);
+            onUi(()->showStructuredResults(title,result));
+        });
     }
     private String shortName(String pkg){return pkg.equals("org.telegram.messenger")?"Telegram":pkg.equals("dev.monolith.launcher")?"MONOLITH":"Wild Rift";}
     private void history(){
@@ -285,7 +381,11 @@ public final class MainActivity extends Activity {
     }
     private void runRead(String command,String title){
         executeAsync(()->{
-            String output=exec(command);onUi(()->showDialog(title,output));
+            String output=exec(command);
+            if("Режимы Wild Rift".equals(title)||"Дисплей".equals(title)){
+                SystemInspector.Result structured="Режимы Wild Rift".equals(title)?SystemInspector.gameModes(output):SystemInspector.display(output);
+                onUi(()->showStructuredResults(title,structured));
+            }else onUi(()->showDialog(title,output));
         });
     }
     private interface Work{void run() throws Exception;}
@@ -435,7 +535,11 @@ public final class MainActivity extends Activity {
                 String after=exec("cmd overlay list --user 0");
                 if(!after.contains("[x] "+font))throw new IllegalStateException("Оверлей не включился");
             },()->restoreAndVerify(undo));
-            onUi(()->showDialog("Готово","Шрифт применён. Перезапуск отдельных экранов может потребоваться."));
+            onUi(()->{
+                if(currentTab==3&&activeFontStatus!=null&&activeFontStatus.isAttachedToWindow())
+                    activeFontStatus.setText("Активен: "+fontLabel(font));
+                showDialog("Шрифт применён", "Выбран "+fontLabel(font)+". Некоторые экраны могут обновиться после перезапуска.");
+            });
         });
     }
     private void changeGame(String mode){
@@ -463,7 +567,7 @@ public final class MainActivity extends Activity {
                 String now=CommandPolicy.appOpsMode(exec(CommandPolicy.appOpsGet(pkg)));
                 if(!now.equals(target))throw new IllegalStateException("Не удалось подтвердить AppOp: "+now);
             },()->restoreAndVerify(snapshot));
-            onUi(()->showDialog("Готово","AppOps обновлён для "+shortName(pkg)));
+            onUi(()->showDialog("Настройка сохранена","Для "+shortName(pkg)+" выбран режим «"+SystemInspector.appOpState("RUN_ANY_IN_BACKGROUND: "+target)+"». Нажми «Обновить состояния AppOps» для проверки."));
         });
     }
     private void restoreSettings(JSONObject undo) throws Exception {
@@ -541,7 +645,7 @@ public final class MainActivity extends Activity {
     }
     private void exportDiagnostic(){
         executeAsync(()->{
-            lastDiagnostic="LEGION CONTROL 1.4.1 / READ ONLY\n"+new Date()+"\n\n"+
+            lastDiagnostic="LEGION CONTROL 1.5.0 / READ ONLY\n"+new Date()+"\n\n"+
                     exec("id; getprop ro.product.model; getprop ro.boot.hardware.sku; getprop ro.soc.model; getprop ro.build.version.release")+"\n\nDISPLAY / POWER\n"+
                     exec("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density")+"\n\nGAME MODES\n"+
                     exec("cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift")+"\n\nOVERLAYS\n"+
@@ -573,6 +677,99 @@ public final class MainActivity extends Activity {
     }
     private void showError(String s){
         showActionDialog("Операция не выполнена", s, "Понятно", null, null, null, false);
+    }
+    /** Structured detail sheet: overview first, technical dump only on request. */
+    private void showStructuredResults(String title,SystemInspector.Result result){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        LinearLayout panel=new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(20),dp(20),dp(20),dp(17));
+        panel.setBackground(round(CARD,24,BORDER));
+
+        TextView heading=text(title,23,WHITE,true);
+        panel.addView(heading);
+        TextView summary=text(result.headline,16,PURPLE,true);
+        summary.setPadding(0,dp(12),0,dp(5));
+        panel.addView(summary);
+        TextView hint=text(result.description,13,MUTED,false);
+        hint.setPadding(0,0,0,dp(13));
+        panel.addView(hint);
+
+        ScrollView scroll=new ScrollView(this){
+            @Override protected void onMeasure(int w,int h){
+                int limit=(int)(getResources().getDisplayMetrics().heightPixels*0.55f);
+                super.onMeasure(w,View.MeasureSpec.makeMeasureSpec(limit,View.MeasureSpec.AT_MOST));
+            }
+        };
+        scroll.setFillViewport(false);
+        LinearLayout rows=new LinearLayout(this);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        for(SystemInspector.Item item:result.items){
+            LinearLayout entry=new LinearLayout(this);
+            entry.setPadding(dp(14),dp(13),dp(14),dp(12));
+            entry.setOrientation(LinearLayout.VERTICAL);
+            entry.setBackground(round(RAISED,14,BORDER));
+            LinearLayout top=new LinearLayout(this);
+            top.setOrientation(LinearLayout.HORIZONTAL);
+            TextView name=text(item.name,15,WHITE,true);
+            top.addView(name,new LinearLayout.LayoutParams(0,-2,1f));
+            TextView state=text(item.state,12,item.positive?GREEN:WARN,true);
+            state.setGravity(Gravity.END);
+            top.addView(state);
+            entry.addView(top);
+            if(!item.detail.isEmpty()){
+                TextView detail=text(item.detail,12,MUTED,false);
+                detail.setPadding(0,dp(5),0,0);
+                entry.addView(detail);
+            }
+            rows.addView(entry,withTop(dp(7)));
+        }
+        if(result.items.isEmpty()){
+            TextView empty=text("Нет элементов для отображения. Проверь доступ Shizuku или открой технические сведения.",14,MUTED,false);
+            rows.addView(empty,withTop(dp(9)));
+        }
+        TextView technical=text(result.technical,12,0xFFD1D0DD,false);
+        technical.setTextIsSelectable(true);
+        technical.setTypeface(Typeface.MONOSPACE);
+        technical.setPadding(dp(10),dp(11),dp(10),dp(11));
+        technical.setBackground(round(RAISED,12,BORDER));
+        technical.setVisibility(View.GONE);
+        rows.addView(technical,withTop(dp(8)));
+        scroll.addView(rows);
+        panel.addView(scroll,new LinearLayout.LayoutParams(-1,-2));
+        Button details=dialogButton("Технические сведения",false,()->{
+            boolean show=technical.getVisibility()!=View.VISIBLE;
+            technical.setVisibility(show?View.VISIBLE:View.GONE);
+        });
+        panel.addView(details,withTop(dp(13)));
+        LinearLayout buttons=new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        Button copy=dialogButton("Копировать",false,()->{
+            ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+            if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("Legion Control",result.technical));
+            dialog.dismiss();
+        });
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);
+        lp.rightMargin=dp(9);
+        buttons.addView(copy,lp);
+        Button close=dialogButton("Закрыть",true,dialog::dismiss);
+        buttons.addView(close,new LinearLayout.LayoutParams(0,-2,1f));
+        panel.addView(buttons,withTop(dp(9)));
+        android.widget.FrameLayout frame=new android.widget.FrameLayout(this);
+        frame.setPadding(dp(13),dp(10),dp(13),dp(10));
+        frame.addView(panel);
+        dialog.setContentView(frame);
+        dialog.show();
+        if(dialog.getWindow()!=null){
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams attrs=dialog.getWindow().getAttributes();
+            attrs.width=WindowManager.LayoutParams.MATCH_PARENT;
+            attrs.height=WindowManager.LayoutParams.WRAP_CONTENT;
+            attrs.dimAmount=0.65f;
+            dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            dialog.getWindow().setAttributes(attrs);
+        }
     }
     private void showActionDialog(String title,String content,String primaryLabel,Runnable primary,String secondaryLabel,Runnable secondary,boolean mono){
         Dialog dialog=new Dialog(this);
