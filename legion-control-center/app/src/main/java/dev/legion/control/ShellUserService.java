@@ -70,7 +70,8 @@ public final class ShellUserService extends ICommandService.Stub {
             Method asInterface=stub.getMethod("asInterface",IBinder.class);
             Object manager=asInterface.invoke(null,binder);
             if(manager==null)return "ERROR\tBINDER_UNAVAILABLE";
-            Method eligibility=manager.getClass().getMethod(
+            Class<?> iface=Class.forName("android.view.accessibility.IAccessibilityManager");
+            Method eligibility=iface.getMethod(
                 "isAccessibilityTargetAllowed",String.class,int.class,int.class);
             Set<String> seen=new HashSet<>();
             StringBuilder output=new StringBuilder();
