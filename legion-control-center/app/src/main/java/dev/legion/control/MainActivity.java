@@ -422,8 +422,14 @@ public final class MainActivity extends Activity {
         String pending=getPreferences(0).getString("pending","");
         if(!pending.isEmpty()){ LinearLayout restore=card();line(restore,"НЕЗАВЕРШЁННАЯ ОПЕРАЦИЯ",getPreferences(0).getString("pending_label","Доступен аварийный откат"));button(restore,"Восстановить исходные значения",true,()->confirm("Восстановление", "Отменить незавершённое изменение?",this::recoverPending));container.addView(restore,withTop(dp(12)));}
         LinearLayout c=card();line(c,"ПОСЛЕДНЯЯ ОПЕРАЦИЯ",last.isEmpty()?"Изменений пока нет":getPreferences(0).getString("undo_label","Доступен откат"));
-        Button undoButton=button(c,"Откатить последнее изменение",true,()->confirm("Вернуть предыдущие настройки?","Будут восстановлены значения, сохранённые перед последней операцией.",this::undo));
-        undoButton.setEnabled(!last.isEmpty());
+        if(!last.isEmpty()){
+            button(c,"Откатить последнее изменение",true,
+                ()->confirm("Вернуть предыдущие настройки?",
+                    "Будут восстановлены значения, сохранённые перед последней операцией.",this::undo));
+        }else{
+            TextView unavailable=text("Откат станет доступен после первого изменения настроек.",13,MUTED,false);
+            c.addView(unavailable,withTop(dp(12)));
+        }
         container.addView(c,withTop(dp(12)));
 
         List<ActionHistory.Entry> events=ActionHistory.read(getPreferences(0).getString("action_history",""));
@@ -1057,6 +1063,10 @@ public final class MainActivity extends Activity {
         return b;
     }
     private void updateBusyState(){
+        if(busy&&remote!=null&&connectionText!=null){
+            connectionText.setText("● SHIZUKU · ВЫПОЛНЯЕТСЯ КОМАНДА");
+            connectionText.setTextColor(PURPLE);
+        }else updateConnection();
         for(Button b:actionButtons) {
             // Respect controls intentionally disabled by their own content state.
             if(busy) {
