@@ -99,7 +99,7 @@ jobs:
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
             echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='4' versionName='1.4.0'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='5' versionName='1.4.0'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
