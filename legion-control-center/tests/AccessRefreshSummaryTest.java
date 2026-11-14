@@ -31,7 +31,7 @@ public final class AccessRefreshSummaryTest {
             Arrays.asList(one,two),Collections.singleton(one.id),true,eligible);
         ok(AccessRefreshSummary.changed(initial,blocked),"Permission change detected");
         List<AccessStatus.Service> removed=AccessStatus.resolve(
-            Collections.singleton(one),Collections.singleton(one.id),true);
+            Collections.singletonList(one),Collections.singleton(one.id),true);
         ok(AccessRefreshSummary.changed(initial,removed),"Missing service detected");
         List<AccessStatus.Service> added=AccessStatus.resolve(
             Arrays.asList(one,two,record("org.example.three/.Svc","org.example.three")),
