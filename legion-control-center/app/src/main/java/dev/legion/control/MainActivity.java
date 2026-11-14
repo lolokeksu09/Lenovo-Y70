@@ -234,7 +234,7 @@ public final class MainActivity extends Activity {
         button(profile,"На каждый день   ·   90 Гц / 0,5×",false,()->confirm("Применить повседневный профиль?", "Изменятся 5 системных значений. Энергосбережение не затрагивается. Откат доступен в разделе «История».",()->applyProfile("daily")));
         button(profile,"Считать значения профиля",false,this::readProfile);
         container.addView(profile,withTop(dp(12)));
-        LinearLayout tip=card();line(tip,"Игровой режим", "По последнему аудиту Wild Rift поддерживает standard/custom. Режим performance не предлагается. Проверить текущее состояние можно во вкладке «Игры».");container.addView(tip,withTop(dp(12)));
+        LinearLayout tip=card();line(tip,"Игровой режим", "GameManager показывает доступные режимы установленной системы. Проверь их во вкладке «Игры»: приложение не предлагает неподтверждённые режимы.");container.addView(tip,withTop(dp(12)));
     }
     private void runOverviewRead(){
         executeAsync(()->{
@@ -253,12 +253,12 @@ public final class MainActivity extends Activity {
         button(c,"Проверить режимы GameManager",true,()->runRead("cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift","Режимы Wild Rift"));
         button(c,"Вернуть стандартный режим",false,()->confirm("Вернуть стандартный игровой режим?","Будет изменён только GameManager для Wild Rift.",()->changeGame("standard")));
         container.addView(c,withTop(dp(12)));
-        LinearLayout info=card();line(info,"ДОСТУПНЫЕ РЕЖИМЫ ПО АУДИТУ","standard, custom");line(info,"PERFORMANCE","Не предлагается: отсутствует в available game modes");container.addView(info,withTop(dp(10)));
+        LinearLayout info=card();line(info,"СПИСОК РЕЖИМОВ","Нажми «Проверить режимы GameManager», чтобы увидеть текущий и реально доступные режимы.");container.addView(info,withTop(dp(10)));
     }
     private void display(){
         section("Дисплей","Применяются только поддерживаемые профили. Энергосбережение не отключается автоматически.");
-        LinearLayout c=card();line(c,"РАЗРЕШЕНИЕ","По последнему аудиту: 1440 × 3168 · 442 dpi");
-        line(c,"ЧАСТОТА","60, 90 и 120 Гц. Режим 144 Гц проверяется на устройстве перед применением.");
+        LinearLayout c=card();line(c,"РАЗРЕШЕНИЕ","Текущие размеры и плотность считываются из Android после нажатия «Проверить текущие значения».");
+        line(c,"ЧАСТОТА","В приложении доступны 60, 90, 120 Гц; 144 Гц проверяется на устройстве. Итоговую частоту определяет система и энергосбережение.");
         button(c,"Проверить текущие значения",true,()->runRead("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density","Дисплей"));
         for(int hz:new int[]{60,90,120,144})
             button(c,"Установить "+hz+" Гц"+(hz==144?" (проверка поддержки)":""),false,
