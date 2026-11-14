@@ -1,0 +1,23 @@
+services:
+  license:
+    build: .
+    restart: unless-stopped
+    environment:
+      LICENSE_DATABASE_PATH: /data/licenses.sqlite3
+      LICENSE_SIGNING_KEY_PATH: /secrets/private.pem
+      LICENSE_LOOKUP_SECRET: ${LICENSE_LOOKUP_SECRET:?Set a random value of at least 32 bytes}
+    ports:
+      - "127.0.0.1:8787:8080"
+    volumes:
+      - ./data:/data
+      - ./secrets/private.pem:/secrets/private.pem:ro
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
