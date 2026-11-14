@@ -53,6 +53,7 @@ public final class AccessCenterActivity extends Activity {
     private String selectedId;
     private String navigationWarning;
     private boolean missingRestrictionMenu;
+    private boolean showSystemServices;
     private long lastRefreshMillis;
     private int manualCheckCount;
     private String refreshFeedback="";
@@ -81,6 +82,7 @@ public final class AccessCenterActivity extends Activity {
         if(state!=null){
             selectedId=state.getString("selected_access_service");
             missingRestrictionMenu=state.getBoolean("missing_restriction_menu",false);
+            showSystemServices=state.getBoolean("show_system_services",false);
             manualCheckCount=state.getInt("manual_check_count",0);
             refreshFeedback=state.getString("refresh_feedback","");
             lastReadResult=state.getString("last_read_result","");
@@ -101,6 +103,7 @@ public final class AccessCenterActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putString("selected_access_service",selectedId);
         out.putBoolean("missing_restriction_menu",missingRestrictionMenu);
+        out.putBoolean("show_system_services",showSystemServices);
         out.putInt("manual_check_count",manualCheckCount);
         out.putString("refresh_feedback",refreshFeedback);
         out.putString("last_read_result",lastReadResult);
@@ -306,19 +309,26 @@ public final class AccessCenterActivity extends Activity {
         }
 
         List<AccessStatus.Service> services=snapshot.services;
-        int enabled=0,disabled=0,restricted=0,unverified=0;
-        for(AccessStatus.Service s:services){
-            if(s.state==AccessStatus.State.ENABLED)enabled++;
-            else if(s.state==AccessStatus.State.DISABLED)disabled++;
-            else if(s.state==AccessStatus.State.RESTRICTED)restricted++;
+        int enabled=0,disabled=0,restricted=0,unverified=0,systemCount=0;
+        for(AccessStatus.Service entry:services){
+            if(entry.system)systemCount++;
+            AccessEvidence.Verdict evidence=manualEvidence(entry);
+            if(entry.state==AccessStatus.State.ENABLED)enabled++;
+            else if(entry.state==AccessStatus.State.DISABLED ||
+                (entry.state==AccessStatus.State.DISABLED_UNVERIFIED &&
+                 evidence==AccessEvidence.Verdict.SWITCH_AVAILABLE))disabled++;
+            else if(entry.state==AccessStatus.State.RESTRICTED ||
+                (entry.state==AccessStatus.State.DISABLED_UNVERIFIED &&
+                 evidence==AccessEvidence.Verdict.RESTRICTED_SCREEN))restricted++;
             else unverified++;
         }
         LinearLayout summary=card();
         addHeading(summary,"Службы Android");
         info(summary,"Найдено: "+services.size()+"   Включено: "+enabled,WHITE);
-        info(summary,"Выключено (доступно): "+disabled+"   Ограничено Android: "+restricted,
+        info(summary,"Доступно для включения*: "+disabled+"   Ограничено*: "+restricted,
                 restricted>0?WARN:MUTED);
-        if(unverified>0)info(summary,"Не удалось проверить ограничения: "+unverified,MUTED);
+        if(unverified>0)info(summary,"Статус не уточнён: "+unverified,MUTED);
+        info(summary,"* Включая подтверждённые вручную состояния. Не все результаты определяет Android API.",MUTED);
         refreshButton(summary,"Проверить снова",true);
         content.addView(summary,top(20));
         addDiagnosticCard();
@@ -331,24 +341,31 @@ public final class AccessCenterActivity extends Activity {
             button(empty,"Открыть спец. возможности",false,this::openAccessibility);
             content.addView(empty,top(12));
         }else{
-            addHeading(content,"Установленные службы");
+            addHeading(content,"Приложения");
             if(!snapshot.message.isEmpty())info(content,snapshot.message,WARN);
+            boolean systemHeading=false;
             for(AccessStatus.Service service:services){
+                if(service.system&&!showSystemServices)continue;
+                if(service.system&&!systemHeading){
+                    addHeading(content,"Системные службы");
+                    systemHeading=true;
+                }
                 LinearLayout entry=card();
+                entry.setPadding(dp(14),dp(10),dp(14),dp(11));
                 TextView name=text(service.applicationName,16,WHITE,true);
                 entry.addView(name);
                 if(!service.serviceName.equals(service.applicationName))
                     info(entry,service.serviceName,MUTED);
-                int color=statusColor(service.state);
-                info(entry,AccessStatus.label(service.state),color);
+                AccessEvidence.Verdict observed=manualEvidence(service);
+                String stateLabel=AccessEvidence.label(service.state,observed);
+                info(entry,stateLabel,statusColor(service.state,observed));
                 TextView open=text("Подробнее  ›",13,PURPLE,true);
                 open.setGravity(Gravity.END);
-                open.setPadding(0,dp(8),0,0);
                 entry.addView(open);
                 entry.setMinimumHeight(dp(76));
                 entry.setFocusable(true);
                 entry.setContentDescription(service.applicationName+", "+service.serviceName+", "+
-                        AccessStatus.label(service.state)+", открыть подробности");
+                        stateLabel+", открыть подробности");
                 entry.setOnClickListener(v->{
                     selectedId=service.id;
                     missingRestrictionMenu=false;
@@ -356,7 +373,14 @@ public final class AccessCenterActivity extends Activity {
                     render();
                     scroll.smoothScrollTo(0,0);
                 });
-                content.addView(entry,top(10));
+                content.addView(entry,top(8));
+            }
+            if(systemCount>0){
+                button(content,showSystemServices?"Скрыть системные службы":
+                    "Показать системные службы ("+systemCount+")",false,()->{
+                    showSystemServices=!showSystemServices;
+                    render();
+                });
             }
         }
         info(content,"Shizuku через ADB работает независимо от состояния его службы Accessibility. Ничего не включается автоматически.",MUTED);
@@ -376,8 +400,9 @@ public final class AccessCenterActivity extends Activity {
 
         LinearLayout status=card();
         addHeading(status,"Текущее состояние");
-        info(status,AccessStatus.label(service.state),statusColor(service.state));
-        info(status,AccessStatus.restrictionDetail(service.state),
+        AccessEvidence.Verdict observed=manualEvidence(service);
+        info(status,AccessEvidence.label(service.state,observed),statusColor(service.state,observed));
+        info(status,AccessEvidence.explanation(service.state,observed),
                 service.state==AccessStatus.State.RESTRICTED?WARN:MUTED);
         if(service.state==AccessStatus.State.RESTRICTED)
             info(status,"Ограничение подтверждено системной проверкой, но это может быть как ECM, так и политика администратора.",MUTED);
@@ -385,7 +410,23 @@ public final class AccessCenterActivity extends Activity {
             info(status,"Android не предоставил результат внутренней проверки. Не считаем приложение заблокированным без доказательств.",MUTED);
         content.addView(status,top(18));
 
-        if(AccessStatus.showManualGuide(service.state)){
+        if(AccessEvidence.canConfirm(service.state)){
+            LinearLayout observedCard=card();
+            addHeading(observedCard,"Уточнить статус по экрану Android");
+            info(observedCard,"Legion не смог автоматически проверить ограничение. Открой службу в настройках Android, затем укажи то, что видишь. Это не меняет разрешения.",MUTED);
+            button(observedCard,"Открыть специальные возможности",false,this::openAccessibility);
+            button(observedCard,"Переключатель доступен, но выключен",true,
+                ()->saveEvidence(service,AccessEvidence.Verdict.SWITCH_AVAILABLE));
+            button(observedCard,"Android пишет «Ограниченный доступ»",false,
+                ()->saveEvidence(service,AccessEvidence.Verdict.RESTRICTED_SCREEN));
+            if(observed!=AccessEvidence.Verdict.NONE)
+                button(observedCard,"Сбросить мою отметку",false,
+                    ()->saveEvidence(service,AccessEvidence.Verdict.NONE));
+            info(observedCard,"Отметка действительна 7 дней или до обновления приложения. Системная проверка имеет приоритет.",MUTED);
+            content.addView(observedCard,top(12));
+        }
+
+        if(AccessEvidence.needsRestrictedWizard(service.state,observed)){
             LinearLayout wizard=card();
             addHeading(wizard,service.state==AccessStatus.State.RESTRICTED?"Системное ограничение":"Как проверить ограничение");
             info(wizard,"1. Открой специальные возможности. Если служба серая — нажми на неё и вызови предупреждение Android. Если переключатель доступен, используй обычное включение.",WHITE);
@@ -580,6 +621,37 @@ public final class AccessCenterActivity extends Activity {
                 .format(new Date(lastRefreshMillis));
     }
 
+    /** User evidence is deliberately separate from and weaker than a system verdict. */
+    private AccessEvidence.Verdict manualEvidence(AccessStatus.Service service){
+        if(!AccessEvidence.canConfirm(service.state))return AccessEvidence.Verdict.NONE;
+        String key="access_evidence_"+service.id;
+        android.content.SharedPreferences prefs=getSharedPreferences("access_evidence",MODE_PRIVATE);
+        long pkgUpdated=0;
+        try{
+            pkgUpdated=getPackageManager().getPackageInfo(service.packageName,0).lastUpdateTime;
+        }catch(Exception ignored){}
+        return AccessEvidence.parse(prefs.getString(key,""),
+            prefs.getLong(key+"_at",0),System.currentTimeMillis(),pkgUpdated);
+    }
+
+    private void saveEvidence(AccessStatus.Service service,AccessEvidence.Verdict evidence){
+        if(!AccessEvidence.canConfirm(service.state))return;
+        String key="access_evidence_"+service.id;
+        android.content.SharedPreferences.Editor editor=getSharedPreferences("access_evidence",MODE_PRIVATE).edit();
+        if(evidence==AccessEvidence.Verdict.NONE){
+            editor.remove(key).remove(key+"_at");
+        }else{
+            editor.putString(key,evidence.name()).putLong(key+"_at",System.currentTimeMillis());
+        }
+        if(!editor.commit()){
+            Toast.makeText(this,"Не удалось сохранить отметку",Toast.LENGTH_LONG).show();
+            return;
+        }
+        render();
+        Toast.makeText(this,evidence==AccessEvidence.Verdict.NONE?
+            "Отметка сброшена":"Статус отмечен вручную",Toast.LENGTH_SHORT).show();
+    }
+
     private void addTitle(String title){
         TextView t=text(title,27,WHITE,true);
         t.setPadding(0,dp(18),0,dp(8));
@@ -608,9 +680,13 @@ public final class AccessCenterActivity extends Activity {
         return t;
     }
 
-    private int statusColor(AccessStatus.State state){
+    private int statusColor(AccessStatus.State state,AccessEvidence.Verdict evidence){
         if(state==AccessStatus.State.ENABLED||state==AccessStatus.State.DISABLED)return GREEN;
         if(state==AccessStatus.State.RESTRICTED)return WARN;
+        if(state==AccessStatus.State.DISABLED_UNVERIFIED){
+            if(evidence==AccessEvidence.Verdict.SWITCH_AVAILABLE)return GREEN;
+            if(evidence==AccessEvidence.Verdict.RESTRICTED_SCREEN)return WARN;
+        }
         return MUTED;
     }
 
