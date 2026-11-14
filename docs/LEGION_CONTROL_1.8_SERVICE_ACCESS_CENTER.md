@@ -88,6 +88,22 @@ Refs: https://android.googlesource.com/platform/packages/modules/Permission/+/b2
 
 **Beta2 build:** `dev.legion.control`, versionCode `11`, versionName `1.8.0-beta2`, same pinned release certificate; physical-device verification still required.
 
+## Beta 3: direct navigation to selected app (2026-11-14)
+
+**Reported UX defect:** A user viewing a disabled Accessibility service (e.g. Kimi Claw) chose the missing-menu help and landed in **All apps**, then had to search for the same application manually.
+
+**Fixed behavior:**
+- The service details wizard now offers **"Настройки [application label]"**.
+- Selecting **"Пункт отсутствует — открыть [application label]"** immediately launches the selected package's App Info through the public `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` intent and `Uri.fromParts("package", packageName, null)`. The app package is taken from the selected service, not from a guess or string built from its label.
+- If the system does not support that intent, the safe fallback opens the generic Apps list. This fallback may still require manual selection — it is an OS limitation, not a silently completed action.
+- After returning, the detail page remains on the same service and re-reads its enabled state. If the menu is still missing, additional diagnostic guidance is available, including the alternate manual Apps-list route.
+- Android may hide the "Allow restricted settings" item on directly deep-linked App Info screens on some ROMs. This action improves navigation but does **not** guarantee that the option appears; the manual app-list route remains an explicitly labeled fallback.
+- The app never grants Accessibility permissions by itself.
+
+Official Android API: https://developer.android.com/reference/android/provider/Settings#ACTION_APPLICATION_DETAILS_SETTINGS
+
+**Version:** `1.8.0-beta3`, versionCode `12`, release signing fingerprint unchanged. Hardware verification remains pending.
+
 ## Security / release invariants
 
 No `WRITE_SECURE_SETTINGS`, no accessibility toggling, no changes to `ACCESS_RESTRICTED_SETTINGS`, no hidden app-op writes, no shell injection for arbitrary packages. Opening Settings does not prove that permissions were granted. Existing Shizuku allowlist remains unchanged. The Activity is `exported=false`. No internet permission or analytics. No private signing material in source.
