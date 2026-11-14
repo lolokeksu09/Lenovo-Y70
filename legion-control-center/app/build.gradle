@@ -6,8 +6,8 @@ android {
         applicationId 'dev.legion.control'
         minSdk 28
         targetSdk 35
-        versionCode 15
-        versionName '1.8.0-beta6'
+        versionCode 16
+        versionName '1.8.0-beta7'
     }
     buildFeatures { aidl true }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
