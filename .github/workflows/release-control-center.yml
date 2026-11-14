@@ -1,10 +1,10 @@
-name: Build Legion Control v1.8.0-beta1 (stable signing)
+name: Build Legion Control v1.8.0-beta2 (stable signing)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'feat/legion-control-v1.8.0'
+      - 'feat/legion-control-v1.8.0-beta2'
     paths:
       - '.github/workflows/release-control-center.yml'
       - 'legion-control-center/**'
@@ -29,8 +29,8 @@ jobs:
           set -euo pipefail
           APP=legion-control-center/app/build.gradle
           grep -F "applicationId 'dev.legion.control'" "$APP"
-          grep -F 'versionCode 10' "$APP"
-          grep -F "versionName '1.8.0-beta1'" "$APP"
+          grep -F 'versionCode 11' "$APP"
+          grep -F "versionName '1.8.0-beta2'" "$APP"
           ! grep -q 'applicationIdSuffix' "$APP"
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
           BASE=legion-control-center/app/src/main/java/dev/legion/control
@@ -47,6 +47,9 @@ jobs:
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.DeviceOverviewTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.AccessStatusTest
           grep -F 'android:exported="false"' legion-control-center/app/src/main/AndroidManifest.xml
+          grep -F 'Пункт отсутствует — что делать?' "$BASE/AccessCenterActivity.java"
+          grep -F 'Settings.ACTION_APPLICATION_SETTINGS' "$BASE/SettingsNavigator.java"
+          grep -F 'Android 17 использует Enhanced Confirmation' "$BASE/AccessCenterActivity.java"
           grep -F "private void showStructuredResults(" "$BASE/MainActivity.java"
 
       - uses: actions/setup-java@v4
@@ -89,7 +92,7 @@ jobs:
           UNSIGNED='legion-control-center/app/build/outputs/apk/release/app-release-unsigned.apk'
           ALIGNED="$RUNNER_TEMP/legion-control-aligned.apk"
           KEYSTORE="$RUNNER_TEMP/legion-control-release.p12"
-          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.8.0-beta1-release.apk"
+          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.8.0-beta2-release.apk"
           test -s "$UNSIGNED"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
           keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
@@ -105,14 +108,14 @@ jobs:
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
             echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='10' versionName='1.8.0-beta1'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='11' versionName='1.8.0-beta2'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
       - name: Upload compatible signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.8.0-beta1-Release-Signed
-          path: Legion-Control-v1.8.0-beta1-release.apk
+          name: Legion-Control-v1.8.0-beta2-Release-Signed
+          path: Legion-Control-v1.8.0-beta2-release.apk
           if-no-files-found: error
           retention-days: 30
