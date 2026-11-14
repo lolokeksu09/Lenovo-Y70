@@ -440,6 +440,90 @@ public final class AccessCenterActivity extends Activity {
         info(content,"Legion Control не снимает ограничения Android, не выдаёт разрешения и не запускает ADB-команды для включения Accessibility.",MUTED);
     }
 
+    /** Immediate feedback that proves a touch reached our Activity without Binder or Shizuku. */
+    private void selfTestButton(){
+        buttonSelfTests++;
+        lastButtonTestMillis=System.currentTimeMillis();
+        Log.i(LOG_TAG,"selftest_tap count="+buttonSelfTests);
+        if(buttonSelfTestStatus!=null)buttonSelfTestStatus.setText(buttonTestLabel());
+        Toast.makeText(this,"Касание обработано: №"+buttonSelfTests,Toast.LENGTH_SHORT).show();
+    }
+
+    private String buttonTestLabel(){
+        if(buttonSelfTests==0)return "Самопроверка кнопки ещё не запускалась.";
+        String time=new SimpleDateFormat("HH:mm:ss",Locale.getDefault())
+                .format(new Date(lastButtonTestMillis));
+        return "Нажатий обработано: "+buttonSelfTests+" · "+time;
+    }
+
+    private void addDiagnosticCard(){
+        LinearLayout box=card();
+        addHeading(box,"Диагностика отклика");
+        info(box,"Если «Проверить повторно» не отвечает, сначала проверь обычную кнопку без обращения к Android или Shizuku.",MUTED);
+        buttonSelfTestStatus=text(buttonTestLabel(),13,GREEN,false);
+        box.addView(buttonSelfTestStatus);
+        button(box,"Самопроверка кнопки",true,this::selfTestButton);
+        info(box,"Последний ответ Android: "+(lastDurationMs<0?"нет данных":lastDurationMs+" мс"),MUTED);
+        button(box,"Сохранить диагностический TXT",false,this::exportDiagnostics);
+        button(box,"Копировать отчёт",false,this::copyDiagnostics);
+        content.addView(box,top(12));
+    }
+
+    private String makeDiagnosticReport(){
+        AccessDiagnostics.Data data=new AccessDiagnostics.Data();
+        try{
+            data.version=getPackageManager().getPackageInfo(getPackageName(),0).versionName;
+        }catch(Exception e){data.version="не определена";}
+        data.model=Build.MODEL;
+        data.androidVersion=Build.VERSION.RELEASE;
+        data.readable=snapshot!=null&&snapshot.readable;
+        data.services=snapshot==null?Collections.emptyList():snapshot.services;
+        data.selectedId=selectedId;
+        data.manualRefreshes=manualCheckCount;
+        data.buttonTests=buttonSelfTests;
+        data.timeouts=stalledReads;
+        data.lastDurationMs=lastDurationMs;
+        data.lastResult=lastReadResult.isEmpty()?"Нет данных":lastReadResult;
+        return AccessDiagnostics.format(data);
+    }
+
+    private void exportDiagnostics(){
+        preparedDiagnostics=makeDiagnosticReport();
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/plain");
+        String stamp=new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(new Date());
+        intent.putExtra(Intent.EXTRA_TITLE,"legion_access_"+stamp+".txt");
+        try{
+            startActivityForResult(intent,DIAGNOSTIC_DOCUMENT_REQUEST);
+        }catch(RuntimeException e){
+            Toast.makeText(this,"Системный выбор файла недоступен. Используй «Копировать отчёт».",Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void copyDiagnostics(){
+        ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+        if(clipboard==null){
+            Toast.makeText(this,"Буфер обмена недоступен",Toast.LENGTH_LONG).show();
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText("Legion Control — диагностика",makeDiagnosticReport()));
+        Toast.makeText(this,"Диагностика скопирована",Toast.LENGTH_SHORT).show();
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=DIAGNOSTIC_DOCUMENT_REQUEST||resultCode!=RESULT_OK||
+                data==null||data.getData()==null)return;
+        try(OutputStream out=getContentResolver().openOutputStream(data.getData())){
+            if(out==null)throw new IllegalStateException("Файл недоступен для записи");
+            out.write(preparedDiagnostics.getBytes(StandardCharsets.UTF_8));
+            Toast.makeText(this,"Диагностический TXT сохранён",Toast.LENGTH_LONG).show();
+        }catch(Exception e){
+            Toast.makeText(this,"Не удалось сохранить TXT. Используй «Копировать отчёт».",Toast.LENGTH_LONG).show();
+        }
+    }
+
     /** Directly opens the chosen package's App Info. No package lookup by the user. */
     private void openSelectedAppInfo(AccessStatus.Service service){
         if(service==null||!AccessStatus.validPackage(service.packageName)){
