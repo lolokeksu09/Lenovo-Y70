@@ -1,10 +1,10 @@
-name: Build Legion Control v1.4.0 (stable signing)
+name: Build Legion Control v1.4.1 (stable signing)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'feat/legion-control-v1.4.0'
+      - 'feat/legion-control-v1.4.1'
     paths:
       - '.github/workflows/release-control-center.yml'
       - 'legion-control-center/**'
@@ -29,8 +29,8 @@ jobs:
           set -euo pipefail
           APP=legion-control-center/app/build.gradle
           grep -F "applicationId 'dev.legion.control'" "$APP"
-          grep -F 'versionCode 5' "$APP"
-          grep -F "versionName '1.4.0'" "$APP"
+          grep -F 'versionCode 6' "$APP"
+          grep -F "versionName '1.4.1'" "$APP"
           ! grep -q 'applicationIdSuffix' "$APP"
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
           BASE=legion-control-center/app/src/main/java/dev/legion/control
@@ -83,7 +83,7 @@ jobs:
           UNSIGNED='legion-control-center/app/build/outputs/apk/release/app-release-unsigned.apk'
           ALIGNED="$RUNNER_TEMP/legion-control-aligned.apk"
           KEYSTORE="$RUNNER_TEMP/legion-control-release.p12"
-          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.4.0-release.apk"
+          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.4.1-release.apk"
           test -s "$UNSIGNED"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
           keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
@@ -99,14 +99,14 @@ jobs:
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
             echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='5' versionName='1.4.0'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='6' versionName='1.4.1'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
       - name: Upload compatible signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.4.0-Release-Signed
-          path: Legion-Control-v1.4.0-release.apk
+          name: Legion-Control-v1.4.1-Release-Signed
+          path: Legion-Control-v1.4.1-release.apk
           if-no-files-found: error
           retention-days: 30
