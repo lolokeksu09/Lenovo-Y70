@@ -1,7 +1,9 @@
 package dev.legion.control;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -9,10 +11,14 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.os.IBinder;
 import android.view.Gravity;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -216,7 +222,7 @@ public final class MainActivity extends Activity {
     private void runOverviewRead(String command,String title){
         executeAsync(()->{
             String output=exec(command);
-            onUi(()->{if(liveSummary!=null)liveSummary.setText(output);showDialog(title,output);});
+            onUi(()->{if(liveSummary!=null)liveSummary.setText(output);showDialog(title,formatDialogContent(title,output));});
         });
     }
     private void games(){
@@ -535,7 +541,7 @@ public final class MainActivity extends Activity {
     }
     private void exportDiagnostic(){
         executeAsync(()->{
-            lastDiagnostic="LEGION CONTROL 1.4 / READ ONLY\n"+new Date()+"\n\n"+
+            lastDiagnostic="LEGION CONTROL 1.4.1 / READ ONLY\n"+new Date()+"\n\n"+
                     exec("id; getprop ro.product.model; getprop ro.boot.hardware.sku; getprop ro.soc.model; getprop ro.build.version.release")+"\n\nDISPLAY / POWER\n"+
                     exec("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density")+"\n\nGAME MODES\n"+
                     exec("cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift")+"\n\nOVERLAYS\n"+
@@ -558,9 +564,142 @@ public final class MainActivity extends Activity {
             }catch(Exception e){showError("Ошибка экспорта: "+e.getMessage());}
         }
     }
-    private void confirm(String title,String message,Runnable yes){new AlertDialog.Builder(this).setTitle(title).setMessage(message).setNegativeButton("Отмена",(d,w)->{}).setPositiveButton("Применить",(d,w)->yes.run()).show();}
-    private void showDialog(String title,String content){new AlertDialog.Builder(this).setTitle(title).setMessage(content.isEmpty()?"Пустой ответ":content).setPositiveButton("OK",null).show();}
-    private void showError(String s){new AlertDialog.Builder(this).setTitle("Операция не выполнена").setMessage(s).setPositiveButton("Понятно",null).show();}
+    private void confirm(String title,String message,Runnable yes){
+        showActionDialog(title, message, "Применить", yes, "Отмена", null, false);
+    }
+    private void showDialog(String title,String content){
+        showActionDialog(title, content==null||content.isEmpty()?"Пустой ответ":content, "OK", null,
+                needsCopy(content)?"Копировать":null, needsCopy(content)?()->copyText(content):null, isMonospaceContent(content));
+    }
+    private void showError(String s){
+        showActionDialog("Операция не выполнена", s, "Понятно", null, null, null, false);
+    }
+    private void showActionDialog(String title,String content,String primaryLabel,Runnable primary,String secondaryLabel,Runnable secondary,boolean mono){
+        Dialog dialog=new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout panel=new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(20),dp(18),dp(20),dp(16));
+        panel.setBackground(round(CARD,22,BORDER));
+
+        TextView titleView=text(title,24,WHITE,true);
+        titleView.setPadding(0,0,0,dp(8));
+        panel.addView(titleView);
+
+        ScrollView messageScroll=new ScrollView(this){
+            @Override protected void onMeasure(int widthMeasureSpec,int heightMeasureSpec){
+                int limit=Math.min(dp(360),(int)(getResources().getDisplayMetrics().heightPixels*0.58f));
+                super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(limit,View.MeasureSpec.AT_MOST));
+            }
+        };
+        messageScroll.setFillViewport(false);
+        LinearLayout.LayoutParams messageLp=new LinearLayout.LayoutParams(-1,-2);
+        TextView body=text(content,15,0xFFD8D7E4,false);
+        body.setTextIsSelectable(true);
+        body.setEllipsize(null);
+        body.setPadding(0,0,0,0);
+        if(mono) body.setTypeface(Typeface.MONOSPACE);
+        messageScroll.addView(body,new ViewGroup.LayoutParams(-1,-2));
+        panel.addView(messageScroll,messageLp);
+
+        LinearLayout actions=new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.END);
+        actions.setPadding(0,dp(16),0,0);
+        panel.addView(actions,new LinearLayout.LayoutParams(-1,-2));
+
+        if(!TextUtils.isEmpty(secondaryLabel)){
+            Button secondaryButton=dialogButton(secondaryLabel,false,()->{
+                dialog.dismiss();
+                if(secondary!=null) secondary.run();
+            });
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);
+            lp.rightMargin=dp(10);
+            actions.addView(secondaryButton,lp);
+        }
+        Button primaryButton=dialogButton(primaryLabel,true,()->{
+            dialog.dismiss();
+            if(primary!=null) primary.run();
+        });
+        actions.addView(primaryButton,new LinearLayout.LayoutParams(TextUtils.isEmpty(secondaryLabel)?-1:0,-2,TextUtils.isEmpty(secondaryLabel)?0f:1f));
+
+        int outer=dp(16);
+        android.widget.FrameLayout frame=new android.widget.FrameLayout(this);
+        frame.setPadding(outer, outer, outer, outer);
+        frame.addView(panel,new android.widget.FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
+        dialog.setContentView(frame);
+
+        dialog.show();
+        if(dialog.getWindow()!=null){
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams attributes=dialog.getWindow().getAttributes();
+            attributes.dimAmount=0.68f;
+            attributes.width=WindowManager.LayoutParams.MATCH_PARENT;
+            attributes.height=WindowManager.LayoutParams.WRAP_CONTENT;
+            dialog.getWindow().setAttributes(attributes);
+        }
+    }
+    private Button dialogButton(String label,boolean primary,Runnable action){
+        Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
+        b.setTextColor(primary?BG:WHITE);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+        b.setMinHeight(dp(48));b.setPadding(dp(14),dp(10),dp(14),dp(10));
+        b.setBackground(round(primary?PURPLE:RAISED,13,primary?PURPLE:0xFF303039));
+        b.setOnClickListener(v->action.run());
+        return b;
+    }
+    private boolean needsCopy(String content){ return content!=null && content.length()>120; }
+    private boolean isMonospaceContent(String content){
+        if(content==null) return false;
+        return content.contains("package:")||content.contains("getprop")||content.contains("[")||content.contains("===")||content.contains("uid=")||content.contains("\n• ");
+    }
+    private void copyText(String content){
+        ClipboardManager cm=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+        if(cm!=null) cm.setPrimaryClip(ClipData.newPlainText("legion-control", content));
+        showActionDialog("Скопировано", "Текст окна скопирован в буфер обмена.", "OK", null, null, null, false);
+    }
+    private String formatDialogContent(String title,String raw){
+        String content=(raw==null?"":raw.trim());
+        if(content.isEmpty()) return "Пустой ответ";
+        if("Модули Motorola".equals(title)) return formatMotorolaModules(content);
+        if("Системные шрифты".equals(title)) return formatFontOverlays(content);
+        return content;
+    }
+    private String formatMotorolaModules(String raw){
+        StringBuilder out=new StringBuilder();
+        String current=null;
+        for(String line:raw.split("\n")){
+            line=line.trim();
+            if(line.startsWith("===")){
+                current=line.substring(3);
+                String label=current.substring(current.lastIndexOf('.')+1)
+                        .replace("gamemode","GameMode")
+                        .replace("freeform","Freeform")
+                        .replace("mobiledesktop","Mobile Desktop")
+                        .replace("batterycare","Battery Care")
+                        .replace("personalize","Personalize");
+                if(out.length()>0) out.append("\n\n");
+                out.append("• ").append(label);
+            } else if(line.startsWith("package:")) {
+                out.append("\n  ✓ Установлен");
+            }
+        }
+        return out.length()==0?raw:out.toString();
+    }
+    private String formatFontOverlays(String raw){
+        StringBuilder out=new StringBuilder();
+        out.append("Доступные системные шрифты:\n\n");
+        for(String line:raw.split("\n")){
+            line=line.trim();
+            if(line.isEmpty()) continue;
+            boolean active=line.startsWith("[x]");
+            String pkg=line.replace("[x]","").replace("[ ]","").trim();
+            String label=pkg.substring(pkg.lastIndexOf('.')+1);
+            out.append(active?"• Активный: ":"• ").append(label).append("\n");
+        }
+        return out.toString().trim();
+    }
     private void onUi(Runnable r){runOnUiThread(r);}
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
     private GradientDrawable round(int fill,int radius,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
