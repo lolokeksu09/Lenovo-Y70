@@ -1,0 +1,53 @@
+name: Build Legion Control APK
+on:
+  push:
+    branches: ['feat/legion-control-center']
+    paths:
+      - '.github/workflows/build-control-center.yml'
+      - 'legion-control-source.b64'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract verified app source
+        run: |
+          base64 -d legion-control-source.b64 > /tmp/legion_control_source.tar.xz
+          echo 'fc2632a54f94f3d8d930d60e5ac322aea133311ec638f69d9accb0ae30c64992  /tmp/legion_control_source.tar.xz' | sha256sum -c
+          tar -xJf /tmp/legion_control_source.tar.xz
+          mkdir -p /tmp/policy-tests
+          javac -encoding UTF-8 -d /tmp/policy-tests legion-control-center/app/src/main/java/dev/legion/control/CommandPolicy.java legion-control-center/tests/PolicyTest.java
+          java -cp /tmp/policy-tests dev.legion.control.PolicyTest
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 35
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build and sign APK (debug)
+        run: gradle --no-daemon --stacktrace -p legion-control-center :app:assembleDebug
+      - name: Verify APK
+        run: |
+          APK=legion-control-center/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "dev.legion.control"
+          sha256sum "$APK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Legion-Control-v1.0-debug-APK
+          path: legion-control-center/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
