@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- Only packages exposing Accessibility services; no broad QUERY_ALL_PACKAGES. -->
+    <queries>
+        <intent>
+            <action android:name="android.accessibilityservice.AccessibilityService" />
+        </intent>
+    </queries>
     <application android:allowBackup="false" android:label="Legion Control" android:icon="@drawable/launcher_mark" android:theme="@style/LegionTheme" android:usesCleartextTraffic="false" android:supportsRtl="true">
+        <activity android:name=".AccessCenterActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
