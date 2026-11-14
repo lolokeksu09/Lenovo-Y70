@@ -45,8 +45,10 @@ def nodes(root):
 
 def find(root, needle, exact=False):
     for n in nodes(root):
-        text = n.attrib.get("text", "") + " " + n.attrib.get("content-desc", "")
-        if (text.strip() == needle if exact else needle.lower() in text.lower()):
+        label = n.attrib.get("text", "")
+        description = n.attrib.get("content-desc", "")
+        if ((label == needle or description == needle) if exact else
+                (needle.lower() in label.lower() or needle.lower() in description.lower())):
             return n
     return None
 
