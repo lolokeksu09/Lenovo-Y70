@@ -30,7 +30,7 @@ jobs:
           APP=legion-control-center/app/build.gradle
           grep -F "applicationId 'dev.legion.control'" "$APP"
           grep -F 'versionCode 7' "$APP"
-          grep -F "versionName '1.4.1'" "$APP"
+          grep -F "versionName '1.5.0'" "$APP"
           ! grep -q 'applicationIdSuffix' "$APP"
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
           BASE=legion-control-center/app/src/main/java/dev/legion/control
@@ -101,7 +101,7 @@ jobs:
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
             echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='7' versionName='1.4.1'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='7' versionName='1.5.0'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
