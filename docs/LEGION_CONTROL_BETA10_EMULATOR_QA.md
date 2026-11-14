@@ -32,12 +32,24 @@ Full evidence: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/4359893251
 
 **Important:** That workflow's overall job is marked **FAIL** because a *separate Shizuku integration step* could not launch Shizuku v13.6 on the emulator. Its official manager APK installed, and the Legion permission was granted via `pm grant`, but the test launcher command was parsed incorrectly, yielding `NO_LAUNCHER`. This does NOT invalidate the 8/8 earlier UI checks.
 
-The Shizuku launcher command was corrected in an isolated emulator test workflow:
+The Shizuku launcher command was corrected and independently tested on Android Emulator:
 https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43599526358
+
+## Shizuku / Android Binder integration — PASS
+
+- **PASS** official Shizuku 13.6.0 APK installed on the emulator.
+- **PASS** ADB shell native Shizuku starter launched; log confirmed `shizuku_server pid is 2484`, starter exited 0.
+- **PASS** Legion Control Beta 10 relaunched with a Shizuku API grant.
+- **PASS** Accessibility Center read real service inventory (3 services) and displayed
+  `Shizuku: автоматически проверено 2 приложений`.
+- **PASS** the resulting state summary reported 3 services available for enabling, none restricted; this only tests the *allowed* path.
+- **PASS** isolated GitHub Actions integration run **completed successfully**.
+- Evidence: https://github.com/lolokeksu09/Lenovo-Y70/actions/runs/43599526358/artifacts/14115716542
 
 ## Remaining gates
 
-- Shizuku daemon and Android accessibility Binder auto-verdict: not confirmed by the UI pass.
+- **Unverified:** the **blocked** verdict path through the actual Android Binder service; the emulator returned only allowed results.
+- **Unverified:** the Android 17 / Motorola ROM Binder interface and compatibility, especially ECM-specific restrictions.
 - Kimi Claw restricted versus SCENE allowed-off state: cannot be tested without realistic installed services and the user's Motorola Android 17 ROM.
 - Actual user device touch events, ECM and Motorola Settings UX: NOT RUN.
 - Do not claim the APK is fully device-verified for 4PDA until physical device testing passes.
