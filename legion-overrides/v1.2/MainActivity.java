@@ -227,7 +227,7 @@ public final class MainActivity extends Activity {
     private void executeAsync(Work work){
         if(busy){showError("Дождись завершения текущей операции.");return;}
         if(remote==null||!authorized()){requestAccess();return;}
-        busy=true;executor.execute(()->{try{work.run();}catch(Exception e){onUi(()->showError(formatError(e)));}finally{onUi(()->{busy=false;updateConnection();});}});
+        busy=true;executor.execute(()->{try{work.run();}catch(Exception e){onUi(()->showError(formatError(e)));}finally{onUi(()->{busy=false;updateConnection();if(!getPreferences(0).getString("pending","").isEmpty())renderTab();});}});
     }
     private String formatError(Exception e){
         String message=e.getMessage()==null?e.getClass().getSimpleName():e.getMessage();
