@@ -9,6 +9,9 @@ import java.util.regex.Pattern;
 /** Pure command policy: all user-selected arguments are allowlisted. */
 public final class CommandPolicy {
     private CommandPolicy() {}
+    /** Read-only public overview. No UID/group or raw shell identity in the normal interface. */
+    public static final String DEVICE_SUMMARY_COMMAND =
+        "printf 'Model: '; getprop ro.product.model; printf 'SKU: '; getprop ro.boot.hardware.sku; printf 'SoC: '; getprop ro.soc.model; printf 'Android: '; getprop ro.build.version.release; printf 'Power saving: '; settings get global low_power; printf 'Peak refresh: '; settings get system peak_refresh_rate; printf 'Minimum refresh: '; settings get system min_refresh_rate";
     public static final String DISPLAY_144_CHECK = "dumpsys display | grep -m 1 'fps=144'";
     public static final String WILD_RIFT = "com.riotgames.league.wildrift";
     public static final List<String> BACKGROUND_PACKAGES = Arrays.asList(
@@ -41,7 +44,7 @@ public final class CommandPolicy {
     }
     private static final List<String> READ_COMMANDS = Arrays.asList(
         "id; getprop ro.product.model; getprop ro.boot.hardware.sku; getprop ro.soc.model; getprop ro.build.version.release",
-        "printf 'Shell: '; id; printf 'Model: '; getprop ro.product.model; printf 'SKU: '; getprop ro.boot.hardware.sku; printf 'SoC: '; getprop ro.soc.model; printf 'Android: '; getprop ro.build.version.release; printf 'Power saving: '; settings get global low_power; printf 'Peak refresh: '; settings get system peak_refresh_rate; printf 'Minimum refresh: '; settings get system min_refresh_rate",
+        DEVICE_SUMMARY_COMMAND,
         "settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density",
         "cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift",
         "cmd game list-modes com.riotgames.league.wildrift",
