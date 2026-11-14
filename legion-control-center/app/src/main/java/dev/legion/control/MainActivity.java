@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Toast;
 import android.widget.TextView;
 import org.json.JSONObject;
 import java.io.OutputStream;
@@ -113,6 +114,17 @@ public final class MainActivity extends Activity {
             Shizuku.bindUserService(args,connection);
         }catch(Throwable t){connecting=false;showError("Не удалось подключить UserService: "+t.getMessage());}
     }
+    /** Report what the tap did. Checking an already connected binder must not be a no-op. */
+    private void checkShizukuConnection(){
+        if(remote!=null&&authorized()){
+            showDialog("Shizuku подключён","Разрешение предоставлено, служба Legion Control готова выполнять команды.");
+        }else if(authorized()){
+            connectIfPossible();
+            Toast.makeText(this,"Подключаем службу Legion Control…",Toast.LENGTH_LONG).show();
+        }else{
+            requestAccess();
+        }
+    }
     private void requestAccess(){
         try{
             if(!Shizuku.pingBinder()) {showError("Запусти Shizuku и вернись в приложение.");return;}
@@ -157,7 +169,7 @@ public final class MainActivity extends Activity {
         conn.setPadding(dp(15),dp(15),dp(15),dp(15));
         connectionText=text("● ПРОВЕРКА SHIZUKU",12,WARN,true);
         conn.addView(connectionText);
-        button(conn,"Проверить подключение",false,()->{requestAccess();updateConnection();});
+        button(conn,"Проверить подключение",false,this::checkShizukuConnection);
         main.addView(conn,withTop(dp(19)));
 
         HorizontalScrollView navScroll=new HorizontalScrollView(this);
@@ -191,7 +203,6 @@ public final class MainActivity extends Activity {
             lp.setMargins(0,0,dp(8),0);
             tabs.addView(chip,lp);
             chip.setOnClickListener(v->{
-                if(busy)return;
                 currentTab=tab;
                 renderTab();
                 bodyScroll.post(()->bodyScroll.smoothScrollTo(0,0));
@@ -275,8 +286,11 @@ public final class MainActivity extends Activity {
         section("Системные инструменты", "Проверка функций Motorola, шрифтов и разрешений через Shizuku.");
         LinearLayout accessCenter=card();
         line(accessCenter,"ДОСТУП ПРИЛОЖЕНИЙ","Проверка служб специальных возможностей и пошаговая помощь с ограниченными настройками Android. Не требует Shizuku.");
-        button(accessCenter,"Открыть центр доступа",true,
+        Button accessButton=button(accessCenter,"Открыть центр доступа",true,
             ()->startActivity(new Intent(this,AccessCenterActivity.class)));
+        // Navigation does not touch Shizuku and must remain available during reads.
+        actionButtons.remove(accessButton);
+        accessButton.setOnClickListener(v->startActivity(new Intent(this,AccessCenterActivity.class)));
         container.addView(accessCenter,withTop(dp(12)));
 
         LinearLayout mods=card();
@@ -352,7 +366,10 @@ public final class MainActivity extends Activity {
         if(row.getChildCount()>0)lp.leftMargin=dp(7);
         row.addView(b,lp);
         actionButtons.add(b);
-        b.setOnClickListener(v->{if(busy)return;action.run();});
+        b.setOnClickListener(v->{
+            if(busy){Toast.makeText(this,"Выполняется предыдущая операция",Toast.LENGTH_SHORT).show();return;}
+            action.run();
+        });
     }
     private void readFonts(){
         executeAsync(()->{
@@ -454,7 +471,16 @@ public final class MainActivity extends Activity {
     private interface Work{void run() throws Exception;}
     private void executeAsync(Work work){
         if(busy){showError("Дождись завершения текущей операции.");return;}
-        if(remote==null||!authorized()){requestAccess();return;}
+        if(remote==null||!authorized()){
+            if(authorized()){
+                connectIfPossible();
+                Toast.makeText(this,"Shizuku подключается. Повтори действие после подключения.",Toast.LENGTH_LONG).show();
+            }else{
+                requestAccess();
+                Toast.makeText(this,"Предоставь разрешение Shizuku, затем повтори действие.",Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
         busy=true;updateBusyState();
         executor.execute(()->{try{work.run();}catch(Exception e){onUi(()->showError(formatError(e)));}finally{onUi(()->{
             busy=false;updateConnection();
@@ -841,10 +867,14 @@ public final class MainActivity extends Activity {
         rows.addView(technical,withTop(dp(8)));
         scroll.addView(rows);
         panel.addView(scroll,new LinearLayout.LayoutParams(-1,-2));
+        final Button[] detailsButton=new Button[1];
         Button details=dialogButton("Технические сведения",false,()->{
             boolean show=technical.getVisibility()!=View.VISIBLE;
             technical.setVisibility(show?View.VISIBLE:View.GONE);
+            detailsButton[0].setText(show?"Скрыть технические сведения":"Технические сведения");
+            if(show)scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));
         });
+        detailsButton[0]=details;
         panel.addView(details,withTop(dp(13)));
         LinearLayout buttons=new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
@@ -1016,7 +1046,13 @@ public final class MainActivity extends Activity {
         b.setGravity(Gravity.CENTER);b.setMinHeight(dp(52));b.setPadding(dp(13),dp(11),dp(13),dp(11));
         b.setBackground(round(primary?PURPLE:RAISED,13,primary?PURPLE:0xFF303039));
         LinearLayout.LayoutParams lp=withTop(dp(10));parent.addView(b,lp);
-        b.setOnClickListener(v->{if(busy){showError("Дождись завершения предыдущего действия.");return;}action.run();});
+        b.setOnClickListener(v->{
+            if(busy){
+                Toast.makeText(this,"Выполняется предыдущая операция",Toast.LENGTH_SHORT).show();
+                return;
+            }
+            action.run();
+        });
         if(container!=null)actionButtons.add(b);
         return b;
     }
