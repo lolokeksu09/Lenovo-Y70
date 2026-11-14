@@ -15,6 +15,9 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /** User-guided Android special access diagnostics: read-only, no hidden bypass. */
 public final class AccessCenterActivity extends Activity {
@@ -34,6 +37,7 @@ public final class AccessCenterActivity extends Activity {
     private String selectedId;
     private String navigationWarning;
     private boolean missingRestrictionMenu;
+    private long lastRefreshMillis;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -86,6 +90,7 @@ public final class AccessCenterActivity extends Activity {
 
     private void refresh(boolean returnTop){
         snapshot=AccessRepository.read(this);
+        lastRefreshMillis=System.currentTimeMillis();
         if(returnTop)selectedId=null;
         render();
     }
@@ -118,6 +123,7 @@ public final class AccessCenterActivity extends Activity {
         button(content,"К системным инструментам",false,()->finish());
         addTitle("Доступ приложений");
         info(content,"Управление службами специальных возможностей Android. Статус ограничений установки может быть недоступен.",MUTED);
+        info(content,lastCheckedLabel(),MUTED);
         warningIfPresent();
         if(!snapshot.readable){
             LinearLayout error=card();
@@ -194,6 +200,7 @@ public final class AccessCenterActivity extends Activity {
         });
         addTitle(service.applicationName);
         info(content,service.serviceName,MUTED);
+        info(content,lastCheckedLabel(),MUTED);
         warningIfPresent();
 
         LinearLayout status=card();
@@ -308,6 +315,13 @@ public final class AccessCenterActivity extends Activity {
             content.addView(warning,top(12));
             navigationWarning=null;
         }
+    }
+
+    /** Visible proof that a repeated check ran, even if the status did not change. */
+    private String lastCheckedLabel(){
+        if(lastRefreshMillis<=0)return "Проверка не запускалась";
+        return "Проверено: "+new SimpleDateFormat("HH:mm:ss",Locale.getDefault())
+                .format(new Date(lastRefreshMillis));
     }
 
     private void addTitle(String title){
