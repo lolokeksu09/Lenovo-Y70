@@ -25,7 +25,7 @@ def tap(label,max_scroll=6):
     for attempt in range(max_scroll+1):
         root=dump()
         for node in root.iter("node"):
-            if label in node.get("text",""):
+            if (node.get("text","")==label if label=="Система" else label in node.get("text","")):
                 values=[int(x) for x in re.findall(r"\d+",node.get("bounds",""))]
                 if len(values)!=4:raise AssertionError("Missing view bounds")
                 adb("shell","input","tap",str((values[0]+values[2])//2),str((values[1]+values[3])//2))
