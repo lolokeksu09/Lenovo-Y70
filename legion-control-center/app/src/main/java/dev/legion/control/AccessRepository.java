@@ -81,7 +81,7 @@ public final class AccessRepository {
                             ApplicationInfo app=pm.getApplicationInfo(record.packageName,0);
                             Object answer=targetMethod.invoke(manager,record.packageName,app.uid,userId);
                             if(answer instanceof Boolean)allowedTargets.put(record.packageName,(Boolean)answer);
-                        }catch(ReflectiveOperationException|RuntimeException ignored){
+                        }catch(Exception ignored){
                             // Hidden API denied, missing package or vendor implementation.
                             // Preserve UNKNOWN classification for this package.
                         }
