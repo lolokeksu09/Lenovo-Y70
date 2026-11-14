@@ -1,19 +1,19 @@
-name: Build Legion Control v1.2.0 (stable signing)
+name: Build Legion Control v1.3.0 (stable signing)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'feat/legion-control-v1.2.0'
+      - 'feat/legion-control-v1.3.0'
     paths:
       - '.github/workflows/release-control-center.yml'
-      - 'legion-overrides/v1.2/**'
+      - 'legion-control-center/**'
 
 permissions:
   contents: read
 
 concurrency:
-  group: legion-control-release-${{ github.ref }}
+  group: legion-control-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -23,44 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate secret availability (without disclosure)
-        env:
-          KEYSTORE_B64: ${{ secrets.LEGION_RELEASE_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.LEGION_RELEASE_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.LEGION_RELEASE_KEY_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.LEGION_RELEASE_KEY_ALIAS }}
-        run: |
-          test -n "$KEYSTORE_B64" || { echo 'Missing secret: LEGION_RELEASE_KEYSTORE_BASE64'; exit 1; }
-          test -n "$STORE_PASSWORD" || { echo 'Missing secret: LEGION_RELEASE_STORE_PASSWORD'; exit 1; }
-          test -n "$KEY_PASSWORD" || { echo 'Missing secret: LEGION_RELEASE_KEY_PASSWORD'; exit 1; }
-          test -n "$KEY_ALIAS" || { echo 'Missing secret: LEGION_RELEASE_KEY_ALIAS'; exit 1; }
-
-      - name: Restore pinned Android sources
+      - name: Verify version and user-service security policy
+        shell: bash
         run: |
           set -euo pipefail
-          base64 --decode legion-control-source.b64 > "$RUNNER_TEMP/legion-control-source.tar.xz"
-          echo 'c6cee95d751784482d03a8c0fdf35c1c04b7acbe9c7a3887d215abdd9d96d7f5  '"$RUNNER_TEMP"'/legion-control-source.tar.xz' | sha256sum -c
-          tar -xJf "$RUNNER_TEMP/legion-control-source.tar.xz"
-          SRC=legion-overrides/v1.2
-          DEST=legion-control-center/app/src/main/java/dev/legion/control
-          cp "$SRC/MainActivity.java" "$DEST/MainActivity.java"
-          cp "$SRC/CommandPolicy.java" "$DEST/CommandPolicy.java"
-          cp "$SRC/MutationTransaction.java" "$DEST/MutationTransaction.java"
-          cp "$SRC/PolicyTest.java" legion-control-center/tests/PolicyTest.java
-          cp "$SRC/MutationTransactionTest.java" legion-control-center/tests/MutationTransactionTest.java
-          sed -i "s/versionCode 2/versionCode 3/; s/versionName '1.1.0'/versionName '1.2.0'/" legion-control-center/app/build.gradle
-          grep -F "applicationId 'dev.legion.control'" legion-control-center/app/build.gradle
-          grep -F 'versionCode 3' legion-control-center/app/build.gradle
-          grep -F "versionName '1.2.0'" legion-control-center/app/build.gradle
-          ! grep -q 'applicationIdSuffix' legion-control-center/app/build.gradle
+          APP=legion-control-center/app/build.gradle
+          grep -F "applicationId 'dev.legion.control'" "$APP"
+          grep -F 'versionCode 4' "$APP"
+          grep -F "versionName '1.3.0'" "$APP"
+          ! grep -q 'applicationIdSuffix' "$APP"
           grep -F 'android:label="Legion Control"' legion-control-center/app/src/main/AndroidManifest.xml
+          BASE=legion-control-center/app/src/main/java/dev/legion/control
+          TEST=legion-control-center/tests
           mkdir -p "$RUNNER_TEMP/legion-tests"
           javac -encoding UTF-8 -d "$RUNNER_TEMP/legion-tests" \
-            legion-control-center/app/src/main/java/dev/legion/control/CommandPolicy.java \
-            legion-control-center/app/src/main/java/dev/legion/control/MutationTransaction.java \
-            legion-control-center/tests/PolicyTest.java \
-            legion-control-center/tests/MutationTransactionTest.java
+            "$BASE/CommandPolicy.java" "$BASE/QuickProfile.java" "$BASE/MutationTransaction.java" \
+            "$TEST/PolicyTest.java" "$TEST/QuickProfileTest.java" "$TEST/MutationTransactionTest.java"
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.PolicyTest
+          java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.QuickProfileTest
           java -cp "$RUNNER_TEMP/legion-tests" dev.legion.control.MutationTransactionTest
 
       - uses: actions/setup-java@v4
@@ -69,7 +49,9 @@ jobs:
           java-version: '17'
 
       - name: Install Android SDK 35
+        shell: bash
         run: |
+          set -euo pipefail
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1)"
           test -n "$SDKMANAGER"
@@ -82,7 +64,8 @@ jobs:
       - name: Assemble unsigned release
         run: gradle --no-daemon --stacktrace -p legion-control-center :app:assembleRelease
 
-      - name: Align and sign with pinned release certificate
+      - name: Align, sign and validate using permanent release key
+        shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.LEGION_RELEASE_KEYSTORE_BASE64 }}
           LEGION_RELEASE_STORE_PASSWORD: ${{ secrets.LEGION_RELEASE_STORE_PASSWORD }}
@@ -91,40 +74,39 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+          test -n "$KEYSTORE_B64" || { echo 'Missing release keystore secret'; exit 1; }
+          test -n "$LEGION_RELEASE_STORE_PASSWORD" || { echo 'Missing release store-password secret'; exit 1; }
+          test -n "$LEGION_RELEASE_KEY_PASSWORD" || { echo 'Missing release key-password secret'; exit 1; }
+          test -n "$KEY_ALIAS" || { echo 'Missing release alias secret'; exit 1; }
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          BUILD_TOOLS="$SDK_ROOT/build-tools/35.0.0"
+          BT="$SDK_ROOT/build-tools/35.0.0"
           UNSIGNED='legion-control-center/app/build/outputs/apk/release/app-release-unsigned.apk'
-          ALIGNED="$RUNNER_TEMP/legion-control-release-aligned.apk"
+          ALIGNED="$RUNNER_TEMP/legion-control-aligned.apk"
           KEYSTORE="$RUNNER_TEMP/legion-control-release.p12"
-          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.2.0-release.apk"
+          OUTPUT="$GITHUB_WORKSPACE/Legion-Control-v1.3.0-release.apk"
           test -s "$UNSIGNED"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
-          test -s "$KEYSTORE"
           keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
             -storepass:env LEGION_RELEASE_STORE_PASSWORD >/dev/null
-          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
-          "$BUILD_TOOLS/apksigner" sign \
-            --ks "$KEYSTORE" \
-            --ks-type PKCS12 \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass env:LEGION_RELEASE_STORE_PASSWORD \
-            --key-pass env:LEGION_RELEASE_KEY_PASSWORD \
+          "$BT/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+          "$BT/apksigner" sign \
+            --ks "$KEYSTORE" --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:LEGION_RELEASE_STORE_PASSWORD --key-pass env:LEGION_RELEASE_KEY_PASSWORD \
             --out "$OUTPUT" "$ALIGNED"
-          "$BUILD_TOOLS/apksigner" verify --verbose "$OUTPUT"
-          CERT_DIGEST="$("$BUILD_TOOLS/apksigner" verify --print-certs "$OUTPUT" | awk -F ': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
+          "$BT/apksigner" verify --verbose "$OUTPUT"
+          CERT_DIGEST="$("$BT/apksigner" verify --print-certs "$OUTPUT" | awk -F ': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
           EXPECTED='c912747bc79e33adfc327817e36c667719937de59dcad1c22bf154e44bb56f5a'
           test -n "$CERT_DIGEST" && test "$CERT_DIGEST" = "$EXPECTED" || {
-            echo 'Release signing certificate does not match the pinned identity.'
-            exit 1
+            echo 'Release signing certificate mismatch.'; exit 1;
           }
-          "$BUILD_TOOLS/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='3' versionName='1.2.0'"
+          "$BT/aapt" dump badging "$OUTPUT" | grep -F "package: name='dev.legion.control' versionCode='4' versionName='1.3.0'"
           sha256sum "$OUTPUT"
           rm -f "$KEYSTORE" "$ALIGNED"
 
-      - name: Upload stable signed release APK
+      - name: Upload compatible signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Legion-Control-v1.2.0-Release-Signed
-          path: Legion-Control-v1.2.0-release.apk
+          name: Legion-Control-v1.3.0-Release-Signed
+          path: Legion-Control-v1.3.0-release.apk
           if-no-files-found: error
           retention-days: 30

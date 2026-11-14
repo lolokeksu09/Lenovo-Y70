@@ -1,0 +1,11 @@
+<resources>
+<style name="LegionTheme" parent="android:style/Theme.Material.NoActionBar">
+<item name="android:windowLightStatusBar">false</item>
+<item name="android:statusBarColor">#060609</item>
+<item name="android:navigationBarColor">#060609</item>
+<item name="android:windowActionModeOverlay">true</item>
+<item name="android:fontFamily">sans</item>
+<item name="android:windowBackground">#060609</item>
+<item name="android:colorAccent">#B4A3FF</item>
+</style>
+</resources>
