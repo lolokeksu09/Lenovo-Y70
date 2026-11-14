@@ -14,6 +14,11 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,6 +43,12 @@ public final class AccessCenterActivity extends Activity {
     private String navigationWarning;
     private boolean missingRestrictionMenu;
     private long lastRefreshMillis;
+    private int manualCheckCount;
+    private String refreshFeedback="";
+    private boolean refreshInFlight;
+    private final ExecutorService refreshExecutor=Executors.newSingleThreadExecutor();
+    private final List<Button> checkButtons=new ArrayList<>();
+    private final List<TextView> checkFeedbackViews=new ArrayList<>();
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -46,6 +57,8 @@ public final class AccessCenterActivity extends Activity {
         if(state!=null){
             selectedId=state.getString("selected_access_service");
             missingRestrictionMenu=state.getBoolean("missing_restriction_menu",false);
+            manualCheckCount=state.getInt("manual_check_count",0);
+            refreshFeedback=state.getString("refresh_feedback","");
         }
         buildRoot();
         showLoading();
@@ -59,6 +72,8 @@ public final class AccessCenterActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putString("selected_access_service",selectedId);
         out.putBoolean("missing_restriction_menu",missingRestrictionMenu);
+        out.putInt("manual_check_count",manualCheckCount);
+        out.putString("refresh_feedback",refreshFeedback);
         super.onSaveInstanceState(out);
     }
 
@@ -88,11 +103,69 @@ public final class AccessCenterActivity extends Activity {
         scroll.requestApplyInsets();
     }
 
+    /** Accessibility binder reads can be slow on vendor ROMs. Never run them on the UI thread. */
     private void refresh(boolean returnTop){
-        snapshot=AccessRepository.read(this);
-        lastRefreshMillis=System.currentTimeMillis();
-        if(returnTop)selectedId=null;
-        render();
+        scheduleRefresh(returnTop,false);
+    }
+
+    private void refreshByUser(){
+        scheduleRefresh(false,true);
+    }
+
+    private void scheduleRefresh(boolean returnTop,boolean manual){
+        if(refreshInFlight){
+            if(manual)Toast.makeText(this,"Проверка уже выполняется",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        refreshInFlight=true;
+        for(Button b:checkButtons){
+            b.setEnabled(false);
+            b.setText("Проверка…");
+        }
+        for(TextView note:checkFeedbackViews)note.setText("Считываю состояния служб Android…");
+        if(manual)Toast.makeText(this,"Проверяю доступы…",Toast.LENGTH_SHORT).show();
+
+        final AccessRepository.Snapshot oldSnapshot=snapshot;
+        try{
+            refreshExecutor.execute(()->{
+                AccessRepository.Snapshot next;
+                try{
+                    next=AccessRepository.read(getApplicationContext());
+                }catch(Exception e){
+                    next=new AccessRepository.Snapshot(Collections.emptyList(),false,
+                        "Ошибка запроса Android. Попробуй повторить проверку.");
+                }
+                final AccessRepository.Snapshot completed=next;
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    refreshInFlight=false;
+                    snapshot=completed;
+                    lastRefreshMillis=System.currentTimeMillis();
+                    if(returnTop)selectedId=null;
+                    boolean changed=oldSnapshot==null ||
+                        oldSnapshot.readable!=completed.readable ||
+                        AccessRefreshSummary.changed(oldSnapshot.services,completed.services);
+                    String message=AccessRefreshSummary.summary(completed.readable,
+                        completed.services.size(),changed);
+                    if(manual)manualCheckCount++;
+                    refreshFeedback=(manual?"Проверка №"+manualCheckCount+": ":"")+
+                        new SimpleDateFormat("HH:mm:ss",Locale.getDefault())
+                            .format(new Date(lastRefreshMillis))+" · "+message;
+                    render();
+                    if(manual)Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                });
+            });
+        }catch(java.util.concurrent.RejectedExecutionException e){
+            refreshInFlight=false;
+            refreshFeedback="Не удалось запустить проверку. Открой раздел заново.";
+            render();
+            Toast.makeText(this,"Проверка не запущена",Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override protected void onDestroy(){
+        refreshExecutor.shutdownNow();
+        super.onDestroy();
     }
 
     private void showLoading(){
@@ -104,6 +177,8 @@ public final class AccessCenterActivity extends Activity {
     private void render(){
         if(isFinishing()||content==null||snapshot==null)return;
         content.removeAllViews();
+        checkButtons.clear();
+        checkFeedbackViews.clear();
         AccessStatus.Service selected=findSelected();
         if(selectedId!=null && selected==null){
             selectedId=null;
@@ -129,7 +204,7 @@ public final class AccessCenterActivity extends Activity {
             LinearLayout error=card();
             addHeading(error,"Не удалось проверить");
             info(error,snapshot.message,WARN);
-            button(error,"Повторить проверку",true,()->refresh(false));
+            refreshButton(error,"Повторить проверку",true);
             button(error,"Открыть спец. возможности",false,this::openAccessibility);
             content.addView(error,top(18));
             return;
@@ -149,7 +224,7 @@ public final class AccessCenterActivity extends Activity {
         info(summary,"Выключено (доступно): "+disabled+"   Ограничено Android: "+restricted,
                 restricted>0?WARN:MUTED);
         if(unverified>0)info(summary,"Не удалось проверить ограничения: "+unverified,MUTED);
-        button(summary,"Проверить снова",true,()->refresh(false));
+        refreshButton(summary,"Проверить снова",true);
         content.addView(summary,top(20));
 
         if(services.isEmpty()){
@@ -238,7 +313,7 @@ public final class AccessCenterActivity extends Activity {
                 button(missing,"Открыть «"+service.applicationName+"» ещё раз",true,()->openSelectedAppInfo(service));
                 info(missing,"Если прямой переход скрывает пункт ⋮ на этой прошивке, попробуй открыть карточку вручную через «Все приложения». Это резервный способ, не обязательный шаг.",MUTED);
                 button(missing,"Резерв: Все приложения",false,this::openAppsList);
-                button(missing,"Проверить ещё раз",false,()->refresh(false));
+                refreshButton(missing,"Проверить ещё раз",false);
                 content.addView(missing,top(12));
             }
         }else if(service.state==AccessStatus.State.ENABLED){
@@ -262,7 +337,7 @@ public final class AccessCenterActivity extends Activity {
         }
         LinearLayout actions=card();
         addHeading(actions,"Проверка и настройки");
-        button(actions,"Проверить повторно",true,()->refresh(false));
+        refreshButton(actions,"Проверить повторно",true);
         button(actions,"Открыть «"+service.applicationName+"» в настройках",false,()->openSelectedAppInfo(service));
         content.addView(actions,top(12));
         info(content,"Legion Control не снимает ограничения Android, не выдаёт разрешения и не запускает ADB-команды для включения Accessibility.",MUTED);
@@ -364,6 +439,22 @@ public final class AccessCenterActivity extends Activity {
         c.setPadding(dp(17),dp(16),dp(17),dp(17));
         c.setBackground(background(CARD,19,BORDER));
         return c;
+    }
+
+    /** Every refresh button carries its own result line, even when statuses stay identical. */
+    private void refreshButton(LinearLayout parent,String label,boolean primary){
+        Button b=button(parent,label,primary,this::refreshByUser);
+        checkButtons.add(b);
+        TextView info=text(refreshInFlight?"Считываю состояния служб Android…":
+            (refreshFeedback.isEmpty()?"Последняя проверка ещё не завершена.":refreshFeedback),
+            12,MUTED,false);
+        info.setPadding(0,dp(7),0,dp(2));
+        parent.addView(info);
+        checkFeedbackViews.add(info);
+        if(refreshInFlight){
+            b.setEnabled(false);
+            b.setText("Проверка…");
+        }
     }
 
     private Button button(LinearLayout parent,String label,boolean primary,Runnable action){
