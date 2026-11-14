@@ -82,7 +82,7 @@ def wait_text(label, seconds=22, exact=False):
     last=None
     while time.monotonic()<deadline:
         last=ui("poll")
-        if find(last,label,exact=exact):
+        if find(last,label,exact=exact) is not None:
             return last
         time.sleep(1.2)
     raise AssertionError("Text never appeared: %r; visible: %s" %
