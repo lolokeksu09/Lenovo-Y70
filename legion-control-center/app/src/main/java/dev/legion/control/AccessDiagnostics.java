@@ -19,6 +19,8 @@ public final class AccessDiagnostics {
         public int timeouts;
         public long lastDurationMs=-1;
         public String lastResult="";
+        public String autoProbeSource="";
+        public int automaticallyChecked;
     }
 
     public static String format(Data data){
@@ -52,6 +54,9 @@ public final class AccessDiagnostics {
         report.append("Последняя длительность проверки: ");
         report.append(data.lastDurationMs>=0?data.lastDurationMs+" мс":"Нет данных").append('\n');
         report.append("Результат: ").append(clean(data.lastResult)).append('\n');
+        report.append("Источник автоматической проверки: ").append(clean(data.autoProbeSource)).append('\n');
+        report.append("Автоматически проверено через Shizuku: ")
+            .append(Math.max(0,data.automaticallyChecked)).append('\n');
         if(selected!=null) {
             report.append("Выбранная служба: ").append(clean(selected.serviceName)).append('\n');
             report.append("Пакет выбранного приложения: ").append(clean(selected.packageName)).append('\n');
