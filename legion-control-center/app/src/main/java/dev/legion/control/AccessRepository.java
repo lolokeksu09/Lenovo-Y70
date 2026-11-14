@@ -74,7 +74,9 @@ public final class AccessRepository {
                         "isAccessibilityTargetAllowed",String.class,int.class,int.class);
                 }catch(ReflectiveOperationException|RuntimeException ignored){}
                 if(targetMethod!=null){
-                    int userId=Process.myUserHandle().getIdentifier();
+                    // Android's multiuser UID range is 100000 per user (AOSP UserHandle).
+                    // UserHandle.getIdentifier() is hidden in the public SDK.
+                    int userId=Process.myUid()/100000;
                     for(AccessStatus.Record record:records){
                         if(enabledIds.contains(record.id)||allowedTargets.containsKey(record.packageName))continue;
                         try{
