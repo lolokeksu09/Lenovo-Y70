@@ -458,10 +458,14 @@ public final class AccessCenterActivity extends Activity {
             addHeading(enabled,"Служба уже включена");
             info(enabled,"Повторно разрешать доступ не требуется. Не меняй настройки, если приложение работает корректно.",GREEN);
             content.addView(enabled,top(12));
-        }else if(service.state==AccessStatus.State.DISABLED){
+        }else if(service.state==AccessStatus.State.DISABLED ||
+            (service.state==AccessStatus.State.DISABLED_UNVERIFIED &&
+             observed==AccessEvidence.Verdict.SWITCH_AVAILABLE)){
             LinearLayout ordinary=card();
             addHeading(ordinary,"Доступна для включения");
-            info(ordinary,"Служба выключена, но системная проверка разрешает её включение. Никаких обходов или специальных разрешений не требуется.",GREEN);
+            info(ordinary,service.state==AccessStatus.State.DISABLED?
+                "Системная проверка разрешает включение службы. Никаких обходов не требуется.":
+                "По твоему подтверждению переключатель доступен. Включение остаётся за пользователем.",GREEN);
             button(ordinary,"Открыть специальные возможности",true,this::openAccessibility);
             content.addView(ordinary,top(12));
         }else{
