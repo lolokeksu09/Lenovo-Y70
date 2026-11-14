@@ -13,7 +13,9 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowInsets;
 import android.text.TextUtils;
 import android.os.IBinder;
 import android.view.Gravity;
@@ -53,6 +55,8 @@ public final class MainActivity extends Activity {
     private ICommandService remote;
     private int currentTab=0;
     private boolean connecting=false, busy=false;
+    private boolean showAllHistory=false;
+    private String lastHistoryExport="";
     private String lastDiagnostic="";
     private final Shizuku.OnBinderReceivedListener received=()->{ updateConnection(); connectIfPossible(); };
     private final Shizuku.OnBinderDeadListener dead=()->{ remote=null;connecting=false;updateConnection(); };
@@ -126,7 +130,21 @@ public final class MainActivity extends Activity {
         main.setOrientation(LinearLayout.VERTICAL);
         main.setPadding(dp(20),dp(25),dp(20),dp(40));
         bodyScroll.addView(main);
+        // Android 15+ draws behind system bars: apply real status/navigation bar insets.
+        if(Build.VERSION.SDK_INT>=30) getWindow().setDecorFitsSystemWindows(false);
+        bodyScroll.setOnApplyWindowInsetsListener((view,insets)->{
+            int top,bottom;
+            if(Build.VERSION.SDK_INT>=30){
+                android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+                top=bars.top;bottom=bars.bottom;
+            }else{
+                top=insets.getSystemWindowInsetTop();bottom=insets.getSystemWindowInsetBottom();
+            }
+            main.setPadding(dp(20),top+dp(18),dp(20),bottom+dp(32));
+            return insets;
+        });
         setContentView(bodyScroll);
+        bodyScroll.requestApplyInsets();
 
         TextView eyebrow=text("L E G I O N  /  C O N T R O L",12,PURPLE,true);
         main.addView(eyebrow);
@@ -377,6 +395,32 @@ public final class MainActivity extends Activity {
         Button undoButton=button(c,"Откатить последнее изменение",true,()->confirm("Вернуть предыдущие настройки?","Будут восстановлены значения, сохранённые перед последней операцией.",this::undo));
         undoButton.setEnabled(!last.isEmpty());
         container.addView(c,withTop(dp(12)));
+
+        List<ActionHistory.Entry> events=ActionHistory.read(getPreferences(0).getString("action_history",""));
+        LinearLayout journal=card();
+        line(journal,"ЖУРНАЛ ДЕЙСТВИЙ",events.isEmpty()?"Событий пока нет":"Последние события сохраняются после перезапуска. Откат доступен только для последнего изменения.");
+        int shown=showAllHistory?events.size():Math.min(6,events.size());
+        for(int i=0;i<shown;i++){
+            ActionHistory.Entry event=events.get(i);
+            LinearLayout item=new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(dp(13),dp(12),dp(13),dp(12));
+            item.setBackground(round(RAISED,12,BORDER));
+            String state=event.type.equals(ActionHistory.APPLIED)?"Применено":event.type.equals(ActionHistory.UNDONE)?"Отменено":"Восстановлено";
+            int stateColor=event.type.equals(ActionHistory.APPLIED)?PURPLE:GREEN;
+            TextView status=text(state,12,stateColor,true);
+            item.addView(status);
+            TextView label=text(event.label,15,WHITE,true);
+            label.setPadding(0,dp(5),0,dp(4));
+            item.addView(label);
+            String stamp=new SimpleDateFormat("dd.MM.yyyy  HH:mm",Locale.getDefault()).format(new Date(event.timestamp));
+            item.addView(text(stamp,12,MUTED,false));
+            journal.addView(item,withTop(dp(8)));
+        }
+        if(events.size()>6)button(journal,showAllHistory?"Свернуть журнал":"Показать все ("+events.size()+")",false,()->{showAllHistory=!showAllHistory;renderTab();});
+        if(!events.isEmpty()) button(journal,"Экспортировать журнал TXT",false,this::exportHistory);
+        container.addView(journal,withTop(dp(12)));
+
         LinearLayout info=card();line(info,"ЗАЩИТНЫЕ ОГРАНИЧЕНИЯ","Нет удаления/отключения пакетов, правок thermal/CPU/GPU, скрытых настроек ядра или автоматического отключения энергосбережения.");container.addView(info,withTop(dp(12)));
     }
     private void runRead(String command,String title){
@@ -417,7 +461,11 @@ public final class MainActivity extends Activity {
         return new MutationTransaction.Store(){
             public boolean hasPending(){return !getPreferences(0).getString("pending","").isEmpty();}
             public boolean stage(String snapshot,String label){return getPreferences(0).edit().putString("pending",snapshot).putString("pending_label",label).commit();}
-            public boolean complete(String snapshot,String label){return getPreferences(0).edit().putString("undo",snapshot).putString("undo_label",label).remove("pending").remove("pending_label").commit();}
+            public boolean complete(String snapshot,String label){
+                String history=ActionHistory.append(getPreferences(0).getString("action_history",""),System.currentTimeMillis(),ActionHistory.APPLIED,label);
+                return getPreferences(0).edit().putString("undo",snapshot).putString("undo_label",label)
+                    .putString("action_history",history).remove("pending").remove("pending_label").commit();
+            }
             public boolean clearPending(){return getPreferences(0).edit().remove("pending").remove("pending_label").commit();}
         };
     }
@@ -626,7 +674,10 @@ public final class MainActivity extends Activity {
         if(pending.isEmpty()){showError("Нет незавершённых изменений.");return;}
         executeAsync(()->{
             restoreAndVerify(new JSONObject(pending));
-            if(!transactionStore().clearPending())throw new IllegalStateException("Не удалось очистить запись о восстановлении");
+            String label=getPreferences(0).getString("pending_label","Системные настройки");
+            String history=ActionHistory.append(getPreferences(0).getString("action_history",""),System.currentTimeMillis(),ActionHistory.RECOVERED,label);
+            if(!getPreferences(0).edit().putString("action_history",history).remove("pending").remove("pending_label").commit())
+                throw new IllegalStateException("Не удалось сохранить результат восстановления");
             onUi(()->{showDialog("Восстановление завершено","Исходные значения проверены. Новые операции доступны.");renderTab();});
         });
     }
@@ -639,13 +690,35 @@ public final class MainActivity extends Activity {
         if(text.isEmpty()){showError("Нет сохранённой операции.");return;}
         executeAsync(()->{
             restoreAndVerify(new JSONObject(text));
-            if(!getPreferences(0).edit().remove("undo").remove("undo_label").commit()) throw new IllegalStateException("Не удалось очистить историю отката");
+            String label=getPreferences(0).getString("undo_label","Системные настройки");
+            String history=ActionHistory.append(getPreferences(0).getString("action_history",""),System.currentTimeMillis(),ActionHistory.UNDONE,label);
+            if(!getPreferences(0).edit().putString("action_history",history).remove("undo").remove("undo_label").commit())
+                throw new IllegalStateException("Не удалось сохранить результат отката");
             onUi(()->{showDialog("Восстановлено","Команды отката выполнены. Проверь результат в системных настройках.");renderTab();});
         });
     }
+    /** Export only human-readable action titles and times; never secret shell output. */
+    private void exportHistory(){
+        List<ActionHistory.Entry> events=ActionHistory.read(getPreferences(0).getString("action_history",""));
+        if(events.isEmpty()){showError("Журнал пуст — экспортировать нечего.");return;}
+        StringBuilder report=new StringBuilder("LEGION CONTROL / ЖУРНАЛ ИЗМЕНЕНИЙ\n");
+        report.append("Записи информативны: откат доступен только для последнего изменения.\n\n");
+        SimpleDateFormat format=new SimpleDateFormat("dd.MM.yyyy HH:mm:ss",Locale.getDefault());
+        for(ActionHistory.Entry item:events){
+            String label=item.type.equals(ActionHistory.APPLIED)?"ПРИМЕНЕНО":item.type.equals(ActionHistory.UNDONE)?"ОТМЕНЕНО":"ВОССТАНОВЛЕНО";
+            report.append(format.format(new Date(item.timestamp))).append("  ").append(label).append("  ")
+                .append(item.label.replace('\n',' ')).append('\n');
+        }
+        lastHistoryExport=report.toString();
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_TITLE,"legion_history_"+new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(new Date())+".txt");
+        startActivityForResult(intent,3102);
+    }
     private void exportDiagnostic(){
         executeAsync(()->{
-            lastDiagnostic="LEGION CONTROL 1.5.0 / READ ONLY\n"+new Date()+"\n\n"+
+            lastDiagnostic="LEGION CONTROL 1.6.0 / READ ONLY\n"+new Date()+"\n\n"+
                     exec("id; getprop ro.product.model; getprop ro.boot.hardware.sku; getprop ro.soc.model; getprop ro.build.version.release")+"\n\nDISPLAY / POWER\n"+
                     exec("settings get global low_power; settings get system min_refresh_rate; settings get system peak_refresh_rate; wm size; wm density")+"\n\nGAME MODES\n"+
                     exec("cmd game list-modes com.riotgames.league.wildrift; cmd game list-configs com.riotgames.league.wildrift")+"\n\nOVERLAYS\n"+
@@ -660,10 +733,11 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int req,int result,Intent data){
         super.onActivityResult(req,result,data);
-        if(req==3101&&result==RESULT_OK&&data!=null&&data.getData()!=null){
+        if((req==3101||req==3102)&&result==RESULT_OK&&data!=null&&data.getData()!=null){
             try(OutputStream stream=getContentResolver().openOutputStream(data.getData())){
                 if(stream==null)throw new IllegalStateException("Не удалось открыть файл");
-                stream.write(lastDiagnostic.getBytes(StandardCharsets.UTF_8));
+                String content=req==3102?lastHistoryExport:lastDiagnostic;
+                stream.write(content.getBytes(StandardCharsets.UTF_8));
                 showDialog("Экспорт готов","TXT сохранён в выбранную папку.");
             }catch(Exception e){showError("Ошибка экспорта: "+e.getMessage());}
         }
