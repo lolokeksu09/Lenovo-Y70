@@ -32,6 +32,12 @@ jobs:
           FILE=/tmp/legion-apk/Legion-Control-v1.8.0-beta10-release.apk
           test -s "$FILE"
           echo "743a79ba2f9f10bca14b698e7c0ffa1147b865e7ef404c1c9d790a67b3c27649  $FILE" | sha256sum -c -
+      - name: Download official Shizuku v13.6.0 (emulator only)
+        run: |
+          curl -fsSL --retry 3 --connect-timeout 20 \
+            -o /tmp/shizuku-official.apk \
+            https://github.com/RikkaApps/Shizuku/releases/download/v13.6.0/shizuku-v13.6.0.r1086.2650830c-release.apk
+          test -s /tmp/shizuku-official.apk
       - name: Enable hardware acceleration on hosted Ubuntu runner
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -43,6 +49,7 @@ jobs:
         env:
           SMOKE_OUTPUT: /tmp/legion-emulator-report
           LEGION_APK: /tmp/legion-apk/Legion-Control-v1.8.0-beta10-release.apk
+          SHIZUKU_APK: /tmp/shizuku-official.apk
         with:
           api-level: 35
           target: google_apis
@@ -50,7 +57,7 @@ jobs:
           profile: pixel_5
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
-          script: python3 legion-control-center/tests/emulator_smoke.py
+          script: bash -lc 'python3 legion-control-center/tests/emulator_smoke.py && python3 legion-control-center/tests/emulator_shizuku.py'
       - name: Upload screenshots, UI dump and crash logs
         if: always()
         uses: actions/upload-artifact@v4
