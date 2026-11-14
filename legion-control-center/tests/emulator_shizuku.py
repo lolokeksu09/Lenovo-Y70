@@ -42,7 +42,7 @@ try:
     print("Start manager UI:",adb("shell","monkey","-p","moe.shizuku.privileged.api","1",check=False),flush=True)
     time.sleep(4)
     script='p="$(pm path moe.shizuku.privileged.api | head -n 1 | sed s/^package://)"; lib="$(dirname "$p")/lib"; ls -l "$lib"/*/libshizuku.so 2>&1; for exe in "$lib"/*/libshizuku.so; do if [ -f "$exe" ]; then "$exe" > /data/local/tmp/shizuku-emulator.log 2>&1 & echo START_PID=$!; exit 0; fi; done; echo NO_LAUNCHER; exit 2'
-    print("Start native shell daemon:",adb("shell","sh","-c",script,check=False),flush=True)
+    print("Start native shell daemon:",adb("shell",script,check=False),flush=True)
     time.sleep(9)
     print("Shizuku daemon log:",adb("shell","cat","/data/local/tmp/shizuku-emulator.log",check=False)[-2000:],flush=True)
     adb("shell","am","force-stop","dev.legion.control")
