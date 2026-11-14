@@ -130,15 +130,19 @@ public final class AccessCenterActivity extends Activity {
         }
 
         List<AccessStatus.Service> services=snapshot.services;
-        int enabled=0,unknown=0;
+        int enabled=0,disabled=0,restricted=0,unverified=0;
         for(AccessStatus.Service s:services){
             if(s.state==AccessStatus.State.ENABLED)enabled++;
-            if(s.state==AccessStatus.State.UNKNOWN)unknown++;
+            else if(s.state==AccessStatus.State.DISABLED)disabled++;
+            else if(s.state==AccessStatus.State.RESTRICTED)restricted++;
+            else unverified++;
         }
         LinearLayout summary=card();
         addHeading(summary,"Службы Android");
-        info(summary,"Найдено: "+services.size()+"    Включено: "+enabled+
-                (unknown>0?"    Неизвестно: "+unknown:""),WHITE);
+        info(summary,"Найдено: "+services.size()+"   Включено: "+enabled,WHITE);
+        info(summary,"Выключено (доступно): "+disabled+"   Ограничено Android: "+restricted,
+                restricted>0?WARN:MUTED);
+        if(unverified>0)info(summary,"Не удалось проверить ограничения: "+unverified,MUTED);
         button(summary,"Проверить снова",true,()->refresh(false));
         content.addView(summary,top(20));
 
@@ -195,15 +199,19 @@ public final class AccessCenterActivity extends Activity {
         LinearLayout status=card();
         addHeading(status,"Текущее состояние");
         info(status,AccessStatus.label(service.state),statusColor(service.state));
-        info(status,"Ограниченные настройки: "+AccessStatus.restrictedStateLabel(),MUTED);
-        info(status,"Невозможно достоверно узнать из обычного API, разрешил ли Android Restricted Settings.",MUTED);
+        info(status,AccessStatus.restrictionDetail(service.state),
+                service.state==AccessStatus.State.RESTRICTED?WARN:MUTED);
+        if(service.state==AccessStatus.State.RESTRICTED)
+            info(status,"Ограничение подтверждено системной проверкой, но это может быть как ECM, так и политика администратора.",MUTED);
+        if(service.state==AccessStatus.State.DISABLED_UNVERIFIED)
+            info(status,"Android не предоставил результат внутренней проверки. Не считаем приложение заблокированным без доказательств.",MUTED);
         content.addView(status,top(18));
 
         if(AccessStatus.showManualGuide(service.state)){
             LinearLayout wizard=card();
-            addHeading(wizard,"Как настроить доступ");
-            info(wizard,"1. Сначала открой специальные возможности, нажми на серую службу и вызови предупреждение Android об ограниченных настройках. Это важно: до предупреждения пункта в меню может не быть.",WHITE);
-            info(wizard,"2. Нажми «Открыть настройки "+service.applicationName+"»: Legion Control откроет карточку именно этого приложения. Искать его в списке не нужно.",WHITE);
+            addHeading(wizard,service.state==AccessStatus.State.RESTRICTED?"Системное ограничение":"Как проверить ограничение");
+            info(wizard,"1. Открой специальные возможности. Если служба серая — нажми на неё и вызови предупреждение Android. Если переключатель доступен, используй обычное включение.",WHITE);
+            info(wizard,"2. Когда Android действительно блокирует доступ, открой настройки «"+service.applicationName+"» прямо отсюда, без поиска в списке.",WHITE);
             info(wizard,"3. Если появилось ⋮ → «Разрешить ограниченные настройки», подтверди действие Android. Включай службу только доверенного приложения.",WHITE);
             info(wizard,"4. Вернись в специальные возможности, включи службу вручную и перепроверь её статус здесь.",WHITE);
             button(wizard,"1. Открыть специальные возможности",false,this::openAccessibility);
@@ -231,6 +239,12 @@ public final class AccessCenterActivity extends Activity {
             addHeading(enabled,"Служба уже включена");
             info(enabled,"Повторно разрешать доступ не требуется. Не меняй настройки, если приложение работает корректно.",GREEN);
             content.addView(enabled,top(12));
+        }else if(service.state==AccessStatus.State.DISABLED){
+            LinearLayout ordinary=card();
+            addHeading(ordinary,"Доступна для включения");
+            info(ordinary,"Служба выключена, но системная проверка разрешает её включение. Никаких обходов или специальных разрешений не требуется.",GREEN);
+            button(ordinary,"Открыть специальные возможности",true,this::openAccessibility);
+            content.addView(ordinary,top(12));
         }else{
             LinearLayout unknown=card();
             addHeading(unknown,"Состояние не подтверждено");
@@ -325,7 +339,9 @@ public final class AccessCenterActivity extends Activity {
     }
 
     private int statusColor(AccessStatus.State state){
-        return state==AccessStatus.State.ENABLED?GREEN:state==AccessStatus.State.DISABLED?WARN:MUTED;
+        if(state==AccessStatus.State.ENABLED||state==AccessStatus.State.DISABLED)return GREEN;
+        if(state==AccessStatus.State.RESTRICTED)return WARN;
+        return MUTED;
     }
 
     private LinearLayout card(){
