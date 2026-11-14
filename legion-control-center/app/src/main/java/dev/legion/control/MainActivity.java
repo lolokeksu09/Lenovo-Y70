@@ -110,7 +110,7 @@ public final class MainActivity extends Activity {
         connecting=true;updateConnection();
         try{
             Shizuku.UserServiceArgs args=new Shizuku.UserServiceArgs(new ComponentName(getPackageName(),ShellUserService.class.getName()))
-                    .processNameSuffix("legion_control").daemon(false).debuggable(false).version(3);
+                    .processNameSuffix("legion_control").daemon(false).debuggable(false).version(4);
             Shizuku.bindUserService(args,connection);
         }catch(Throwable t){connecting=false;showError("Не удалось подключить UserService: "+t.getMessage());}
     }
