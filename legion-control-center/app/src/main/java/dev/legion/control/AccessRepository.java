@@ -60,7 +60,8 @@ public final class AccessRepository {
                     appName=safeLabel(pm.getApplicationLabel(app),pkg);
                     system=(app.flags & (ApplicationInfo.FLAG_SYSTEM|ApplicationInfo.FLAG_UPDATED_SYSTEM_APP))!=0;
                 }
-                records.add(new AccessStatus.Record(info.getId(),pkg,serviceName,appName,system));
+                records.add(new AccessStatus.Record(info.getId(),pkg,serviceName,appName,
+                        system,app!=null?app.uid:-1));
             }
             // The public SDK does not expose Android's ECM eligibility. The underlying
             // AccessibilityManager has a read-only, hidden isAccessibilityTargetAllowed
