@@ -122,7 +122,7 @@ class LicenseManager private constructor(context: Context) {
         }
         executor.execute {
             var success = false
-            val status: String
+            var status: String
             try {
                 val request = JSONObject().put("key", key).put("install_id", installId)
                 val response = post("/v1/activate", request)
@@ -156,7 +156,7 @@ class LicenseManager private constructor(context: Context) {
         prefs.edit().putLong(LAST_RENEW, System.currentTimeMillis() / 1000L).apply()
         executor.execute {
             var success = false
-            val status: String
+            var status: String
             try {
                 val request = JSONObject().put("token", token).put("install_id", installId)
                 val response = post("/v1/renew", request)
