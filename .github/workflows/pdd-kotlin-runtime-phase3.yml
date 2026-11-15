@@ -1,0 +1,80 @@
+name: PDD Overlay RU Kotlin runtime phase 3
+on:
+  push:
+    branches: [pdd-overlay-ru-kotlin-runtime-v020]
+    paths:
+      - '.github/workflows/pdd-kotlin-runtime-phase3.yml'
+      - 'pdd-overlay-ru/migrations/kotlin_runtime_phase3.py'
+      - 'pdd-overlay-ru/migrations/runtime/*.kt'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Migrate Kotlin runtime from preserved beta2 version
+        run: |
+          python3 pdd-overlay-ru/migrations/kotlin_runtime_phase3.py
+          base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-kotlin-runtime.zip
+          unzip -q /tmp/pdd-kotlin-runtime.zip
+          test ! -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/TranslationEngine.java
+          test ! -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/PddAccessibilityService.java
+          test -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/TranslationEngine.kt
+          test -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/PddAccessibilityService.kt
+          grep -q "versionCode 12" pinduoduo_overlay_ru/app/build.gradle
+      - name: Existing regression tests and privacy/source invariants
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+      - name: Kotlin unit tests, debug and release builds
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify Kotlin tests executed rather than skipped
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          root = Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          for name in ("HomeReadinessTest", "TranslationPolicyKotlinTest",
+                       "OverlayPlacementKotlinTest", "OverlayCoordinatesKotlinTest",
+                       "OverlayUpdatePolicyKotlinTest"):
+              items = list(root.glob("TEST-*" + name + ".xml"))
+              assert len(items) == 1, name
+              suite = ET.parse(items[0]).getroot()
+              assert int(suite.get("tests", "0")) > 0, name
+              assert int(suite.get("failures", "0")) == 0, name
+              assert int(suite.get("errors", "0")) == 0, name
+              print(name, suite.get("tests"), "PASS")
+          PY
+      # The API 35 software emulator has failed before APK installation (Package Manager
+      # "Broken pipe"); do not confuse infrastructure failure with app verification.
+      # Device/emulator runtime testing remains a separate, explicitly unverified gate.
+      - name: Commit verified Kotlin source archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then echo "Expected migrated archive change"; exit 1; fi
+          git commit -m "refactor(pdd): migrate ML Kit engine and accessibility service to Kotlin"
+          git push origin HEAD:pdd-overlay-ru-kotlin-runtime-v020
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-Kotlin-runtime-phase3-debug-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
