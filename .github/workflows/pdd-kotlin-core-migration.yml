@@ -1,0 +1,72 @@
+name: PDD Overlay RU Kotlin core migration
+on:
+  push:
+    branches: [pdd-overlay-ru-kotlin-core-v020]
+    paths:
+      - '.github/workflows/pdd-kotlin-core-migration.yml'
+      - 'pdd-overlay-ru/migrations/kotlin_core_phase2.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  migrate-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Migrate versioned Android source to Kotlin core
+        run: |
+          python3 pdd-overlay-ru/migrations/kotlin_core_phase2.py
+          base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-kotlin-source.zip
+          unzip -q /tmp/pdd-kotlin-source.zip
+          test "$(find pinduoduo_overlay_ru/app/src/main/java -name '*.kt' | wc -l)" -ge 8
+          test ! -e pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/TranslationPolicy.java
+          grep -q "versionCode 12" pinduoduo_overlay_ru/app/build.gradle
+      - name: Java compatibility and static-source checks
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+      - name: Kotlin/JUnit regressions and debug APK
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify Kotlin regression suites actually ran
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree
+          root = Path('pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest')
+          names = ('TranslationPolicyKotlinTest', 'OverlayPlacementKotlinTest',
+                   'OverlayCoordinatesKotlinTest', 'OverlayUpdatePolicyKotlinTest')
+          for name in names:
+              reports = list(root.glob('TEST-*' + name + '.xml'))
+              assert len(reports) == 1, (name, reports)
+              tests = ElementTree.parse(reports[0]).getroot()
+              assert int(tests.get('tests', '0')) > 0
+              assert int(tests.get('failures', '0')) == 0
+              assert int(tests.get('errors', '0')) == 0
+              print(name, tests.get('tests'), 'PASS')
+          PY
+      - name: Commit verified Kotlin source archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then echo 'Expected migrated archive change'; exit 1; fi
+          git commit -m "refactor(pdd): migrate translation and overlay policies to Kotlin"
+          git push origin HEAD:pdd-overlay-ru-kotlin-core-v020
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PDD-RU-Kotlin-core-debug-and-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: error
