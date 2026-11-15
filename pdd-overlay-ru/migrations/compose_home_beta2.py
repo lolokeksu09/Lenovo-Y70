@@ -117,8 +117,8 @@ cases = """
 """
 files[base + test] = (original[:-2] + cases + "}\n").encode("utf-8")
 patch("ONE_MODULE_ARCHITECTURE.md",
-      "Version: " + "\`0.2.0-beta.1\`" + " / " + "\`versionCode 11\`",
-      "Version: " + "\`0.2.0-beta.2\`" + " / " + "\`versionCode 12\`")
+      "Version: " + "`0.2.0-beta.1`" + " / " + "`versionCode 11`",
+      "Version: " + "`0.2.0-beta.2`" + " / " + "`versionCode 12`")
 
 result = io.BytesIO()
 with zipfile.ZipFile(result, "w") as dst:
