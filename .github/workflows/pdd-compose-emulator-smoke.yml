@@ -1,10 +1,11 @@
-name: PDD Overlay RU Compose emulator smoke
+name: PDD Overlay RU beta3 emulator UI smoke
 on:
   push:
     branches:
       - pdd-overlay-ru-compose-single-v020
     paths:
       - '.github/workflows/pdd-compose-emulator-smoke.yml'
+      - 'pdd-overlay-ru/source_bundle.base64'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +26,10 @@ jobs:
         run: |
           base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-compose-src.zip
           unzip -q /tmp/pdd-compose-src.zip
+          grep -q 'versionCode 13' pinduoduo_overlay_ru/app/build.gradle
+          grep -q "versionName '0.2.0-beta.3'" pinduoduo_overlay_ru/app/build.gradle
+          test -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/TranslationQueueGate.kt
+          test -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/PaymentActionPolicy.kt
       - name: Build debug APK
         run: gradle -p pinduoduo_overlay_ru :app:assembleDebug --no-daemon
       - name: Emulator install, launch and UI smoke
@@ -61,6 +66,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: PDD-RU-Compose-emulator-smoke
+          name: PDD-RU-beta3-emulator-smoke
           path: smoke-evidence/
           if-no-files-found: warn
