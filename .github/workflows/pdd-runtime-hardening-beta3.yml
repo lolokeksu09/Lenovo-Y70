@@ -91,6 +91,9 @@ jobs:
             exit 1
           fi
           git commit -m "feat(pdd): beta3 ML Kit queue hardening and payment overlay safeguards"
+          # Preserve any unrelated changes committed while CI was building.
+          git fetch origin pdd-overlay-ru-runtime-hardening-beta3
+          git rebase origin/pdd-overlay-ru-runtime-hardening-beta3
           git push origin HEAD:pdd-overlay-ru-runtime-hardening-beta3
 
       - uses: actions/upload-artifact@v4
