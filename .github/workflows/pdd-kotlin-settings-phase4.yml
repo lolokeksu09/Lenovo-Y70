@@ -1,0 +1,76 @@
+name: PDD Overlay RU Kotlin advanced settings phase 4
+on:
+  push:
+    branches: [pdd-overlay-ru-kotlin-settings-v020]
+    paths:
+      - '.github/workflows/pdd-kotlin-settings-phase4.yml'
+      - 'pdd-overlay-ru/migrations/kotlin_settings_phase4.py'
+      - 'pdd-overlay-ru/migrations/settings/MainActivity.kt'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  settings-kotlin-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Apply Kotlin settings migration from versioned archive
+        run: |
+          python3 pdd-overlay-ru/migrations/kotlin_settings_phase4.py
+          base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-settings.zip
+          unzip -q /tmp/pdd-settings.zip
+          test -f pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/MainActivity.kt
+          test ! -e pinduoduo_overlay_ru/app/src/main/java/app/pinduoduo/overlayru/MainActivity.java
+          grep -q "versionCode 12" pinduoduo_overlay_ru/app/build.gradle
+      - name: Source privacy and Java continuity checks
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+      - name: Compile Kotlin, JUnit and both APK variants
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+      - name: Confirm expected Kotlin tests really executed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          path = Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          for name in ("HomeReadinessTest", "SettingsKotlinMigrationTest",
+                       "TranslationPolicyKotlinTest", "OverlayCoordinatesKotlinTest",
+                       "OverlayPlacementKotlinTest", "OverlayUpdatePolicyKotlinTest",
+                       "LicenseTokenVerifierTest"):
+              matches = list(path.glob("TEST-*" + name + ".xml"))
+              assert len(matches) == 1, (name, matches)
+              xml = ET.parse(matches[0]).getroot()
+              assert int(xml.get("tests", "0")) > 0, name
+              assert int(xml.get("failures", "0")) == 0, name
+              assert int(xml.get("errors", "0")) == 0, name
+              print(name, xml.get("tests"), "PASS")
+          PY
+      - name: Commit verified Kotlin source archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then echo 'Expected migrated archive change'; exit 1; fi
+          git commit -m "refactor(pdd): Kotlin advanced settings and helper migration"
+          git push origin HEAD:pdd-overlay-ru-kotlin-settings-v020
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-Kotlin-advanced-settings-phase4
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
