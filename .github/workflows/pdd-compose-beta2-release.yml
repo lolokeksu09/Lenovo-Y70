@@ -1,0 +1,61 @@
+name: PDD Overlay RU single-module Compose beta2
+on:
+  push:
+    branches: [pdd-overlay-ru-compose-single-v020]
+    paths:
+      - '.github/workflows/pdd-compose-beta2-release.yml'
+      - 'pdd-overlay-ru/migrations/compose_home_beta2.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-build-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Apply beta2 onboarding changes to original versioned source
+        run: python3 pdd-overlay-ru/migrations/compose_home_beta2.py
+      - name: Restore patched Android project
+        run: |
+          base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-beta2-source.zip
+          unzip -q /tmp/pdd-beta2-source.zip
+          grep -q "versionCode 12" pinduoduo_overlay_ru/app/build.gradle
+          test "$(grep -c 'include(' pinduoduo_overlay_ru/settings.gradle)" -eq 1
+      - name: Translation regression checks
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+      - name: Compose unit tests and release build
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+      - name: Commit verified beta2 Android source back to branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          git diff --cached --exit-code && { echo 'No change to commit'; exit 1; } || true
+          git commit -m "feat(pdd): beta2 actionable setup and translation retry"
+          git push origin HEAD:pdd-overlay-ru-compose-single-v020
+      - name: Export Android signer
+        run: |
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner.jar | head -n 1)
+          test -n "$SIGNER"
+          cp "$SIGNER" ./apksigner.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PDD-RU-v0.2.0-beta.2-Compose-unsigned-and-signer
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            apksigner.jar
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: error
