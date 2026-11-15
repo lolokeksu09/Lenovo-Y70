@@ -35,7 +35,7 @@ new_view = (feature/"OcrImageViewer.kt").read_bytes()
 assert "remember(preview) { mutableIntStateOf(-1) }" in new_view.decode()
 assert "detectTransformGestures(panZoomLock = true)" in new_view.decode()
 assert "viewport.toImageCanvas(" in new_view.decode()
-assert new_view.count("graphicsLayer {") == 2
+assert new_view.decode("utf-8").count("graphicsLayer {") == 2
 assert "onDoubleTap" in new_view.decode()
 assert "eligible[position + 1]" in new_view.decode()
 files[main+"OcrImageViewer.kt"] = new_view
