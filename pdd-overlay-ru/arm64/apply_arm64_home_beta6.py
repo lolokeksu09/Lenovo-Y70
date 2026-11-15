@@ -73,8 +73,8 @@ assert "android.permission.READ_MEDIA_IMAGES" not in manifest
 assert "android.permission.SYSTEM_ALERT_WINDOW" not in manifest
 assert "android:name=\".ImageOcrActivity\"" in manifest
 assert "android:name=\".GlossaryEditorActivity\"" in manifest
-assert "LicenseTokenVerifier.kt" in [p.rsplit("/",1)[1] for p in map(Path,files) if p.name=="LicenseTokenVerifier.kt"]
-assert "OcrImageOpener.kt" in [p.rsplit("/",1)[1] for p in map(Path,files) if p.name=="OcrImageOpener.kt"]
+assert src + "LicenseTokenVerifier.kt" in files
+assert src + "OcrImageOpener.kt" in files
 
 out = io.BytesIO()
 with zipfile.ZipFile(out,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
