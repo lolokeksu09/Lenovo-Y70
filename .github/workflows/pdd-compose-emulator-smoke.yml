@@ -1,0 +1,66 @@
+name: PDD Overlay RU Compose emulator smoke
+on:
+  push:
+    branches:
+      - pdd-overlay-ru-compose-single-v020
+    paths:
+      - '.github/workflows/pdd-compose-emulator-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Restore Android project
+        run: |
+          base64 -d pdd-overlay-ru/source_bundle.base64 > /tmp/pdd-compose-src.zip
+          unzip -q /tmp/pdd-compose-src.zip
+      - name: Build debug APK
+        run: gradle -p pinduoduo_overlay_ru :app:assembleDebug --no-daemon
+      - name: Emulator install, launch and UI smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 3072M
+          heap-size: 512M
+          disk-size: 4096M
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            mkdir -p smoke-evidence
+            adb install -r pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n app.pinduoduo.overlayru/.HomeActivity | tee smoke-evidence/launch.txt
+            sleep 8
+            adb shell pidof app.pinduoduo.overlayru | tee smoke-evidence/pid.txt
+            adb shell uiautomator dump /sdcard/pdd-home.xml
+            adb pull /sdcard/pdd-home.xml smoke-evidence/home.xml
+            adb exec-out screencap -p > smoke-evidence/home.png
+            grep -q 'Pinduoduo на русском' smoke-evidence/home.xml
+            grep -q 'Pinduoduo' smoke-evidence/home.xml
+            adb shell am start -W -n app.pinduoduo.overlayru/.MainActivity | tee smoke-evidence/settings-launch.txt
+            sleep 2
+            adb shell pidof app.pinduoduo.overlayru
+            adb shell am start -W -n app.pinduoduo.overlayru/.LicenseActivity | tee smoke-evidence/license-launch.txt
+            sleep 2
+            adb shell pidof app.pinduoduo.overlayru
+            adb logcat -d -t 1200 > smoke-evidence/logcat.txt
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDD-RU-Compose-emulator-smoke
+          path: smoke-evidence/
+          if-no-files-found: warn
