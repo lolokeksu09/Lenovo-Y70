@@ -280,9 +280,9 @@ private fun ImageOcrScreen(
                 ) {
                     Column(Modifier.fillMaxWidth().padding(14.dp)) {
                         Text(row.first, color = OCRMuted, fontSize = 13.sp, lineHeight = 18.sp)
-                        if (!row.second.isNullOrBlank()) {
+                        row.second?.takeIf { it.isNotBlank() }?.let { translation ->
                             Spacer(Modifier.height(6.dp))
-                            Text(row.second, color = OCRText, fontSize = 15.sp, lineHeight = 21.sp)
+                            Text(translation, color = OCRText, fontSize = 15.sp, lineHeight = 21.sp)
                         }
                     }
                 }
