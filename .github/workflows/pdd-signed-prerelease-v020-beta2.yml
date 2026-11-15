@@ -31,12 +31,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          missing=0
           for name in PDD_KEYSTORE_B64 PDD_RELEASE_STORE_PASSWORD PDD_RELEASE_KEY_ALIAS PDD_RELEASE_KEY_PASSWORD; do
             if [[ -z "$(printenv "$name")" ]]; then
-              echo "::error title=No persistent release key::Missing Actions secret $name. Refusing to publish an unsigned/debug release."
-              exit 1
+              echo "::error title=Release secret missing::$name is absent. Refusing to publish an unsigned/debug release."
+              missing=1
             fi
           done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
           if [[ -z "$PDD_LICENSE_API_BASE_URL" || -z "$PDD_LICENSE_PUBLIC_KEY_B64" ]]; then
             echo "::error title=Incomplete PRO config::Set both PDD license Actions variables before publishing."
             exit 1
