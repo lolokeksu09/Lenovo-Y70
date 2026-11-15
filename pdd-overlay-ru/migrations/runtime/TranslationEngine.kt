@@ -24,7 +24,7 @@ import java.util.LinkedHashMap
  * Preserve: offline model inspection, explicit download consent, single-flight noncancellable
  * tasks, failure backoff, limited callback fan-out and a bounded translation cache.
  */
-internal class TranslationEngine private constructor(private val context: Context) {
+class TranslationEngine private constructor(private val context: Context) {
 
     companion object {
         const val PREFS = "local_settings"
