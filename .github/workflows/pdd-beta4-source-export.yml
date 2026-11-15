@@ -1,0 +1,25 @@
+name: PDD temporary source extraction beta4
+on:
+  push:
+    branches: [pdd-overlay-ru-ocr-custom-glossary-beta4]
+    paths:
+      - '.github/workflows/pdd-beta4-source-export.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore and verify canonical source ZIP
+        run: |
+          base64 -d pdd-overlay-ru/source_bundle.base64 > pdd-overlay-ru-current-source.zip
+          unzip -tq pdd-overlay-ru-current-source.zip
+          unzip -p pdd-overlay-ru-current-source.zip pinduoduo_overlay_ru/app/build.gradle | grep -F "versionName '0.2.0-beta.3'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PDD-beta3-canonical-Android-source-for-beta4-development
+          path: pdd-overlay-ru-current-source.zip
+          if-no-files-found: error
