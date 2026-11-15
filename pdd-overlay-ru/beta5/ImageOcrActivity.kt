@@ -235,7 +235,7 @@ class ImageOcrActivity : ComponentActivity() {
                 }
             }
             timeout = Runnable { complete(null) }
-            mainHandler.postDelayed(timeout, 35_000L)
+            timeout?.let { mainHandler.postDelayed(it, 35_000L) }
             try {
                 val immediate = engine.translateOcr(source) { translated -> complete(translated) }
                 if (immediate != null) complete(immediate)
