@@ -92,7 +92,7 @@ class TranslationEngine private constructor(private val context: Context) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean =
             size > 200
     }
-    private val pending = HashMap<String, MutableList<Consumer<String>>>()
+    private val pending = HashMap<String, MutableList<Consumer<String?>>>()
 
     init {
         restoreLocalModels()
@@ -384,7 +384,7 @@ class TranslationEngine private constructor(private val context: Context) {
      * Returns an immediate glossary/cache value or null.
      * Unknown labels are resolved by ML Kit and sent to bounded pending callbacks.
      */
-    fun translate(text: String?, onReady: Consumer<String>?): String? {
+    fun translate(text: String?, onReady: Consumer<String?>?): String? {
         if (text == null) return null
         val clean = text.trim()
         if (!TranslationPolicy.shouldTranslate(clean, false, false)) return null
@@ -414,7 +414,7 @@ class TranslationEngine private constructor(private val context: Context) {
             return null
         }
 
-        val waiting = ArrayList<Consumer<String>>()
+        val waiting = ArrayList<Consumer<String?>>()
         if (onReady != null) waiting.add(onReady)
         pending[key] = waiting
         val activeTranslator = if (sourceLanguage == TranslationPolicy.CHINESE)
