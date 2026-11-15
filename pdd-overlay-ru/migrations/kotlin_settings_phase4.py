@@ -277,6 +277,8 @@ validator_path = root + "scripts/validate_sources.py"
 validator = files[validator_path].decode("utf-8")
 for before, after in {
     "MainActivity.java": "MainActivity.kt",
+    "'AccessibilityServiceIds.contains(services,'":
+        "'AccessibilityServiceIds.contains('",
     "ModelDownloadConditionsFactory.java": "ModelDownloadConditionsFactory.kt",
     "AccessibilityServiceIds.java": "AccessibilityServiceIds.kt",
     "DownloadAttemptGate.java": "DownloadAttemptGate.kt",
