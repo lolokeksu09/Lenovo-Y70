@@ -134,7 +134,8 @@ replace_exact(
 )
 replace_exact(
     engine,
-    '''        if (!TranslationPolicy.shouldTranslate(clean, false, false)) return null
+    '''        if (!TranslationPolicy.shouldTranslate(clean, false, false) ||
+            PaymentActionPolicy.isProtected(clean)) return null
         val sourceLanguage = TranslationPolicy.sourceLanguage(clean)''',
     '''        if (!TranslationPolicy.shouldTranslate(clean, false, false) ||
             PaymentActionPolicy.isProtected(clean)) return null
