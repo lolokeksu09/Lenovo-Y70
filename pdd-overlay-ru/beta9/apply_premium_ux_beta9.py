@@ -84,6 +84,19 @@ assert "CustomGlossary.put(context, source, translation)" in files[main+"Glossar
 assert "CustomGlossary.delete(context, item.first)" in files[main+"GlossaryEditorActivity.kt"].decode()
 assert "OcrImageViewer(" in files[main+"OcrScreenV2.kt"].decode()
 
+# Retire only an obsolete UI test that required the old ornamental gradient.
+# Replace it with assertions for real beta9 settings navigation and correct OCR
+# information; keep all security, Accessibility and translation test contracts.
+local_checks = root + "scripts/test_local.sh"
+checks = files[local_checks].decode("utf-8")
+old_visual_assert = "assert 'GradientDrawable.Orientation.TL_BR' in activity"
+assert checks.count(old_visual_assert) == 1, "Unexpected local UI test baseline"
+new_visual_assert = (
+    "assert 'Настройки перевода' in activity and "
+    "'OCR доступен на главном экране:' in activity"
+)
+files[local_checks] = checks.replace(old_visual_assert, new_visual_assert, 1).encode("utf-8")
+
 g = files[gradle].decode()
 assert "applicationId 'app.pinduoduo.overlayru'" in g
 assert "ndk { abiFilters 'arm64-v8a' }" in g
