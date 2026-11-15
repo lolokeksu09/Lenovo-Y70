@@ -54,8 +54,10 @@ class ImageOcrActivity : ComponentActivity() {
     private data class OcrLine(val source: String, val translation: String? = null)
 
     private val engine by lazy { TranslationEngine.get(this) }
+    private var recognizerOpened = false
     private val recognizer by lazy {
         TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+            .also { recognizerOpened = true }
     }
     private val worker = Executors.newSingleThreadExecutor()
     private var generation = 0
@@ -111,11 +113,9 @@ class ImageOcrActivity : ComponentActivity() {
                     recognizer.process(InputImage.fromBitmap(bitmap, 0))
                         .addOnSuccessListener { document ->
                             if (!isDestroyed && generation == scan) {
-                                val text = document.textBlocks.flatMap { it.lines }
-                                    .map { it.text.trim() }
-                                    .filter { it.isNotBlank() }
-                                    .distinct()
-                                    .take(60)
+                                val text = OcrTextPolicy.cleaned(
+                                    document.textBlocks.flatMap { it.lines }.map { it.text }
+                                )
                                 busy = false
                                 rows = text.map { OcrLine(it) }
                                 if (text.isEmpty()) {
@@ -169,8 +169,7 @@ class ImageOcrActivity : ComponentActivity() {
     private fun translateRows(scan: Int) {
         val initial = rows
         initial.forEachIndexed { index, item ->
-            if (!TranslationPolicy.shouldTranslate(item.source, false, false) ||
-                PaymentActionPolicy.isProtected(item.source)) return@forEachIndexed
+            if (!OcrTextPolicy.canTranslate(item.source)) return@forEachIndexed
             val immediate = engine.translateOcr(item.source) { translated ->
                 if (translated.isNullOrBlank() || isDestroyed || generation != scan) return@translateOcr
                 if (rows.getOrNull(index)?.source == item.source) {
@@ -199,7 +198,7 @@ class ImageOcrActivity : ComponentActivity() {
     override fun onDestroy() {
         ++generation
         worker.shutdownNow()
-        if (this::recognizer.isInitialized) recognizer.close()
+        if (recognizerOpened) recognizer.close()
         super.onDestroy()
     }
 }
