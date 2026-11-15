@@ -87,7 +87,7 @@ assert "OcrImageViewer(" in files[main+"OcrScreenV2.kt"].decode()
 # Retire only an obsolete UI test that required the old ornamental gradient.
 # Replace it with assertions for real beta9 settings navigation and correct OCR
 # information; keep all security, Accessibility and translation test contracts.
-local_checks = root + "scripts/test_local.sh"
+local_checks = root + "scripts/validate_sources.py"
 checks = files[local_checks].decode("utf-8")
 old_visual_assert = "assert 'GradientDrawable.Orientation.TL_BR' in activity"
 assert checks.count(old_visual_assert) == 1, "Unexpected local UI test baseline"
