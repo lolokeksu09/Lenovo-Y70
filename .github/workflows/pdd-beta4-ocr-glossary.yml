@@ -1,0 +1,118 @@
+name: PDD Overlay RU beta4 OCR and local glossary
+
+on:
+  push:
+    branches: [pdd-overlay-ru-ocr-custom-glossary-beta4]
+    paths:
+      - '.github/workflows/pdd-beta4-ocr-glossary.yml'
+      - 'pdd-overlay-ru/beta4/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-build-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Migrate canonical source archive to beta4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta4/apply_ocr_glossary_beta4.py
+          base64 -d pdd-overlay-ru/source_bundle.base64 > "$RUNNER_TEMP/pdd-beta4-source.zip"
+          unzip -tq "$RUNNER_TEMP/pdd-beta4-source.zip"
+          unzip -q "$RUNNER_TEMP/pdd-beta4-source.zip"
+          APP=pinduoduo_overlay_ru
+          test "$(find "$APP/app/src/main/java" -name '*.java' | wc -l)" -eq 0
+          grep -q 'versionCode 14' "$APP/app/build.gradle"
+          grep -q "versionName '0.2.0-beta.4'" "$APP/app/build.gradle"
+          grep -q "applicationId 'app.pinduoduo.overlayru'" "$APP/app/build.gradle"
+          grep -q "com.google.mlkit:text-recognition-chinese:16.0.1" "$APP/app/build.gradle"
+          grep -q 'android:name=".ImageOcrActivity"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:name=".GlossaryEditorActivity"' "$APP/app/src/main/AndroidManifest.xml"
+          ! grep -q 'android.permission.READ_MEDIA_IMAGES' "$APP/app/src/main/AndroidManifest.xml"
+          test -f "$APP/app/src/test/java/app/pinduoduo/overlayru/OcrTextPolicyTest.kt"
+          test -f "$APP/app/src/test/java/app/pinduoduo/overlayru/CustomGlossaryPolicyTest.kt"
+
+      - name: Translation security and source invariants
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+
+      - name: Test and build both Android variants
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify 47 real executed JUnit tests including OCR safety rules
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          expected = {
+              "LicenseTokenVerifierTest": 7,
+              "LicenseSecurityMigrationTest": 5,
+              "SettingsKotlinMigrationTest": 4,
+              "TranslationPolicyKotlinTest": 3,
+              "OverlayPlacementKotlinTest": 2,
+              "OverlayCoordinatesKotlinTest": 2,
+              "OverlayUpdatePolicyKotlinTest": 1,
+              "HomeReadinessTest": 6,
+              "TranslationQueueGateTest": 6,
+              "PaymentActionPolicyTest": 3,
+              "CustomGlossaryPolicyTest": 4,
+              "OcrTextPolicyTest": 4
+          }
+          total = 0
+          for suite, count in expected.items():
+              report = list(root.glob("TEST-*" + suite + ".xml"))
+              assert len(report) == 1, (suite, report)
+              xml = ET.parse(report[0]).getroot()
+              assert int(xml.get("tests", "0")) == count, (suite, "test count mismatch")
+              assert int(xml.get("failures", "-1")) == 0, suite
+              assert int(xml.get("errors", "-1")) == 0, suite
+              assert int(xml.get("skipped", "0")) == 0, suite
+              total += count
+              print(suite, count, "PASS")
+          assert total == 47, total
+          print("PASS", total, "tests")
+          PY
+
+      - name: Commit exact tested beta4 source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then
+            echo "::error::Expected updated canonical beta4 source"
+            exit 1
+          fi
+          git commit -m "feat(pdd): integrate beta4 offline image OCR and personal glossary into Kotlin source"
+          git fetch origin pdd-overlay-ru-ocr-custom-glossary-beta4
+          git rebase origin/pdd-overlay-ru-ocr-custom-glossary-beta4
+          git push origin HEAD:pdd-overlay-ru-ocr-custom-glossary-beta4
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-v0.2.0-beta.4-OCR-APK-and-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
