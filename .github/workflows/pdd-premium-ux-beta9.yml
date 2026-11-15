@@ -1,0 +1,126 @@
+name: PDD Overlay RU beta9 premium UX ARM64
+on:
+  push:
+    branches: [pdd-overlay-ru-premium-ux-beta9]
+    paths:
+      - '.github/workflows/pdd-premium-ux-beta9.yml'
+      - 'pdd-overlay-ru/beta9/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-premium-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Apply UX migration to beta8 canonical Android source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta9/apply_premium_ux_beta9.py
+          base64 --decode pdd-overlay-ru/source_bundle.base64 > "$RUNNER_TEMP/pdd-beta9.zip"
+          unzip -tq "$RUNNER_TEMP/pdd-beta9.zip"
+          unzip -q "$RUNNER_TEMP/pdd-beta9.zip"
+          APP=pinduoduo_overlay_ru
+          test "$(find "$APP/app/src/main/java" -type f -name '*.java' | wc -l)" -eq 0
+          grep -q 'versionCode 19' "$APP/app/build.gradle"
+          grep -q "versionName '0.2.0-beta.9'" "$APP/app/build.gradle"
+          grep -q "applicationId 'app.pinduoduo.overlayru'" "$APP/app/build.gradle"
+          grep -q "ndk { abiFilters 'arm64-v8a' }" "$APP/app/build.gradle"
+          grep -q 'fun HomeScreen(' "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeScreen.kt"
+          grep -q 'import app.pinduoduo.overlayru.ui.design.PddPalette' "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeScreen.kt"
+          grep -q 'OCR доступен на главном экране:' "$APP/app/src/main/java/app/pinduoduo/overlayru/MainActivity.kt"
+          grep -q 'Text("Править"' "$APP/app/src/main/java/app/pinduoduo/overlayru/GlossaryEditorActivity.kt"
+
+      - name: Accessibility, translation and privacy invariants
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+
+      - name: JVM regression suite and ARM64 Android Release
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify all 66 JUnit cases actually executed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          folder=Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          expected={
+              "LicenseTokenVerifierTest":7, "LicenseSecurityMigrationTest":5,
+              "SettingsKotlinMigrationTest":4, "TranslationPolicyKotlinTest":3,
+              "OverlayPlacementKotlinTest":2, "OverlayCoordinatesKotlinTest":2,
+              "OverlayUpdatePolicyKotlinTest":1, "HomeReadinessTest":6,
+              "TranslationQueueGateTest":6, "PaymentActionPolicyTest":3,
+              "CustomGlossaryPolicyTest":4, "OcrTextPolicyTest":4,
+              "OcrImagePolicyTest":5, "OcrRegionTest":6,
+              "OcrPhotoViewportTest":8
+          }
+          total=0
+          for klass,n in expected.items():
+              matches=list(folder.glob("TEST-*"+klass+".xml"))
+              assert len(matches)==1,(klass,matches)
+              xml=ET.parse(matches[0]).getroot()
+              for name,required in [("tests",n),("failures",0),("errors",0),("skipped",0)]:
+                  assert int(xml.get(name,-1))==required,(klass,name,xml.get(name))
+              total+=n
+              print(klass,n,"PASS")
+          assert total==66,total
+          print("PASS: 66 JVM regression tests")
+          PY
+
+      - name: Check distributed APK payload architecture
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          path=Path("pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk")
+          assert path.is_file() and path.stat().st_size>1000000
+          with zipfile.ZipFile(path) as z:
+              names=z.namelist()
+              libs=[n for n in names if n.startswith("lib/") and n.endswith(".so")]
+              assert libs and all(n.startswith("lib/arm64-v8a/") for n in libs),libs
+              assert any(n.endswith("/libtranslate_jni.so") for n in libs),libs
+              assert any(n.endswith("/libmlkit_google_ocr_pipeline.so") for n in libs),libs
+              assert "AndroidManifest.xml" in names
+          print("PASS ARM64-only, size:",path.stat().st_size)
+          PY
+
+      - name: Commit exact verified beta9 canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then
+            echo "::error::Expected updated canonical source"
+            exit 1
+          fi
+          git commit -m "feat(pdd): premium UX beta9 for Home, Settings, OCR and Glossary"
+          git fetch origin pdd-overlay-ru-premium-ux-beta9
+          git rebase origin/pdd-overlay-ru-premium-ux-beta9
+          git push origin HEAD:pdd-overlay-ru-premium-ux-beta9
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-v0.2.0-beta.9-ARM64-premium-APK-and-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
