@@ -21,7 +21,6 @@ jobs:
       PDD_RELEASE_STORE_PASSWORD: ${{ secrets.PDD_RELEASE_STORE_PASSWORD }}
       PDD_RELEASE_KEY_ALIAS: ${{ secrets.PDD_RELEASE_KEY_ALIAS }}
       PDD_RELEASE_KEY_PASSWORD: ${{ secrets.PDD_RELEASE_KEY_PASSWORD }}
-      PDD_EXPECTED_SIGNER_SHA256: ${{ vars.PDD_EXPECTED_SIGNER_SHA256 }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -140,13 +139,14 @@ jobs:
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' release-out/SIGNING.txt
           cert_sha256="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' release-out/SIGNING.txt | head -1 | tr -d '[:space:]')"
           [[ "$cert_sha256" =~ ^[0-9a-fA-F]{64}$ ]]
-          if [[ -n "$PDD_EXPECTED_SIGNER_SHA256" ]]; then
-            actual_lower="$(printf '%s' "$cert_sha256" | tr '[:upper:]' '[:lower:]')"
-            expected_lower="$(printf '%s' "$PDD_EXPECTED_SIGNER_SHA256" | tr '[:upper:]' '[:lower:]')"
-            if [[ "$actual_lower" != "$expected_lower" ]]; then
-              echo "::error title=Signing identity mismatch::The certificate differs from the expected production certificate."
-              exit 1
-            fi
+          # Pinned from previously signed PDD RU v0.1.0, v0.1.8, v0.1.9,
+          # and v0.2.0-beta.2 APKs. This is a PUBLIC certificate fingerprint,
+          # not the keystore/private key. Never silently accept another signer.
+          original_cert_sha256="7005dccd4bb71c63ec0f95ded14ccddf9ca5a4fcb5a08ed72ca255f388765bf0"
+          actual_lower="$(printf '%s' "$cert_sha256" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$actual_lower" != "$original_cert_sha256" ]]; then
+            echo "::error title=Signing identity mismatch::The release certificate is not the original PDD Overlay RU certificate. Refusing to publish an update-incompatible APK."
+            exit 1
           fi
           echo "Release certificate SHA-256: $cert_sha256"
           badge="$("$AAPT" dump badging "$APK" | grep '^package:')"
