@@ -1,0 +1,132 @@
+name: PDD Overlay RU ARM64 premium beta6
+on:
+  push:
+    branches: [pdd-overlay-ru-arm64-premium-beta6]
+    paths:
+      - '.github/workflows/pdd-arm64-premium-beta6.yml'
+      - 'pdd-overlay-ru/arm64/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-arm64-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Apply ARM64-only packaging and premium Home UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/arm64/apply_arm64_home_beta6.py
+          base64 --decode pdd-overlay-ru/source_bundle.base64 > "$RUNNER_TEMP/pdd-arm64-beta6.zip"
+          unzip -tq "$RUNNER_TEMP/pdd-arm64-beta6.zip"
+          unzip -q "$RUNNER_TEMP/pdd-arm64-beta6.zip"
+          APP=pinduoduo_overlay_ru
+          test "$(find "$APP/app/src/main/java" -name '*.java' | wc -l)" -eq 0
+          grep -q "versionCode 16" "$APP/app/build.gradle"
+          grep -q "versionName '0.2.0-beta.6'" "$APP/app/build.gradle"
+          grep -q "applicationId 'app.pinduoduo.overlayru'" "$APP/app/build.gradle"
+          grep -q "ndk { abiFilters 'arm64-v8a' }" "$APP/app/build.gradle"
+          grep -q 'fun HomeScreen(' "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeScreen.kt"
+          grep -q 'onOcr: () -> Unit' "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeScreen.kt"
+          grep -q 'onDictionary: () -> Unit' "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeScreen.kt"
+
+      - name: Check local behavior, Accessibility and license constraints
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+
+      - name: Compile ARM64 release and run regressions
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Confirm 52 executed regression tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          folder=Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          expected={
+              "LicenseTokenVerifierTest":7, "LicenseSecurityMigrationTest":5,
+              "SettingsKotlinMigrationTest":4, "TranslationPolicyKotlinTest":3,
+              "OverlayPlacementKotlinTest":2, "OverlayCoordinatesKotlinTest":2,
+              "OverlayUpdatePolicyKotlinTest":1, "HomeReadinessTest":6,
+              "TranslationQueueGateTest":6, "PaymentActionPolicyTest":3,
+              "CustomGlossaryPolicyTest":4, "OcrTextPolicyTest":4,
+              "OcrImagePolicyTest":5,
+          }
+          total=0
+          for name,n in expected.items():
+              matches=list(folder.glob("TEST-*"+name+".xml"))
+              assert len(matches)==1, (name,len(matches))
+              element=ET.parse(matches[0]).getroot()
+              assert int(element.get("tests","-1"))==n,(name,"test count")
+              assert int(element.get("failures","-1"))==0,(name,"failures")
+              assert int(element.get("errors","-1"))==0,(name,"errors")
+              assert int(element.get("skipped","0"))==0,(name,"skipped")
+              total+=n
+          assert total==52,total
+          print(f"PASS: {total} real JVM regression tests")
+          PY
+
+      - name: Enforce only ARM64 native libraries in actual release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          apk=Path("pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk")
+          assert apk.is_file() and apk.stat().st_size>1_000_000,apk
+          with zipfile.ZipFile(apk) as archive:
+              names=archive.namelist()
+              libs=[n for n in names if n.startswith("lib/") and n.endswith(".so")]
+              assert libs, "APK lacks expected native ML Kit translation/OCR libraries"
+              assert all(n.startswith("lib/arm64-v8a/") for n in libs), libs
+              assert any(n.endswith("/libtranslate_jni.so") for n in libs),libs
+              assert any(n.endswith("/libmlkit_google_ocr_pipeline.so") for n in libs),libs
+              assert not any(n.startswith("lib/armeabi-v7a/") or
+                  n.startswith("lib/x86/") or n.startswith("lib/x86_64/") for n in names)
+              for n in ["classes.dex","AndroidManifest.xml"]:
+                  assert n in names,n
+          print("PASS: ARM64-only APK; no 32-bit or x86 native code; OCR and translate libraries present")
+          print(f"APK size {apk.stat().st_size / 1048576:.2f} MiB")
+          PY
+
+      - name: Commit exact tested ARM64 Kotlin source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then
+            echo "::error::Expected updated ARM64 canonical source"
+            exit 1
+          fi
+          git commit -m "feat(pdd): ARM64-only beta6 release and premium home UI"
+          git fetch origin pdd-overlay-ru-arm64-premium-beta6
+          git rebase origin/pdd-overlay-ru-arm64-premium-beta6
+          git push origin HEAD:pdd-overlay-ru-arm64-premium-beta6
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-v0.2.0-beta.6-ARM64-release-and-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
