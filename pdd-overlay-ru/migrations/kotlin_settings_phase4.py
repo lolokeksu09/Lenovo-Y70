@@ -247,13 +247,19 @@ for name, data in tests.items():
 # Kotlin/JUnit suites rather than running a stub or claiming zero discovered tests.
 shell = root + "scripts/test_local.sh"
 lines = files[shell].decode("utf-8").splitlines(keepends=True)
-old_checks = set(kotlin)
-for name in old_checks:
+old_checks = {
+    "AccessibilityServiceIds": "AccessibilityServiceIdsTest",
+    "DownloadAttemptGate": "DownloadAttemptGateTest",
+    "ModelAvailability": "ModelAvailabilityTest",
+    "ModelDownloadConditionsFactory": "ModelDownloadConditionsTest",
+    "EnglishUiGlossary": "EnglishUiGlossaryTest",
+}
+for name, test_name in old_checks.items():
     for index, line in enumerate(lines):
         if line.startswith("javac ") and (name + ".java") in line:
-            if index + 1 >= len(lines) or "java " not in lines[index + 1]:
+            if index + 1 >= len(lines) or not lines[index + 1].startswith("java "):
                 raise RuntimeError("Java shell test not paired for " + name)
-            if name + "Test" not in lines[index + 1]:
+            if test_name not in lines[index + 1]:
                 raise RuntimeError("Expected original test name for " + name)
             lines[index] = ""
             lines[index + 1] = ""
