@@ -1,7 +1,7 @@
-name: PDD Overlay RU PRO client v0.1.9
+name: PDD Overlay RU Compose single-module v0.2.0-beta.1
 on:
   push:
-    branches: [pdd-overlay-ru-pro-client-20261114]
+    branches: [pdd-overlay-ru-compose-single-v020]
     paths:
       - 'pdd-overlay-ru/source_bundle.base64'
       - '.github/workflows/pdd-pro-client-build.yml'
@@ -44,7 +44,7 @@ jobs:
           cp "$SIGNER" ./apksigner.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: PDD-RU-v0.1.9-PRO-client-unsigned-and-signer
+          name: PDD-RU-v0.2.0-beta.1-Compose-unsigned-and-signer
           path: |
             pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
             apksigner.jar
