@@ -1,0 +1,116 @@
+name: PDD OCR image decode and AMOLED UI beta5
+
+on:
+  push:
+    branches: [pdd-overlay-ru-ocr-image-decode-ui-beta5]
+    paths:
+      - '.github/workflows/pdd-ocr-image-ui-beta5.yml'
+      - 'pdd-overlay-ru/beta5/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-build-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Migrate pinned beta4 Android source to beta5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta5/apply_ocr_ui_beta5.py
+          base64 --decode pdd-overlay-ru/source_bundle.base64 > "$RUNNER_TEMP/pdd-beta5.zip"
+          unzip -tq "$RUNNER_TEMP/pdd-beta5.zip"
+          unzip -q "$RUNNER_TEMP/pdd-beta5.zip"
+          APP=pinduoduo_overlay_ru
+          test "$(find "$APP/app/src/main/java" -name '*.java' | wc -l)" -eq 0
+          grep -q 'versionCode 15' "$APP/app/build.gradle"
+          grep -q "versionName '0.2.0-beta.5'" "$APP/app/build.gradle"
+          grep -q "applicationId 'app.pinduoduo.overlayru'" "$APP/app/build.gradle"
+          grep -q 'ImageDecoder.createSource(resolver, uri)' "$APP/app/src/main/java/app/pinduoduo/overlayru/OcrImageOpener.kt"
+          grep -q 'Surface(modifier = Modifier.fillMaxSize(), color = bg)' "$APP/app/src/main/java/app/pinduoduo/overlayru/OcrScreenV2.kt"
+          test -f "$APP/app/src/test/java/app/pinduoduo/overlayru/OcrImagePolicyTest.kt"
+
+      - name: Accessibility, privacy and translation policy checks
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+
+      - name: Kotlin unit tests and Android debug/release builds
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Assert all 52 JVM tests actually ran
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          expected = {
+              "LicenseTokenVerifierTest": 7,
+              "LicenseSecurityMigrationTest": 5,
+              "SettingsKotlinMigrationTest": 4,
+              "TranslationPolicyKotlinTest": 3,
+              "OverlayPlacementKotlinTest": 2,
+              "OverlayCoordinatesKotlinTest": 2,
+              "OverlayUpdatePolicyKotlinTest": 1,
+              "HomeReadinessTest": 6,
+              "TranslationQueueGateTest": 6,
+              "PaymentActionPolicyTest": 3,
+              "CustomGlossaryPolicyTest": 4,
+              "OcrTextPolicyTest": 4,
+              "OcrImagePolicyTest": 5,
+          }
+          total = 0
+          for klass, count in expected.items():
+              matches = list(root.glob("TEST-*" + klass + ".xml"))
+              assert len(matches) == 1, (klass, matches)
+              result = ET.parse(matches[0]).getroot()
+              assert int(result.get("tests", "-1")) == count, (klass, "wrong test count")
+              assert int(result.get("failures", "-1")) == 0, klass
+              assert int(result.get("errors", "-1")) == 0, klass
+              assert int(result.get("skipped", "0")) == 0, klass
+              total += count
+              print(klass, count, "PASS")
+          assert total == 52, total
+          print("PASS:", total, "Android JVM tests")
+          PY
+
+      - name: Commit exact tested beta5 source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then
+            echo "::error::Expected beta5 source archive update"
+            exit 1
+          fi
+          git commit -m "fix(pdd): beta5 OCR image URI handling and AMOLED UI"
+          git fetch origin pdd-overlay-ru-ocr-image-decode-ui-beta5
+          git rebase origin/pdd-overlay-ru-ocr-image-decode-ui-beta5
+          git push origin HEAD:pdd-overlay-ru-ocr-image-decode-ui-beta5
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-beta5-OCR-fixed-APK-and-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/debug/app-debug.apk
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
