@@ -30,5 +30,5 @@ internal object OcrImagePolicy {
     }
 
     fun withinEncodedLimit(byteCount: Long): Boolean =
-        byteCount in 0..MAX_ENCODED_BYTES.toLong()
+        byteCount >= 0L && byteCount <= MAX_ENCODED_BYTES.toLong()
 }
