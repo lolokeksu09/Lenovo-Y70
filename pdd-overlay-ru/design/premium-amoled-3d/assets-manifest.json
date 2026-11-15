@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "name": "PDD Premium AMOLED 3D",
+  "source": "Previously generated four PDD Overlay RU mockups and new visual refinement board",
+  "notes": "Full-resolution 941x1672 WebP reconversions at quality=95. Source PNGs preserved in conversation reference ZIP.",
+  "files": [
+    {
+      "path": "references/home.webp",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 166890,
+      "sha256": "da9021d2f7c6927d19c801110d43c49b338981de5dd2371803b40cf2e4dd6664",
+      "git_blob": "3a6226569489cae6d38ea52e5f37124d63426fac"
+    },
+    {
+      "path": "references/photo-ocr.webp",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 174200,
+      "sha256": "4e83ae6d837317ba868007879a9e9d06ecfd780b728e749dffc30adac1c7883d",
+      "git_blob": "02527b0f34d233f5699342264400a2751a036686"
+    },
+    {
+      "path": "references/glossary.webp",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 175730,
+      "sha256": "26003740bfe976c32817993868180d533a880c972443cf99ed9ffabb31e607de",
+      "git_blob": "558f02d5107120c49ef138da2c31d88dfdff9a7e"
+    },
+    {
+      "path": "references/settings.webp",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 169710,
+      "sha256": "46949704bf8d457a4e409306c3011631e862ce46e078df8712a06d82d4ba59aa",
+      "git_blob": "b72d6eb4ad8efb21ceb4c3810379ee4f141ff294"
+    },
+    {
+      "path": "references/premium-concept-board.webp",
+      "size_bytes": 213424,
+      "sha256": "bb2ea0329810d9db0c267e3f9c46d13b45030775642894cc0bbf21389125cc54",
+      "git_blob": "f9a298f86bb2a9a28c51832ae01513da969f5754"
+    }
+  ]
+}
