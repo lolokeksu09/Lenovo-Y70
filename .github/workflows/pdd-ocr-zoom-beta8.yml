@@ -1,0 +1,124 @@
+name: PDD Overlay RU beta8 OCR pinch zoom ARM64
+on:
+  push:
+    branches: [pdd-overlay-ru-ocr-zoom-beta8]
+    paths:
+      - '.github/workflows/pdd-ocr-zoom-beta8.yml'
+      - 'pdd-overlay-ru/beta8/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-source-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Repack canonical beta8 sources and validate release constraints
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta8/apply_ocr_zoom_beta8.py
+          base64 --decode pdd-overlay-ru/source_bundle.base64 > "$RUNNER_TEMP/pdd-beta8.zip"
+          unzip -tq "$RUNNER_TEMP/pdd-beta8.zip"
+          unzip -q "$RUNNER_TEMP/pdd-beta8.zip"
+          APP=pinduoduo_overlay_ru
+          test "$(find "$APP/app/src/main/java" -type f -name '*.java' | wc -l)" -eq 0
+          grep -q 'versionCode 18' "$APP/app/build.gradle"
+          grep -q "versionName '0.2.0-beta.8'" "$APP/app/build.gradle"
+          grep -q "applicationId 'app.pinduoduo.overlayru'" "$APP/app/build.gradle"
+          grep -q "ndk { abiFilters 'arm64-v8a' }" "$APP/app/build.gradle"
+          grep -q 'detectTransformGestures' "$APP/app/src/main/java/app/pinduoduo/overlayru/OcrImageViewer.kt"
+          test -f "$APP/app/src/test/java/app/pinduoduo/overlayru/OcrPhotoViewportTest.kt"
+
+      - name: Privacy, translation and Accessibility source checks
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+
+      - name: Execute JVM regressions and compile ARM64 release
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify all 66 JVM tests were executed
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          folder=Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          expected={
+              "LicenseTokenVerifierTest":7, "LicenseSecurityMigrationTest":5,
+              "SettingsKotlinMigrationTest":4, "TranslationPolicyKotlinTest":3,
+              "OverlayPlacementKotlinTest":2, "OverlayCoordinatesKotlinTest":2,
+              "OverlayUpdatePolicyKotlinTest":1, "HomeReadinessTest":6,
+              "TranslationQueueGateTest":6, "PaymentActionPolicyTest":3,
+              "CustomGlossaryPolicyTest":4, "OcrTextPolicyTest":4,
+              "OcrImagePolicyTest":5, "OcrRegionTest":6,
+              "OcrPhotoViewportTest":8
+          }
+          total=0
+          for name,count in expected.items():
+              reports=list(folder.glob("TEST-*"+name+".xml"))
+              assert len(reports)==1,(name,reports)
+              xml=ET.parse(reports[0]).getroot()
+              for attr,num in [("tests",count),("failures",0),("errors",0),("skipped",0)]:
+                  assert int(xml.get(attr,-1))==num,(name,attr,xml.get(attr))
+              total+=count
+          assert total==66,total
+          print("PASS:",total,"executed tests")
+          PY
+
+      - name: Verify actual APK only contains ARM64 native code
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          path=Path("pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk")
+          assert path.is_file() and path.stat().st_size>1000000
+          with zipfile.ZipFile(path) as a:
+              names=a.namelist()
+              libs=[n for n in names if n.startswith("lib/") and n.endswith(".so")]
+              assert libs and all(n.startswith("lib/arm64-v8a/") for n in libs),libs
+              assert any(n.endswith("/libtranslate_jni.so") for n in libs),libs
+              assert any(n.endswith("/libmlkit_google_ocr_pipeline.so") for n in libs),libs
+              assert "AndroidManifest.xml" in names
+          print("PASS: signed-ready release has only ARM64 native payload")
+          print("APK bytes:",path.stat().st_size)
+          PY
+
+      - name: Commit exact tested beta8 source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then
+            echo "::error::Expected changed beta8 canonical ZIP"
+            exit 1
+          fi
+          git commit -m "feat(pdd): beta8 OCR zoom and stable text selection"
+          git fetch origin pdd-overlay-ru-ocr-zoom-beta8
+          git rebase origin/pdd-overlay-ru-ocr-zoom-beta8
+          git push origin HEAD:pdd-overlay-ru-ocr-zoom-beta8
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-v0.2.0-beta.8-ARM64-OCR-zoom-APK-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
