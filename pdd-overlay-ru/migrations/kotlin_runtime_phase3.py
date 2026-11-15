@@ -40,6 +40,7 @@ validator = files[validator_path].decode("utf-8")
 replacements = {
     "PddAccessibilityService.java": "PddAccessibilityService.kt",
     "TranslationEngine.java": "TranslationEngine.kt",
+    "ModelDownloadConditionsFactory.create(preparingWifiOnly)": "ModelDownloadConditionsFactory.create(modelPreparingWifiOnly)",
     "PDD.contentEquals(root.getPackageName())": "PDD.contentEquals(root.packageName)",
     "node.isPassword()": "node.isPassword",
     "node.isEditable()": "node.isEditable",
