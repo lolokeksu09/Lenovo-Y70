@@ -110,6 +110,30 @@ No user screenshot, avatar, order or review personally identifiable data is comm
 
 QA checklist: `pdd-overlay-ru/qa/LEGION_Y70_OVERLAY_DENSITY_QA.md`.
 
+## K. Lenovo screenshots follow-up — November 16, 2026
+
+Three newly supplied Lenovo screenshots expose misleading OCR progress
+(red regions without Russian text), empty space under translated kiwi
+paragraphs, and emoji/accented English reviews not routed to translation.
+Screenshots are private and not committed.
+
+- [x] Source root cause confirmed for emoji/Latin-accent routing.
+- [x] Change OCR viewer to separate recognition from translation; show actual
+      coverage, show no false translation switch when zero text is ready,
+      and omit untranslated red-box clutter.
+- [x] Track Chinese-vs-English model readiness independently; 4 unit tests.
+- [x] Add six washer-fluid packaging terms to the offline Chinese glossary.
+- [x] Increase paragraph font only while full translated text fits the original
+      rectangle; preserve protected controls.
+- [ ] Run 106/106 unit tests, ARM64 release and Android 35 photo OCR test.
+- [ ] Confirm actual translation of the photographed bottle text on Lenovo
+      with a separately consented Chinese model; no universal in-image
+      translation is claimed for unreadable tiny print.
+- [ ] Confirm English model readiness and review Accessibility exposure on
+      Lenovo; visual acceptance for paragraphs at 1.0 and 1.3 font scale.
+
+Document: `pdd-overlay-ru/qa/LEGION_Y70_PRODUCT_PHOTO_REVIEWS_2026-11-16.md`.
+
 ## Invariants
 - Package `app.pinduoduo.overlayru`, minSdk 26, targetSdk 35, ARM64 release only.
 - Chinese and English ML Kit model downloads require explicit separate consent.
