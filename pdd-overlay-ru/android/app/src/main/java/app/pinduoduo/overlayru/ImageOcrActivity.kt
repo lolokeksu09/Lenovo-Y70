@@ -103,18 +103,9 @@ class ImageOcrActivity : ComponentActivity() {
                 errorHint = errorHint,
                 rows = rows.map { it.source to it.translation },
                 regions = rows.map { it.region },
-                // English readiness does not imply Chinese text can be translated.
-                modelReady = rows.filter { OcrTextPolicy.canTranslate(it.source) }
-                    .map { TranslationPolicy.sourceLanguage(it.source) }
-                    .distinct().let { languages ->
-                        languages.isNotEmpty() && languages.all { language ->
-                            when (language) {
-                                TranslationPolicy.CHINESE -> engine.ready()
-                                TranslationPolicy.ENGLISH -> engine.englishReady()
-                                else -> false
-                            }
-                        }
-                    },
+                modelReady = OcrModelReadiness.allRequiredModelsReady(
+                    rows.map { it.source }, engine.ready(), engine.englishReady()
+                ),
                 onPick = { picker.launch("image/*") },
                 onSettings = {
                     PddNav.open(this, PddTab.SETTINGS)
