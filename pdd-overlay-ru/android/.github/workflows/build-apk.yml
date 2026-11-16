@@ -1,0 +1,47 @@
+name: Build PDD RU overlay APK
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PDD_KEYSTORE_B64: ${{ secrets.PDD_KEYSTORE_B64 }}
+      PDD_RELEASE_STORE_PASSWORD: ${{ secrets.PDD_RELEASE_STORE_PASSWORD }}
+      PDD_RELEASE_KEY_ALIAS: ${{ secrets.PDD_RELEASE_KEY_ALIAS }}
+      PDD_RELEASE_KEY_PASSWORD: ${{ secrets.PDD_RELEASE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Validate privacy restrictions and dictionary
+        run: bash scripts/test_local.sh
+      - name: Build APK
+        shell: bash
+        run: |
+          if [[ -n "$PDD_KEYSTORE_B64" && -n "$PDD_RELEASE_STORE_PASSWORD" && -n "$PDD_RELEASE_KEY_ALIAS" && -n "$PDD_RELEASE_KEY_PASSWORD" ]]; then
+            printf '%s' "$PDD_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/pdd-overlay-release.jks"
+            export PDD_RELEASE_KEYSTORE="$RUNNER_TEMP/pdd-overlay-release.jks"
+            gradle :app:assembleRelease --no-daemon --stacktrace
+          else
+            echo 'No persistent signing secrets: building debug APK (signing key varies by runner).'
+            gradle :app:assembleDebug --no-daemon --stacktrace
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PddOverlayRU-v0.1.0
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

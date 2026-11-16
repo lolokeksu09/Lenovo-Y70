@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_description">Переводит видимые китайские надписи в официальном Pinduoduo. Не нажимает кнопки и не читает другие приложения. Поля ввода и пароли пропускаются.</string>
+</resources>
