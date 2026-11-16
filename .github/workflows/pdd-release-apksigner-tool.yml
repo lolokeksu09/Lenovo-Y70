@@ -23,7 +23,10 @@ jobs:
           test -n "$ZIPALIGN" && test -s "$ZIPALIGN"
           cp "$ZIPALIGN" output/zipalign
           chmod +x output/zipalign
-          sha256sum output/apksigner.jar output/zipalign
+          LIBCXX="$(find "$ANDROID_HOME/build-tools" -type f -name libc++.so | sort -V | tail -n 1)"
+          test -n "$LIBCXX" && test -s "$LIBCXX"
+          cp "$LIBCXX" output/libc++.so
+          sha256sum output/apksigner.jar output/zipalign output/libc++.so
       - uses: actions/upload-artifact@v4
         with:
           name: PDD-android-sdk-apksigner-jar
