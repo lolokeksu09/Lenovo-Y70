@@ -1,0 +1,57 @@
+name: PDD beta11 dictionary and OCR picker E2E
+on:
+  push:
+    branches: [pdd-beta11-ui-acceptance-e2e, pdd-overlay-ru-compose-single-v020]
+    paths:
+      - '.github/workflows/pdd-beta11-ui-acceptance-e2e.yml'
+      - 'pdd-overlay-ru/qa/ui_control.py'
+      - 'pdd-overlay-ru/qa/dictionary_e2e.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Verify canonical Kotlin sources
+        run: python3 pdd-overlay-ru/beta11/bootstrap_android.py
+      - name: Assemble x86_64 emulator-only debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i "s/ndk { abiFilters 'arm64-v8a' }/ndk { abiFilters 'x86_64' }/" pdd-overlay-ru/android/app/build.gradle
+          grep -q "ndk { abiFilters 'x86_64' }" pdd-overlay-ru/android/app/build.gradle
+          gradle -p pdd-overlay-ru/android :app:assembleDebug --no-daemon
+      - name: Enable hardware-accelerated Android emulator
+        shell: bash
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Exercise real dictionary CRUD and OCR picker cancellation
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 2048M
+          heap-size: 256M
+          disk-size: 4096M
+          disable-animations: true
+          script: bash pdd-overlay-ru/qa/dictionary_e2e.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-beta11-dictionary-ocr-e2e-evidence
+          path: pdd-dictionary-e2e-evidence/
+          if-no-files-found: warn
