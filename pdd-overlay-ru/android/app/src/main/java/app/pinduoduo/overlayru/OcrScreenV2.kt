@@ -178,7 +178,7 @@ internal fun OcrScreenV2(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    "Показать перевод поверх фото",
+                                    OcrViewerPresentation.openViewerLabel(rows),
                                     color = bright, fontSize = 13.sp
                                 )
                             }
@@ -229,7 +229,7 @@ internal fun OcrScreenV2(
                                 Column {
                                     Text("Результат", color = bright, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                                     Text(
-                                        "Переведено " + rows.count { !it.second.isNullOrBlank() } +
+                                        "Переведено " + OcrViewerPresentation.translatedCount(rows) +
                                             " из " + rows.size + " строк",
                                         color = subdued, fontSize = 12.sp
                                     )
