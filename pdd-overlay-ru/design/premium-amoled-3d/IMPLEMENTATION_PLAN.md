@@ -56,7 +56,7 @@ Pending offline glossary/model-state correction: [PR #21](https://github.com/lol
 - [x] Android 35 E2E verifies **two Russian glossary outputs without model download**; run `43885916622` PASS with `Переведено 2 из 2 строк`, visible text, screenshots and no AndroidRuntime errors.
 - [x] Final Android 35 E2E `43887705435` PASS (commit `895453f8a9374eaa77399251db60b1edbf5f7067`): Pixel Launcher ANR recovered without modifying PDD, real ML Kit OCR, `2/2` Russian text, focused AndroidRuntime log empty and screenshot reviewed.
 - [x] ARM64 Release validation `43887866819` PASS (commit `f0ec7cb4ce27c8119731ccb267b87804369e8319`): 76/76 tests, privacy gate, ARM64 native OCR/translate libs, configured PRO BuildConfig. No signed APK was published.
-- [ ] Merge PR #21 only after both final CI jobs pass; do not attach APK to the earlier GitHub prerelease.
+- [x] PR #21 merged after Android and ARM64 PASS; squash commit `0bb8284532fafbca432711a69d67bf273e18933b`. No signing, APK upload or prerelease asset changes.
 - [ ] Live PRO activation and entitlement renewal remain unverified. CI `43821463490` only confirms configured URL/public key.
 
 ## F. Device-only acceptance — REMAINS OPEN
