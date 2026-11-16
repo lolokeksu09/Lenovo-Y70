@@ -1,0 +1,41 @@
+name: Publish PDD beta11 prerelease metadata (source-only)
+on:
+  push:
+    branches: [pdd-release-v020-beta11]
+    paths:
+      - '.github/workflows/pdd-publish-beta11-metadata.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v0.2.0-beta.11
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Publish exact source-only beta11 prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release tag already published: refusing to overwrite."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Release tag exists: refusing to move tag."
+            exit 1
+          fi
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "PDD Overlay RU v0.2.0-beta.11 (ARM64 beta — APK not yet attached)" \
+            --notes-file pdd-overlay-ru/releases/v0.2.0-beta.11-github.md \
+            --prerelease
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isPrerelease,isDraft,assets,url \
+            --jq '{tag: .tagName, prerelease: .isPrerelease, draft: .isDraft, url: .url, assetCount: (.assets | length)}'
