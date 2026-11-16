@@ -527,7 +527,9 @@ class PddAccessibilityService : AccessibilityService() {
 
         // Never cover an entire prose paragraph with a clipped translation.
         // Measure full multiline content and retain original on any overflow.
-        val paragraphFont = if (paragraph) listOf(14f, 13f, 12f, 11f, 10f)
+        // Scale translated paragraphs into their source rectangle when possible,
+        // rather than leaving a large dark empty panel after a short translation.
+        val paragraphFont = if (paragraph) (20 downTo 10).map { it.toFloat() }
             .firstOrNull { sp ->
                 val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                     textSize = android.util.TypedValue.applyDimension(
@@ -547,8 +549,7 @@ class PddAccessibilityService : AccessibilityService() {
         if (label == null) {
             label = TextView(this)
             label.setTextColor(Color.WHITE)
-            label.gravity = if (paragraph) Gravity.TOP or Gravity.START
-                else Gravity.CENTER_VERTICAL or Gravity.START
+            label.gravity = Gravity.CENTER_VERTICAL or Gravity.START
             label.isSingleLine = !paragraph
             label.ellipsize = null
             label.includeFontPadding = false

@@ -1,0 +1,128 @@
+name: PDD Lenovo product-image OCR and English review regressions
+on:
+  push:
+    branches: [pdd-lenovo-ocr-coverage-english-review-fix]
+    paths:
+      - '.github/workflows/pdd-lenovo-image-review.yml'
+      - 'pdd-overlay-ru/android/**'
+      - 'pdd-overlay-ru/qa/ocr_image_e2e.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Verify canonical source and protected UI policies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta11/bootstrap_android.py
+          ln -s pdd-overlay-ru/android pinduoduo_overlay_ru
+          bash pinduoduo_overlay_ru/scripts/test_local.sh
+          grep -q "ndk { abiFilters 'arm64-v8a' }" pdd-overlay-ru/android/app/build.gradle
+          grep -q "versionCode 21" pdd-overlay-ru/android/app/build.gradle
+          python3 - <<'PY'
+          import json
+          path="pdd-overlay-ru/android/app/src/main/assets/glossary_zh_ru.json"
+          glossary=json.load(open(path,encoding="utf-8"))
+          expected={"防冻":"Защита от замерзания","玻璃水":"Жидкость стеклоомывателя",
+                    "祛油膜":"Удаление масляной плёнки",
+                    "祛油膜玻璃水":"Стеклоомыватель с удалением масляной плёнки",
+                    "防冻玻璃水":"Незамерзающая жидкость стеклоомывателя",
+                    "强力去污":"Интенсивное удаление загрязнений"}
+          assert len(glossary)==490, len(glossary)
+          assert all(glossary[k]==v for k,v in expected.items())
+          print("PASS: six product-photo Chinese labels bundled offline")
+          PY
+      - name: Run 106 JVM tests and compile ARM64 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p pdd-overlay-ru/android :app:testReleaseUnitTest :app:assembleRelease --no-daemon
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          import zipfile
+          app=Path('pdd-overlay-ru/android/app')
+          folder=app/'build/test-results/testReleaseUnitTest'
+          files=list(folder.glob('TEST-*.xml'))
+          assert files,'No tests'
+          totals={k:0 for k in ('tests','failures','errors','skipped')}
+          for f in files:
+              e=ET.parse(f).getroot()
+              for k in totals: totals[k]+=int(e.get(k,'0'))
+          assert totals=={'tests':106,'failures':0,'errors':0,'skipped':0},totals
+          for name,num in {'OcrViewerPresentationTest':4,'OcrModelReadinessTest':4,
+                           'TranslationPolicyKotlinTest':6,'ReviewTranslationPolicyTest':6}.items():
+              p=list(folder.glob('TEST-*'+name+'.xml'))
+              assert len(p)==1,(name,p)
+              assert int(ET.parse(p[0]).getroot().get('tests','0'))==num,(name,num)
+          apk=app/'build/outputs/apk/release/app-release-unsigned.apk'
+          assert apk.stat().st_size>1000000
+          with zipfile.ZipFile(apk) as z:
+              libraries=[n for n in z.namelist() if n.startswith('lib/') and n.endswith('.so')]
+              assert libraries and all(n.startswith('lib/arm64-v8a/') for n in libraries)
+          print('PASS: 106/106 JVM tests and ARM64 release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-product-image-review-ARM64-unsigned-INTERNAL
+          path: |
+            pdd-overlay-ru/android/app/build/outputs/apk/release/app-release-unsigned.apk
+            pdd-overlay-ru/android/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
+  android35-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile isolated Android 35 x86_64 debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta11/bootstrap_android.py
+          sed -i "s/ndk { abiFilters 'arm64-v8a' }/ndk { abiFilters 'x86_64' }/" pdd-overlay-ru/android/app/build.gradle
+          gradle -p pdd-overlay-ru/android :app:assembleDebug --no-daemon
+      - name: Enable hardware accelerated Android 35 emulator
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Test real Chinese image OCR, inline Russian captions and original toggle
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 2048M
+          heap-size: 256M
+          disk-size: 4096M
+          disable-animations: true
+          script: bash pdd-overlay-ru/qa/ocr_image_e2e.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-product-image-OCR-Android35-evidence
+          path: pdd-ocr-image-e2e-evidence/
+          if-no-files-found: warn

@@ -29,6 +29,17 @@ class ReviewTranslationPolicyTest {
         assertNull(ReviewTranslationPolicy.chunks(longReview + " Confirmation 453278"))
     }
 
+    @Test fun longAccentedReviewWithEmojiGetsEveryWordTranslated() {
+        val text = "These crème-green kiwifruits are delicious—and fresh! " +
+            "Every bite is sweet and the packaging is excellent. " +
+            "The texture is soft, the balance is perfect, and delivery was quick. " +
+            "I bought from the seller before and will happily buy again! 👍"
+        val chunks = ReviewTranslationPolicy.chunks(text)
+        assertNotNull(chunks)
+        assertEquals(text, chunks!!.joinToString(" "))
+        assertTrue(chunks.all { it.length <= 180 })
+    }
+
     @Test fun rejectsOversizeAndUnboundedSingleTokens() {
         assertNull(ReviewTranslationPolicy.chunks("pleasant packaging ".repeat(100)))
         assertNull(ReviewTranslationPolicy.chunks("a".repeat(170) + " " + longReview))

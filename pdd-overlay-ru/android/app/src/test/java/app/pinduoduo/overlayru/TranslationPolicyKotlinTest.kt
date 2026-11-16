@@ -45,6 +45,24 @@ class TranslationPolicyKotlinTest {
         assertTrue(TranslationPolicy.shouldTranslate("Looks fresh—even after delivery.", false, false))
     }
 
+    @Test fun acceptsAccentedLatinAndEmojiButRejectsMixedForeignScript() {
+        val text = "These crème-green kiwifruits are delicious—and fresh! 👍"
+        assertEquals(TranslationPolicy.ENGLISH, TranslationPolicy.sourceLanguage(text))
+        assertTrue(TranslationPolicy.shouldTranslate(text, false, false))
+        assertEquals(TranslationPolicy.ENGLISH,
+            TranslationPolicy.sourceLanguage("Wonderful kiwifruit from Shaanxi! 🇨🇳 🥝"))
+        assertEquals(TranslationPolicy.NONE,
+            TranslationPolicy.sourceLanguage("Хорошие киви 👍 wonderful quality"))
+        assertEquals(TranslationPolicy.NONE,
+            TranslationPolicy.sourceLanguage("رائع quality 👍"))
+    }
+
+    @Test fun avoidsAllCurrencySymbols() {
+        assertFalse(TranslationPolicy.shouldTranslate("Price €39 is good", false, false))
+        assertFalse(TranslationPolicy.shouldTranslate("Price £39 is good", false, false))
+        assertFalse(TranslationPolicy.shouldTranslate("Cost ₩2000 today", false, false))
+    }
+
     @Test fun rejectsLatinContactAndPriceWithoutObscuringMoney() {
         assertFalse(TranslationPolicy.shouldTranslate("Email admin@example.com", false, false))
         assertFalse(TranslationPolicy.shouldTranslate("订单 19 元", false, false))

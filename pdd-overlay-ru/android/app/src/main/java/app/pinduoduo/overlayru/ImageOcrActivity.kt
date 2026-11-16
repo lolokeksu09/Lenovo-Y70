@@ -103,7 +103,9 @@ class ImageOcrActivity : ComponentActivity() {
                 errorHint = errorHint,
                 rows = rows.map { it.source to it.translation },
                 regions = rows.map { it.region },
-                modelReady = engine.ready() || engine.englishReady(),
+                modelReady = OcrModelReadiness.allRequiredModelsReady(
+                    rows.map { it.source }, engine.ready(), engine.englishReady()
+                ),
                 onPick = { picker.launch("image/*") },
                 onSettings = {
                     PddNav.open(this, PddTab.SETTINGS)

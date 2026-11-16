@@ -39,7 +39,7 @@ private val ViewerBg = Color(0xFF080A0E)
 private val ViewerSurface = Color(0xFF15191F)
 private val ViewerInk = Color(0xFFF5F6F9)
 private val ViewerMuted = Color(0xFFB3BDCA)
-private val ViewerRed = Color(0xFFEA3A50)
+private val ViewerRed = Color(0xFFEA3A50) // close action only, not OCR detections
 private val ViewerGreen = Color(0xFF69E0C0)
 
 /**
@@ -61,6 +61,7 @@ internal fun OcrImageViewer(
     var displaySize by remember(preview) { mutableStateOf(IntSize.Zero) }
     val liveRegions by rememberUpdatedState(regions)
     val eligible = regions.indices.filter { regions[it] != null }
+    val completedCount = OcrViewerPresentation.translatedCount(lines)
     val position = eligible.indexOf(selected)
 
     fun zoomBy(factor: Float) {
@@ -111,18 +112,21 @@ internal fun OcrImageViewer(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            if (showInlineTranslations) "Русский текст поверх фото"
+                            if (completedCount == 0) "Русский перевод пока недоступен"
+                            else if (showInlineTranslations) "Русский текст поверх фото"
                             else "Оригинальные надписи",
                             fontSize = 12.sp, color = ViewerMuted
                         )
-                        TextButton(onClick = {
-                            showInlineTranslations = !showInlineTranslations
-                        }) {
-                            Text(
-                                if (showInlineTranslations) "Показать оригинал"
-                                else "Показать перевод",
-                                color = ViewerGreen, fontSize = 12.sp
-                            )
+                        if (completedCount > 0) {
+                            TextButton(onClick = {
+                                showInlineTranslations = !showInlineTranslations
+                            }) {
+                                Text(
+                                    if (showInlineTranslations) "Показать оригинал"
+                                    else "Показать перевод",
+                                    color = ViewerGreen, fontSize = 12.sp
+                                )
+                            }
                         }
                     }
                     Box(
@@ -201,28 +205,41 @@ internal fun OcrImageViewer(
                                     preview.width.toFloat(), preview.height.toFloat()
                                 ) ?: continue
                                 val active = index == selected
-                                drawRoundRect(
-                                    color = if (active) ViewerGreen else ViewerRed,
-                                    topLeft = Offset(rect.left, rect.top),
-                                    size = Size(rect.right - rect.left, rect.bottom - rect.top),
-                                    cornerRadius = CornerRadius(4.dp.toPx()),
-                                    style = Stroke(width = (if (active) 2.5f else 1.25f).dp.toPx())
+                                val source = lines.getOrNull(index)?.first.orEmpty()
+                                val translated = lines.getOrNull(index)?.second
+                                val coverable = OcrInlineTextPolicy.canCover(
+                                    source, translated, region,
+                                    rect.right - rect.left, rect.bottom - rect.top
                                 )
+                                // The red detection boxes obscured dense product-label
+                                // photographs and misrepresented OCR as translation.
+                                if (OcrViewerPresentation.showRegionOutline(
+                                    active, coverable, showInlineTranslations
+                                )) {
+                                    drawRoundRect(
+                                        color = ViewerGreen.copy(
+                                            alpha = if (active) 1f else .52f
+                                        ),
+                                        topLeft = Offset(rect.left, rect.top),
+                                        size = Size(
+                                            rect.right - rect.left, rect.bottom - rect.top
+                                        ),
+                                        cornerRadius = CornerRadius(4.dp.toPx()),
+                                        style = Stroke(
+                                            width = (if (active) 2.5f else 1f).dp.toPx()
+                                        )
+                                    )
+                                }
                                 if (active) {
                                     drawRoundRect(
-                                        color = ViewerGreen.copy(alpha = 0.13f),
+                                        color = ViewerGreen.copy(alpha = .13f),
                                         topLeft = Offset(rect.left, rect.top),
                                         size = Size(rect.right - rect.left, rect.bottom - rect.top),
                                         cornerRadius = CornerRadius(4.dp.toPx())
                                     )
                                 }
 
-                                val source = lines.getOrNull(index)?.first.orEmpty()
-                                val translated = lines.getOrNull(index)?.second
-                                if (showInlineTranslations && OcrInlineTextPolicy.canCover(
-                                    source, translated, region,
-                                    rect.right - rect.left, rect.bottom - rect.top
-                                )) {
+                                if (showInlineTranslations && coverable) {
                                     val message = translated!!.trim()
                                     val padX = 4.dp.toPx()
                                     val padY = 2.dp.toPx()
@@ -335,13 +352,15 @@ internal fun OcrImageViewer(
                                 }
                             } else {
                                 Text(
-                                    "Распознано " + regions.count { it != null } + " областей",
+                                    OcrViewerPresentation.viewerSummary(lines),
                                     color = ViewerInk, fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Spacer(Modifier.height(5.dp))
                                 Text(
-                                    "Нажми выделенную область или увеличь мелкий текст жестом и кнопкой «+».",
+                                    if (completedCount == 0)
+                                        "Распознавание выполнено. Проверь китайскую языковую модель в настройках. Мелкий текст можно выбрать и увеличить."
+                                    else "Нажми область для отдельного перевода или увеличь мелкий текст кнопкой «+».",
                                     color = ViewerMuted, fontSize = 12.sp, lineHeight = 18.sp
                                 )
                             }
