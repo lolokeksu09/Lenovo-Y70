@@ -45,7 +45,7 @@ Additional Android interaction test: [draft PR #18](https://github.com/lolokeksu
 - [x] Automated dictionary add → persistence across process restart → rename (old key removed) → delete cancel → confirmed delete in Android 35 emulator. PASS in run `43825854300`.
 - [x] System image picker opens and cancel returns safely to OCR without restarting the process. PASS in run `43825854300`.
 - [x] Review 5 screenshots (empty/create/rename/delete/OCR cancellation), app process and logs. All match expected transitions; scoped AndroidRuntime errors absent. CI run `43825854300` PASS.
-- [ ] Merge test-only PR #18 after confirming target branch and workflow applicability.
+- [x] Merge test-only PR #18 into canonical branch after PASS; squash commit `6028b01034b2d768c07230fdac057179ebe6cb33`. No app binaries or Kotlin production code changed.
 - [ ] Real OCR of Chinese goods screenshot with explicit user image selection, and consented model download on Legion Y70.
 - [ ] Scope and security of live Accessibility against official Pinduoduo on Lenovo, excluding payment/OTP actions.
 - [ ] Live PRO activation and entitlement renewal remain unverified. CI `43821463490` only confirms configured URL/public key.
