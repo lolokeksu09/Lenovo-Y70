@@ -35,7 +35,10 @@ object TranslationPolicy {
     fun sourceLanguage(value: String?): Int {
         if (value == null) return NONE
         if (containsChinese(value)) return CHINESE
-        if (value.any { it.code > 127 }) return NONE
+        // Product reviews commonly use em dashes and smart quotes. Allow
+        // typography, but never interpret Cyrillic/other scripts as English.
+        val englishPunctuation = "—–‘’“”…\u00A0\u2011"
+        if (value.any { it.code > 127 && it !in englishPunctuation }) return NONE
 
         val matcher = LATIN_WORD.matcher(value)
         var count = 0

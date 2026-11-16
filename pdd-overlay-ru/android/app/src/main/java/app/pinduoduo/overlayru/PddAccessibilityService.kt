@@ -10,6 +10,10 @@ import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
+import android.text.StaticLayout
+import android.text.Layout
+import android.text.TextPaint
+import android.graphics.Paint
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
@@ -202,14 +206,20 @@ class PddAccessibilityService : AccessibilityService() {
         val weakService = WeakReference(this)
         for (target in targets) {
             val source = target.text
-            val translated = e.translate(source) { value ->
-                weakService.get()?.onTranslationReady(source, value)
+            val translated = if (target.isReview) {
+                e.translateReview(source) { value ->
+                    weakService.get()?.onTranslationReady(source, value)
+                }
+            } else {
+                e.translate(source) { value ->
+                    weakService.get()?.onTranslationReady(source, value)
+                }
             }
             if (translated.isNullOrEmpty() || translated == source) continue
             val key = target.bounds.toShortString() + "::" + source
             if (addLabel(
                 key, translated, target.bounds, origin, screenWidth,
-                screenHeight, occupiedLabels
+                screenHeight, occupiedLabels, target.isReview
             )) thisFrame.add(key)
         }
 
@@ -231,7 +241,7 @@ class PddAccessibilityService : AccessibilityService() {
             )) scheduleRedraw()
     }
 
-    private data class Target(val text: String, val bounds: Rect)
+    private data class Target(val text: String, val bounds: Rect, val isReview: Boolean)
 
     private fun findText(root: AccessibilityNodeInfo, width: Int, height: Int): List<Target> {
         val list = ArrayList<Target>()
@@ -245,16 +255,20 @@ class PddAccessibilityService : AccessibilityService() {
             val className = node.className
             val editable = node.isEditable || className?.toString()?.contains("EditText") == true
             if (editable || node.isPassword) continue // skip sensitive subtree
-            val text = node.text
-            if (text != null && TranslationPolicy.shouldTranslate(text.toString(), false, false) &&
-                !PaymentActionPolicy.isProtected(text.toString())) {
-                val rect = Rect()
-                node.getBoundsInScreen(rect)
-                if (!rect.intersect(0, 0, width, height)) continue
-                if (rect.width() >= 24 && rect.height() >= 13 && rect.width() < width * .96f) {
-                    val value = text.toString().trim()
-                    val id = rect.toShortString() + "::" + value
-                    if (seen.add(id)) list.add(Target(value, rect))
+            val text = node.text?.toString()?.trim()
+            if (!text.isNullOrEmpty()) {
+                val paragraph = ReviewTranslationPolicy.chunks(text) != null
+                val regular = TranslationPolicy.shouldTranslate(text, false, false)
+                if ((regular || paragraph) && !PaymentActionPolicy.isProtected(text)) {
+                    val rect = Rect()
+                    node.getBoundsInScreen(rect)
+                    if (rect.intersect(0, 0, width, height) &&
+                        rect.width() >= 24 && rect.height() >= 13 &&
+                        rect.width() <= width * (if (paragraph) 1.0f else .96f) &&
+                        (!paragraph || rect.height() >= dp(48f))) {
+                        val id = rect.toShortString() + "::" + text
+                        if (seen.add(id)) list.add(Target(text, rect, paragraph))
+                    }
                 }
             }
             val childCount = min(node.childCount, 80)
@@ -464,7 +478,8 @@ class PddAccessibilityService : AccessibilityService() {
     /** Reuse source-anchored captions without covering adjacent rows or actions. */
     private fun addLabel(
         key: String, translation: String, rect: Rect, origin: IntArray,
-        maxX: Int, maxY: Int, occupied: MutableList<Rect>
+        maxX: Int, maxY: Int, occupied: MutableList<Rect>,
+        paragraph: Boolean
     ): Boolean {
         val panel = overlay ?: return false
         val local = OverlayCoordinates.toLocalBounds(
@@ -473,7 +488,11 @@ class PddAccessibilityService : AccessibilityService() {
         val sourceX = local[0]
         val sourceY = local[1]
         val widthGoal = ceil(translation.length * dp(7.5f) + dp(16f)).toInt()
-        val fit = OverlayPlacement.fit(
+        val fit = if (paragraph) {
+            OverlayPlacement.fitParagraph(
+                sourceX, sourceY, local[2], local[3], maxX, maxY
+            )
+        } else OverlayPlacement.fit(
             sourceX, sourceY, local[2], local[3],
             widthGoal, maxX, maxY, dp(8f).toInt()
         ) ?: return false
@@ -482,15 +501,35 @@ class PddAccessibilityService : AccessibilityService() {
         if (overlaps(placement, occupied)) return false
         occupied.add(placement)
 
+        // Never cover an entire prose paragraph with a clipped translation.
+        // Measure full multiline content and retain original on any overflow.
+        val paragraphFont = if (paragraph) listOf(14f, 13f, 12f, 11f, 10f)
+            .firstOrNull { sp ->
+                val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                    textSize = android.util.TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_SP, sp, resources.displayMetrics
+                    )
+                }
+                val layout = StaticLayout.Builder.obtain(
+                    translation, 0, translation.length, paint,
+                    (fit[2] - dp(12f)).toInt().coerceAtLeast(1)
+                ).setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                    .setIncludePad(false).build()
+                layout.height <= fit[3] - dp(6f)
+            } ?: return false else 12f
         var label = activeLabels[key]
         if (label == null) {
             label = TextView(this)
             label.setTextColor(Color.WHITE)
-            label.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            label.isSingleLine = true
-            label.ellipsize = TextUtils.TruncateAt.END
+            label.gravity = if (paragraph) Gravity.TOP or Gravity.START
+                else Gravity.CENTER_VERTICAL or Gravity.START
+            label.isSingleLine = !paragraph
+            label.ellipsize = if (paragraph) null else TextUtils.TruncateAt.END
             label.includeFontPadding = false
-            label.setPadding(dp(6f).toInt(), 0, dp(6f).toInt(), 0)
+            label.setPadding(
+                dp(6f).toInt(), if (paragraph) dp(3f).toInt() else 0,
+                dp(6f).toInt(), if (paragraph) dp(3f).toInt() else 0
+            )
             label.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             val bg = GradientDrawable()
             bg.setColor(Color.argb(252, 22, 25, 31))
@@ -501,15 +540,17 @@ class PddAccessibilityService : AccessibilityService() {
             panel.addView(label)
         }
         if (translation != label.text.toString()) label.text = translation
-        val sizeSp = 12f
+        val sizeSp = paragraphFont
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        val available = (fit[2] - dp(14f)).coerceAtLeast(1f)
-        val measured = label.paint.measureText(translation)
-        if (measured > available) {
-            label.setTextSize(
-                TypedValue.COMPLEX_UNIT_SP,
-                (sizeSp * available / measured).coerceAtLeast(10f)
-            )
+        if (!paragraph) {
+            val available = (fit[2] - dp(14f)).coerceAtLeast(1f)
+            val measured = label.paint.measureText(translation)
+            if (measured > available) {
+                label.setTextSize(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    (sizeSp * available / measured).coerceAtLeast(10f)
+                )
+            }
         }
         val params = FrameLayout.LayoutParams(fit[2], fit[3])
         params.leftMargin = fit[0]

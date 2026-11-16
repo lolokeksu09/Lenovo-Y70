@@ -93,6 +93,11 @@ class TranslationEngine private constructor(private val context: Context) {
             size > 200
     }
     private val pending = TranslationQueueGate()
+    private val reviewPending = TranslationQueueGate(capacity = 3, timeoutMs = 120_000L)
+    private val reviewCache = object : LinkedHashMap<String, String>(24, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean =
+            size > 40
+    }
 
     init {
         restoreLocalModels()
@@ -392,6 +397,56 @@ class TranslationEngine private constructor(private val context: Context) {
     /** Explicit image-picker OCR may translate while Accessibility overlay is disabled. */
     fun translateOcr(text: String?, onReady: Consumer<String?>?): String? =
         translateInternal(text, onReady, requireOverlayEnabled = false)
+
+    /**
+     * Full prose review is processed in bounded chunks. Never publish partial
+     * results or start a model download; only a separately consented, ready
+     * English model may translate review paragraphs.
+     */
+    fun translateReview(text: String?, onReady: Consumer<String?>?): String? {
+        val raw = text?.trim() ?: return null
+        val chunks = ReviewTranslationPolicy.chunks(raw) ?: return null
+        reviewCache[raw]?.let { return it }
+        if (!enabled() || !englishModelReady || onReady == null) return null
+
+        val key = "review:" + raw
+        val ticket = reviewPending.reserve(key, SystemClock.uptimeMillis(), onReady).ticket
+            ?: return null
+        val completed = java.util.concurrent.atomic.AtomicBoolean(false)
+        val values = ArrayList<String>(chunks.size)
+        var timeout: Runnable? = null
+        fun finish(value: String?) {
+            if (!completed.compareAndSet(false, true)) return
+            timeout?.let(main::removeCallbacks)
+            val callbacks = reviewPending.finish(key, ticket, SystemClock.uptimeMillis())
+                ?: return
+            if (!value.isNullOrBlank()) reviewCache[raw] = value
+            callbacks.forEach { it.accept(value) }
+        }
+        fun translateNext(index: Int) {
+            if (completed.get()) return
+            if (index >= chunks.size) {
+                finish(values.joinToString(" "))
+                return
+            }
+            val result = translateInternal(chunks[index], Consumer { translated ->
+                if (completed.get()) return@Consumer
+                if (translated.isNullOrBlank()) finish(null)
+                else {
+                    values.add(translated)
+                    main.post { translateNext(index + 1) }
+                }
+            }, requireOverlayEnabled = true)
+            if (result != null) {
+                values.add(result)
+                main.post { translateNext(index + 1) }
+            }
+        }
+        timeout = Runnable { finish(null) }
+        main.postDelayed(timeout, 120_000L)
+        translateNext(0)
+        return null
+    }
 
     private fun translateInternal(
         text: String?, onReady: Consumer<String?>?, requireOverlayEnabled: Boolean
