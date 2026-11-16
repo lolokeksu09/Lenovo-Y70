@@ -86,7 +86,28 @@ sys.exit(1)
 PY
   then
     timeout 20s adb exec-out screencap -p > "$OUT/chinese-ocr-result.png"
-    echo 'PASS: seeded Chinese PNG → Android picker → real ML Kit OCR → Chinese text visible'
+    # Offline bundled dictionary must translate known product labels even when
+# ML Kit translation models have not been downloaded or consented to.
+# This assertion catches the old 'if (!engine.ready()) continue' bug.
+    adb shell input swipe 520 1710 520 760 450 || true
+    sleep 1
+    adb shell uiautomator dump /sdcard/pdd-offline-glossary.xml > /dev/null
+    adb exec-out cat /sdcard/pdd-offline-glossary.xml > "$OUT/offline-glossary.xml"
+    python3 - "$OUT/offline-glossary.xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+root = ET.parse(sys.argv[1]).getroot()
+labels = [n.attrib.get("text", "") for n in root.iter("node")]
+expected = ("Переведено 2 из 2 строк", "Описание товара", "Отследить доставку")
+missing = [item for item in expected if item not in labels]
+if missing:
+    print("FAIL: offline built-in glossary not applied after OCR:", missing)
+    print("Visible labels:", [v[:80] for v in labels if v][:40])
+    sys.exit(1)
+print("PASS: offline built-in glossary translated both OCR labels without language models")
+PY
+    timeout 20s adb exec-out screencap -p > "$OUT/chinese-ocr-with-offline-glossary.png"
+echo 'PASS: seeded Chinese PNG → Android picker → real ML Kit OCR → Chinese text visible'
     exit 0
   fi
   adb shell input swipe 520 1680 520 600 500

@@ -196,7 +196,7 @@ class ImageOcrActivity : ComponentActivity() {
                             errorHint = if (engine.ready() || engine.englishReady()) {
                                 "Переводим доступными офлайн-моделями"
                             } else {
-                                "Для русского перевода загрузи языковую модель в настройках"
+                                "Известные надписи переводятся локально; для новых фраз загрузи модель в настройках"
                             }
                             translateRows(scan)
                         }
@@ -231,10 +231,10 @@ class ImageOcrActivity : ComponentActivity() {
             val index = translationCursor++
             val source = rows[index].source
             if (!OcrTextPolicy.canTranslate(source)) continue
-            val language = TranslationPolicy.sourceLanguage(source)
-            if (language == TranslationPolicy.CHINESE && !engine.ready()) continue
-            if (language == TranslationPolicy.ENGLISH && !engine.englishReady()) continue
-            if (language == TranslationPolicy.NONE) continue
+            // Allow user corrections and built-in glossary translations even without
+            // ML Kit language models. translateOcr() checks glossary first and only
+            // calls ML Kit when the relevant model is actually ready.
+            if (TranslationPolicy.sourceLanguage(source) == TranslationPolicy.NONE) continue
 
             translationInflight++
             val finished = AtomicBoolean(false)
