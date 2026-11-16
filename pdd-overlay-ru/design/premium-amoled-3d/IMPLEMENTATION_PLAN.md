@@ -89,6 +89,15 @@ No user screenshot, avatar, order or review personally identifiable data is comm
 - The screenshot's English prose review is a real Lenovo feedback case, but no English model/Accessibility hierarchy data was captured; long review translation on Lenovo remains NOT RUN.
 - Do not silently download models, record the screen or upload user content. No change to beta11 release signing or APK.
 
+## I. Locally signed Lenovo test APK — 2026-11-16
+
+- [x] Signed the **verified PR #22 ARM64 CI artifact** from run `43895561486` using the same existing release signing identity as beta10/beta11. This was a private ChatGPT-chat file, **not** a GitHub release upload.
+- [x] Official Android SDK apksigner v2/v3 verification, pinned signer certificate `d0d4e5dfb604917e1896c9a4697f2743296e3fa7b137d5bacefdf7a8c7b519d3`, ARM64 JNI, 16 KiB native alignment, ZIP CRC PASS.
+- [x] File: `PDD-Overlay-RU-v0.2.0-beta.11-REVIEWS-INLINE-OCR-ARM64-SIGNED.apk`; SHA-256: `76bca3c1023f3b507b3a7a260b3b46494398e29989c3fa6b0f8fb04562218a0f`; 37,991,374 bytes. Version remains beta11/versionCode 21; signing does **not** mean install has been validated.
+- [ ] Verify same-version update over the existing beta11 on physical Lenovo without uninstalling or clearing data.
+- [ ] Confirm English→Russian model separately consented and ready, actual long review text readable; verify photo viewer inline Russian captions and original toggle on Lenovo.
+- [ ] Measure and reduce intrusive short overlay labels from the original user screenshot in the next scoped refinement.
+
 ## Invariants
 - Package `app.pinduoduo.overlayru`, minSdk 26, targetSdk 35, ARM64 release only.
 - Chinese and English ML Kit model downloads require explicit separate consent.
