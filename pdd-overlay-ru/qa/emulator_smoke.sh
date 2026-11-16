@@ -70,3 +70,30 @@ for tab in 'Фото' 'Словарь' 'Настройки' 'Главная'; do
 done
 
 echo 'PASS: Home / Photo / Dictionary / Settings / Home Android 35 navigation and screenshots'
+
+# Accessibility geometry regression: exercise UI under 1.3x Android font scale.
+adb shell settings put system font_scale 1.3
+font_scale="$(adb shell settings get system font_scale | tr -d '\r')"
+test "$font_scale" = "1.3"
+printf '%s\n' "$font_scale" > "$OUT/font-scale-verified.txt"
+adb shell am force-stop "$PACKAGE"
+timeout 40s adb shell am start -W -n "$PACKAGE/.HomeActivity" > "$OUT/Font13-Home-launch.txt"
+sleep 4
+audit_screen Font13-Home HomeActivity
+
+for tab in 'Фото' 'Словарь' 'Настройки'; do
+  case "$tab" in
+    'Фото') expected='ImageOcrActivity' ;;
+    'Словарь') expected='GlossaryEditorActivity' ;;
+    'Настройки') expected='MainActivity' ;;
+  esac
+  timeout 35s adb shell uiautomator dump /sdcard/pdd-window.xml > /dev/null
+  adb exec-out cat /sdcard/pdd-window.xml > "$OUT/Font13-window-$tab.xml"
+  python3 pdd-overlay-ru/qa/select_bottom_tab.py "$tab" "$OUT/Font13-window-$tab.xml" > "$OUT/Font13-point.txt"
+  read -r x y < "$OUT/Font13-point.txt"
+  adb shell input tap "$x" "$y"
+  sleep 3
+  audit_screen "Font13-$tab" "$expected"
+done
+
+echo 'PASS: 1.3x system font-scale navigation screenshots on Home / Photo / Dictionary / Settings'
