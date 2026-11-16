@@ -30,6 +30,18 @@ jobs:
           sed -i "s/ndk { abiFilters 'arm64-v8a' }/ndk { abiFilters 'x86_64' }/" pdd-overlay-ru/android/app/build.gradle
           grep -q "ndk { abiFilters 'x86_64' }" pdd-overlay-ru/android/app/build.gradle
           gradle -p pdd-overlay-ru/android :app:assembleDebug --no-daemon
+      - name: Grant runner user access to KVM
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -c /dev/kvm ]; then
+            echo "::error::Hardware virtualization device /dev/kvm is not available on this runner"
+            exit 1
+          fi
+          # GitHub runner user is not a member of the kvm group.
+          # Without this the Android 35 x86_64 emulator times out booting.
+          sudo chmod a+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
       - name: Launch all four screens in Android 35 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
