@@ -82,6 +82,8 @@ No user screenshot, avatar, order or review personally identifiable data is comm
 
 ## H. PR #22 verification evidence
 
+- [x] [PR #22](https://github.com/lolokeksu09/Lenovo-Y70/pull/22) squash-merged into the canonical branch, commit `8c18aa15ee10c07e243218f61f4d1f9d48f8d827`; new source changes are not part of the earlier signed beta11 APK.
+
 - ARM64 Gradle release + privacy validation: PASS, 89/89 JVM tests, run `43895561486`.
 - Android 35 x86_64 real OCR image selection, two Chinese labels translated from bundled dictionary, screenshot of Russian text actually occupying the image rectangles, and reversible original/translation toggle: PASS, run `43895561486`. Reviewed `inline-russian-caption-viewer.png` and `original-photo-viewer.png`.
 - The screenshot's English prose review is a real Lenovo feedback case, but no English model/Accessibility hierarchy data was captured; long review translation on Lenovo remains NOT RUN.
