@@ -49,10 +49,10 @@ Review the file before sending: logs may include device details. Do not send cre
 
 ## One-command read-only device report
 
-After you install beta11 on Lenovo, run from Termux:
+After you install beta11 on Lenovo, download the optional [read-only script](device_check_termux.sh) to Android's Download folder and run it from Termux:
 
 ```sh
-bash "$HOME/pdd-beta11-device-check.sh"
+bash /storage/emulated/0/Download/device_check_termux.sh
 ```
 
-The optional [script](device_check_termux.sh) checks only version, ABI, package presence, Accessibility permission and process state through your existing Shizuku `~/rish`. It never changes settings, grants permissions, reads payment data or collects a logcat. Output goes to `/storage/emulated/0/Download/PDD-beta11-device-check.txt`. It does not test UI interaction; use the manual screen matrix above.
+The script checks only version, ABI, package presence, Accessibility permission and process state through your existing Shizuku `~/rish`. It never changes settings, grants permissions, reads payment data or collects a logcat. Output goes to `/storage/emulated/0/Download/PDD-beta11-device-check.txt`. It does not test UI interaction; use the manual screen matrix above.
