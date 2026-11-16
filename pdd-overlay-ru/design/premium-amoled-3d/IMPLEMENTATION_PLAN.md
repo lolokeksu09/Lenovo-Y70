@@ -96,7 +96,7 @@ No user screenshot, avatar, order or review personally identifiable data is comm
 - [x] File: `PDD-Overlay-RU-v0.2.0-beta.11-REVIEWS-INLINE-OCR-ARM64-SIGNED.apk`; SHA-256: `76bca3c1023f3b507b3a7a260b3b46494398e29989c3fa6b0f8fb04562218a0f`; 37,991,374 bytes. Version remains beta11/versionCode 21; signing does **not** mean install has been validated.
 - [ ] Verify same-version update over the existing beta11 on physical Lenovo without uninstalling or clearing data.
 - [ ] Confirm English→Russian model separately consented and ready, actual long review text readable; verify photo viewer inline Russian captions and original toggle on Lenovo.
-- [ ] Measure and reduce intrusive short overlay labels from the original user screenshot in the next scoped refinement.
+- [ ] Measure short overlay chip density/overlaps against real Lenovo screenshot. Source patch PR #23 limits translated captions to 12 visible, max two per 84dp vertical band, prioritizes review paragraphs, reserves system header/shop footer and avoids clipped captions. CI/test and real-device verification required.
 
 ## Invariants
 - Package `app.pinduoduo.overlayru`, minSdk 26, targetSdk 35, ARM64 release only.

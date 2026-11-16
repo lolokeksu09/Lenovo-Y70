@@ -17,10 +17,11 @@ object OverlayPlacement {
         val left = maxOf(0, x)
         val top = maxOf(0, y)
         val onLeft = x < viewportWidth * 0.70f
-        val right = if (onLeft) minOf(viewportWidth - edgeMargin, (viewportWidth * 0.83f).toInt())
+        val right = if (onLeft) minOf(viewportWidth - edgeMargin, (viewportWidth * 0.76f).toInt())
                     else viewportWidth - edgeMargin
         val allowedWidth = maxOf(0, right - left)
-        val expandedWidth = ceil((sourceWidth * (if (onLeft) 1.55f else 1.10f)).toDouble()).toInt()
+        // Never expand a short caption across neighboring product photos.
+        val expandedWidth = ceil((sourceWidth * (if (onLeft) 1.30f else 1.08f)).toDouble()).toInt()
         val width = minOf(allowedWidth,
             maxOf(sourceWidth, minOf(maxOf(sourceWidth, desiredWidth), expandedWidth)))
         val height = minOf(sourceHeight, viewportHeight - top)

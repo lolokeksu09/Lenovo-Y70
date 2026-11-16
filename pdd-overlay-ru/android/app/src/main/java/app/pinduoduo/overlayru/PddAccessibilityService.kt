@@ -9,7 +9,6 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
-import android.text.TextUtils
 import android.text.StaticLayout
 import android.text.Layout
 import android.text.TextPaint
@@ -180,7 +179,18 @@ class PddAccessibilityService : AccessibilityService() {
         val displaySize = Point()
         window.defaultDisplay.getRealSize(displaySize)
         if (displaySize.x <= 0 || displaySize.y <= 0) return
-        val targets = findText(root, displaySize.x, displaySize.y)
+        val discovered = findText(root, displaySize.x, displaySize.y)
+        val selected = OverlayDensityPolicy.select(
+            discovered.map {
+                OverlayDensityPolicy.Candidate(
+                    it.bounds.left, it.bounds.top, it.bounds.right, it.bounds.bottom,
+                    it.isReview
+                )
+            },
+            displaySize.x, displaySize.y,
+            dp(32f).toInt(), dp(104f).toInt(), dp(84f).toInt()
+        )
+        val targets = selected.map { discovered[it] }
         if (targets.isEmpty()) {
             clearLabels()
             visibleChineseTexts.clear()
@@ -497,8 +507,23 @@ class PddAccessibilityService : AccessibilityService() {
             widthGoal, maxX, maxY, dp(8f).toInt()
         )) ?: return false
         if (fit[2] < dp(24f) || fit[3] < dp(17f)) return false
+        // Reject ellipsized captions: an incomplete RU label is less useful
+        // than leaving its original readable. Minimum 10sp is a11y-safe.
+        if (!paragraph) {
+            val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics
+                )
+            }
+            if (paint.measureText(translation) > fit[2] - dp(12f)) return false
+        }
         val placement = Rect(fit[0], fit[1], fit[0] + fit[2], fit[1] + fit[3])
-        if (overlaps(placement, occupied)) return false
+        // Keep a small gap around neighboring captions; this is *not* a
+        // location to cover nearby tappable elements or the shop footer.
+        val spaced = Rect(placement).apply {
+            inset(-dp(4f).toInt(), -dp(3f).toInt())
+        }
+        if (overlaps(spaced, occupied)) return false
 
         // Never cover an entire prose paragraph with a clipped translation.
         // Measure full multiline content and retain original on any overflow.
@@ -525,7 +550,7 @@ class PddAccessibilityService : AccessibilityService() {
             label.gravity = if (paragraph) Gravity.TOP or Gravity.START
                 else Gravity.CENTER_VERTICAL or Gravity.START
             label.isSingleLine = !paragraph
-            label.ellipsize = if (paragraph) null else TextUtils.TruncateAt.END
+            label.ellipsize = null
             label.includeFontPadding = false
             label.setPadding(
                 dp(6f).toInt(), if (paragraph) dp(3f).toInt() else 0,
