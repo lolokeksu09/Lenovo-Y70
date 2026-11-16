@@ -6,11 +6,11 @@ Do not uninstall Beta 10 first: the production signing identity is unchanged.
 
 ## Installation
 
-1. Download and install `PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk` over Beta 10.
+1. Download and install `PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED-CORRECTED.apk` over Beta 10.
 2. Confirm Android accepts an in-place update and retains the user's local dictionary and translation settings.
 3. Launch normally. No debug/system privilege, Root or Shizuku is required for translation.
 
-APK SHA-256: `191055071ce444d008e5c9f77df945bb21835537c36f03107b573bca9bfa43a9`
+APK SHA-256: `04ac0e85edc4a75176ffd1e0cdff3b1561ac93257b0444293d3def66d57abd71`
 Certificate SHA-256 (unchanged Beta 10): `d0d4e5dfb604917e1896c9a4697f2743296e3fa7b137d5bacefdf7a8c7b519d3`
 
 ## Quick functional matrix (real device only)
@@ -42,10 +42,10 @@ Review the file before sending: logs may include device details. Do not send cre
 
 ## Validation distinctions
 
-- PASS: 71/71 Gradle JVM tests, source/privacy gate, and ARM64 native library verification in GitHub Actions `43811452976`.
-- PASS: APK content ZIP/CRC, 4K shared-library alignment, cryptographically valid APK Signature Scheme v2/v3 using the same pinned certificate.
+- PASS: 71/71 Gradle JVM tests, source/privacy gate, and ARM64 native library verification in GitHub Actions `43821463490`.
+- PASS: corrected signed APK ZIP integrity, 16 KiB native library alignment, official Android SDK apksigner verification of v2/v3 using the beta10 signing certificate.
 - NOT RUN: in-place install, font 1.3×, manual OCR and Accessibility inside Pinduoduo on a physical Legion Y70.
-- Android 35 GitHub emulator: run 43815178719 successfully booted with KVM permission and launched HomeActivity; the rest of navigation stopped at a shell multi-line `for` syntax error. Run the full script file with Bash and validate real tab switching before marking emulator smoke PASS.
+- PASS: Android 35 emulator four-tab navigation and content-aware screenshots in run `43821463539`. Runtime on a physical Legion Y70 remains NOT RUN.
 
 ## One-command read-only device report
 
@@ -59,8 +59,8 @@ The script checks only version, ABI, package presence, Accessibility permission 
 
 ## Emulated navigation evidence
 
-Run `43820223348` (`b29bbec7`) passed all four Activity transitions and returned to Home. Actual screenshots show Home, Dictionary and Settings. The Photo Activity was resumed but its immediate screenshot still contained Home while the next UIAutomator dump confirmed the Photo screen. Treat Photo rendering as **not independently screenshot-verified** until the UI gate waits for the `Перевод фото` heading before capture.
+Run `43821463539` passed all four Activity transitions and returned to Home. The screenshot gate verified each screen heading before capture (including «Перевод фото»). No AndroidRuntime errors were captured by the scoped logcat filter. This is Android 35 x86_64 emulator evidence, not ARM64 real-device evidence.
 
 ## PRO configuration build regression
 
-The initial beta11 CI workflow omitted the `PDD_LICENSE_API_BASE_URL` and `PDD_LICENSE_PUBLIC_KEY_B64` job variables passed in beta10. This can cause a release build with an empty license endpoint and trust anchor. The updated workflow passes the existing repository variables, and checks generated BuildConfig fields without printing secrets. Until configured values are verified, beta11 PRO activation is **NOT VERIFIED**. The app's free translation remains separate from licensing.
+The initial beta11 CI workflow omitted the `PDD_LICENSE_API_BASE_URL` and `PDD_LICENSE_PUBLIC_KEY_B64` job variables passed in beta10. This can cause a release build with an empty license endpoint and trust anchor. The updated workflow passes the existing repository variables, and checks generated BuildConfig fields without printing secrets. Run `43821463490` confirmed the corrected BuildConfig is `CONFIGURED`, and the corrected signed APK uses that artifact. **Live PRO activation remains NOT RUN**, even though the endpoint and public key are embedded. The app's free translation remains separate from licensing.
