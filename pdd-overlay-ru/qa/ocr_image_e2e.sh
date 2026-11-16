@@ -14,28 +14,33 @@ trap diagnostics EXIT
 test -s "$FIXTURE"
 sha256sum "$FIXTURE" > "$OUT/fixture-sha256.txt"
 adb install -r pdd-overlay-ru/android/app/build/outputs/apk/debug/app-debug.apk
-# ADB push alone does not index media on Android 35. Seed a standard
-# camera location, explicitly scan and require a verified MediaStore row.
-REMOTE=/sdcard/DCIM/Camera/ocr_chinese_sample.png
-adb shell mkdir -p /sdcard/DCIM/Camera
-adb push "$FIXTURE" "$REMOTE"
-timeout 15s adb shell cmd media_scanner scan-file "$REMOTE" > "$OUT/media-scan.txt" 2>&1 || true
-timeout 15s adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$REMOTE" >> "$OUT/media-scan.txt" 2>&1 || true
-timeout 30s adb shell content call --uri content://media/ --method scan_volume --arg external_primary >> "$OUT/media-scan.txt" 2>&1 || true
-indexed=0
-for attempt in $(seq 1 15); do
-  timeout 20s adb shell content query --uri content://media/external/images/media --projection _id:_display_name > "$OUT/media-rows.txt" 2>&1 || true
-  if grep -Fq 'ocr_chinese_sample.png' "$OUT/media-rows.txt"; then
-    indexed=1
-    break
-  fi
-  sleep 3
-done
-if [[ "$indexed" != 1 ]]; then
-  echo 'FAIL: synthetic PNG not indexed in Android MediaStore, picker not exercised' >&2
+# Use the official MediaStore content provider interface instead of ADB
+# filesystem writes: Android 35 denies direct write to some DCIM paths.
+# This method is documented for AOSP multi-user media tests.
+MEDIA='content://media/external/images/media'
+NAME='ocr_chinese_sample.png'
+timeout 25s adb shell content insert --uri "$MEDIA" \
+  --bind "_display_name:s:$NAME" \
+  --bind 'mime_type:s:image/png' \
+  --bind 'relative_path:s:Pictures/PddQa' > "$OUT/media-insert.txt"
+timeout 25s adb shell content query --uri "$MEDIA" \
+  --projection _id:_display_name \
+  --where "_display_name='$NAME'" > "$OUT/media-rows.txt"
+MEDIA_ID="$(sed -nE 's/.*_id=([0-9]+).*/\1/p' "$OUT/media-rows.txt" | head -1)"
+if [[ ! "$MEDIA_ID" =~ ^[0-9]+$ ]]; then
+  echo 'FAIL: no synthetic image row in Android MediaStore' >&2
   exit 1
 fi
-echo 'PASS: synthetic PNG indexed in MediaStore'
+timeout 25s adb shell content write --uri "$MEDIA/$MEDIA_ID" < "$FIXTURE"
+# Prove the provider stored exactly this test image before opening picker.
+expected="$(sha256sum "$FIXTURE" | awk '{print $1}')"
+actual="$(timeout 25s adb exec-out content read --uri "$MEDIA/$MEDIA_ID" | sha256sum | awk '{print $1}')"
+if [[ "$actual" != "$expected" ]]; then
+  echo 'FAIL: MediaStore image bytes do not match source PNG' >&2
+  exit 1
+fi
+echo 'PASS: image inserted and byte-verified in Android MediaStore'
+sleep 3
 timeout 40s adb shell am start -W -n "$APP/.HomeActivity" > "$OUT/launch.txt"
 sleep 4
 python3 "$QA" tap 'Фото' "$OUT/window-before-photo.xml"
