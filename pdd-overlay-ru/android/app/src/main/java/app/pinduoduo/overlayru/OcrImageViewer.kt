@@ -39,6 +39,7 @@ private val ViewerBg = Color(0xFF080A0E)
 private val ViewerSurface = Color(0xFF15191F)
 private val ViewerInk = Color(0xFFF5F6F9)
 private val ViewerMuted = Color(0xFFB3BDCA)
+private val ViewerRed = Color(0xFFEA3A50) // close action only, not OCR detections
 private val ViewerGreen = Color(0xFF69E0C0)
 
 /**
