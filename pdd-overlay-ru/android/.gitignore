@@ -1,7 +1,7 @@
 /build/
 /app/build/
 /.gradle/
-/.kоtlin/
+/.kotlin/
 /local.properties
 /.idea/
 /.cxx/
