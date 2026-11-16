@@ -36,12 +36,16 @@ jobs:
               exit 1
             fi
           done
+          # A source-only prerelease may exist while GitHub signing credentials are
+          # being configured. Attach signed assets only if it still has no APK.
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error title=Immutable release::Release tag already published. Refusing to replace assets."
-            exit 1
-          fi
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "::error title=Existing tag::Refusing to reuse the tag."
+            existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '[.assets[] | select(.name | endswith(".apk"))] | length')"
+            if [[ "$existing" != "0" ]]; then
+              echo "::error title=Immutable binary::Signed release APK already exists. Refusing to replace it."
+              exit 1
+            fi
+          elif git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error title=Existing tag::Tag without a supported prerelease exists. Refusing to reuse it."
             exit 1
           fi
           umask 077
@@ -135,15 +139,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release create "$TAG" \
-            release-out/PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk \
-            release-out/SHA256SUMS.txt \
-            release-out/SIGNING.txt \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "PDD Overlay RU v0.2.0-beta.11 — ARM64" \
-            --notes-file pdd-overlay-ru/releases/v0.2.0-beta.11.md \
-            --prerelease
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              release-out/PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk \
+              release-out/SHA256SUMS.txt \
+              release-out/SIGNING.txt \
+              --repo "$GITHUB_REPOSITORY"
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "PDD Overlay RU v0.2.0-beta.11 — ARM64" \
+              --notes-file pdd-overlay-ru/releases/v0.2.0-beta.11.md \
+              --prerelease
+          else
+            gh release create "$TAG" \
+              release-out/PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk \
+              release-out/SHA256SUMS.txt \
+              release-out/SIGNING.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "PDD Overlay RU v0.2.0-beta.11 — ARM64" \
+              --notes-file pdd-overlay-ru/releases/v0.2.0-beta.11.md \
+              --prerelease
+          fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
             --json tagName,isPrerelease,isDraft,assets,url \
             --jq '{tag: .tagName, prerelease: .isPrerelease, draft: .isDraft, url: .url, assets: [.assets[].name]}'
