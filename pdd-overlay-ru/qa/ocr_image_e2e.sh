@@ -14,11 +14,28 @@ trap diagnostics EXIT
 test -s "$FIXTURE"
 sha256sum "$FIXTURE" > "$OUT/fixture-sha256.txt"
 adb install -r pdd-overlay-ru/android/app/build/outputs/apk/debug/app-debug.apk
-adb shell mkdir -p /sdcard/Pictures/PddQa
-adb push "$FIXTURE" /sdcard/Pictures/PddQa/ocr_chinese_sample.png
-adb shell cmd media_scanner scan-file /sdcard/Pictures/PddQa/ocr_chinese_sample.png > "$OUT/media-scan.txt" 2>&1 || true
-adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/PddQa/ocr_chinese_sample.png >> "$OUT/media-scan.txt" 2>&1 || true
-sleep 4
+# ADB push alone does not index media on Android 35. Seed a standard
+# camera location, explicitly scan and require a verified MediaStore row.
+REMOTE=/sdcard/DCIM/Camera/ocr_chinese_sample.png
+adb shell mkdir -p /sdcard/DCIM/Camera
+adb push "$FIXTURE" "$REMOTE"
+timeout 15s adb shell cmd media_scanner scan-file "$REMOTE" > "$OUT/media-scan.txt" 2>&1 || true
+timeout 15s adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$REMOTE" >> "$OUT/media-scan.txt" 2>&1 || true
+timeout 30s adb shell content call --uri content://media/ --method scan_volume --arg external_primary >> "$OUT/media-scan.txt" 2>&1 || true
+indexed=0
+for attempt in $(seq 1 15); do
+  timeout 20s adb shell content query --uri content://media/external/images/media --projection _id:_display_name > "$OUT/media-rows.txt" 2>&1 || true
+  if grep -Fq 'ocr_chinese_sample.png' "$OUT/media-rows.txt"; then
+    indexed=1
+    break
+  fi
+  sleep 3
+done
+if [[ "$indexed" != 1 ]]; then
+  echo 'FAIL: synthetic PNG not indexed in Android MediaStore, picker not exercised' >&2
+  exit 1
+fi
+echo 'PASS: synthetic PNG indexed in MediaStore'
 timeout 40s adb shell am start -W -n "$APP/.HomeActivity" > "$OUT/launch.txt"
 sleep 4
 python3 "$QA" tap 'Фото' "$OUT/window-before-photo.xml"

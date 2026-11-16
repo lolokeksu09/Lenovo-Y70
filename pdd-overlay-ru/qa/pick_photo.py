@@ -33,7 +33,7 @@ for node in nodes:
         continue
     x1,y1,x2,y2=map(int,m.groups())
     w,h=x2-x1,y2-y1
-    if min(w,h)<120 or max(w,h)>950 or y1<150 or y2>2200:
+    if min(w,h)<120 or max(w,h)>950 or y1<1250 or y2>2200:
         continue
     rid=node.get("resource-id","").lower()
     desc=node.get("content-desc","").lower()
@@ -41,7 +41,9 @@ for node in nodes:
     image=any(x.get("class","").endswith("ImageView") for x in descendants)
     media=any(k in rid for k in ("thumbnail","item","media","photo")) or any(k in desc for k in ("photo","image","png"))
     square=abs(w-h)<0.45*max(w,h)
-    if not (square or image or media):
+    if desc in ("more options","cancel","albums","photos") or node.get("text","").strip():
+        continue
+    if not ((image and square) or media):
         continue
     score=(6 if image else 0)+(4 if media else 0)+(2 if square else 0)
     candidates.append((score,y1,x1,(x1+x2)//2,(y1+y2)//2,rid,desc))
