@@ -46,3 +46,13 @@ Review the file before sending: logs may include device details. Do not send cre
 - PASS: APK content ZIP/CRC, 4K shared-library alignment, cryptographically valid APK Signature Scheme v2/v3 using the same pinned certificate.
 - NOT RUN: in-place install, font 1.3×, manual OCR and Accessibility inside Pinduoduo on a physical Legion Y70.
 - Android 35 GitHub emulator: run 43815178719 successfully booted with KVM permission and launched HomeActivity; the rest of navigation stopped at a shell multi-line `for` syntax error. Run the full script file with Bash and validate real tab switching before marking emulator smoke PASS.
+
+## One-command read-only device report
+
+After you install beta11 on Lenovo, run from Termux:
+
+```sh
+bash "$HOME/pdd-beta11-device-check.sh"
+```
+
+The optional [script](device_check_termux.sh) checks only version, ABI, package presence, Accessibility permission and process state through your existing Shizuku `~/rish`. It never changes settings, grants permissions, reads payment data or collects a logcat. Output goes to `/storage/emulated/0/Download/PDD-beta11-device-check.txt`. It does not test UI interaction; use the manual screen matrix above.
