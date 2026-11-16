@@ -47,18 +47,18 @@ object TranslationPolicy {
             val allowed = when {
                 Character.isLetter(cp) ->
                     Character.UnicodeScript.of(cp) == Character.UnicodeScript.LATIN
-                Character.isDigit(cp) || kind == Character.CURRENCY_SYMBOL -> false
+                Character.isDigit(cp) || kind == Character.CURRENCY_SYMBOL.toInt() -> false
                 cp == 0x200D || cp == 0xFE0F || cp == 0xFE0E -> true
                 cp in 0x1F000..0x1FAFF || cp in 0x2600..0x27BF -> true
-                kind == Character.NON_SPACING_MARK ||
-                    kind == Character.COMBINING_SPACING_MARK -> true
-                kind == Character.DASH_PUNCTUATION ||
-                    kind == Character.START_PUNCTUATION ||
-                    kind == Character.END_PUNCTUATION ||
-                    kind == Character.INITIAL_QUOTE_PUNCTUATION ||
-                    kind == Character.FINAL_QUOTE_PUNCTUATION ||
-                    kind == Character.OTHER_PUNCTUATION ||
-                    kind == Character.SPACE_SEPARATOR -> true
+                kind == Character.NON_SPACING_MARK.toInt() ||
+                    kind == Character.COMBINING_SPACING_MARK.toInt() -> true
+                kind == Character.DASH_PUNCTUATION.toInt() ||
+                    kind == Character.START_PUNCTUATION.toInt() ||
+                    kind == Character.END_PUNCTUATION.toInt() ||
+                    kind == Character.INITIAL_QUOTE_PUNCTUATION.toInt() ||
+                    kind == Character.FINAL_QUOTE_PUNCTUATION.toInt() ||
+                    kind == Character.OTHER_PUNCTUATION.toInt() ||
+                    kind == Character.SPACE_SEPARATOR.toInt() -> true
                 else -> false
             }
             if (!allowed) return NONE
@@ -81,7 +81,7 @@ object TranslationPolicy {
         if (s.isEmpty() || s.length > 180 || sourceLanguage(s) == NONE) return false
         // Do not obscure prices, order totals, URLs, contacts or one-time codes.
         if (s.codePoints().anyMatch {
-                Character.getType(it) == Character.CURRENCY_SYMBOL
+                Character.getType(it) == Character.CURRENCY_SYMBOL.toInt()
             } || AMOUNT.matcher(s).matches()) return false
         if (DIGITS.matcher(s).matches() || TOKEN.matcher(s).matches()) return false
         if (OTP.matcher(s).matches()) return false
