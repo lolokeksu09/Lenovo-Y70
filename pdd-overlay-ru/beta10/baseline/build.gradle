@@ -1,0 +1,89 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+def keyFile = System.getenv('PDD_RELEASE_KEYSTORE')
+def keyStorePassword = System.getenv('PDD_RELEASE_STORE_PASSWORD')
+def keyAliasValue = System.getenv('PDD_RELEASE_KEY_ALIAS')
+def keyPasswordValue = System.getenv('PDD_RELEASE_KEY_PASSWORD')
+def hasReleaseKey = keyFile && keyStorePassword && keyAliasValue && keyPasswordValue
+// A deployer must configure BOTH public trust anchor and HTTPS endpoint.
+// Deliberately no fallback key or endpoint in source or APK.
+def licenseApiUrl = System.getenv('PDD_LICENSE_API_BASE_URL') ?: ''
+def licensePublicKey = System.getenv('PDD_LICENSE_PUBLIC_KEY_B64') ?: ''
+if (licenseApiUrl && !(licenseApiUrl ==~ /^https:\/\/[A-Za-z0-9.-]+(?::443)?(?:\/[A-Za-z0-9._~\/-]*)?$/)) {
+    throw new GradleException('Invalid PDD_LICENSE_API_BASE_URL: use a trusted HTTPS host')
+}
+if (licensePublicKey && !(licensePublicKey ==~ /^[A-Za-z0-9+\/=]+$/)) {
+    throw new GradleException('PDD_LICENSE_PUBLIC_KEY_B64 is not standard Base64 DER')
+}
+if (!!licenseApiUrl != !!licensePublicKey) {
+    throw new GradleException('License API URL and public verification key must be configured together')
+}
+
+
+android {
+    namespace 'app.pinduoduo.overlayru'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'app.pinduoduo.overlayru'
+        minSdk 26
+        targetSdk 35
+        // The distributed APK is exclusively for 64-bit ARM Android devices.
+        ndk { abiFilters 'arm64-v8a' }
+        versionCode 19
+        versionName '0.2.0-beta.9'
+        buildConfigField 'String', 'LICENSE_API_BASE_URL', '\"' + licenseApiUrl + '\"'
+        buildConfigField 'String', 'LICENSE_PUBLIC_KEY_B64', '\"' + licensePublicKey + '\"'
+    }
+
+    buildFeatures {
+        buildConfig true
+        compose true
+    }
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            persistent {
+                storeFile file(keyFile)
+                storePassword keyStorePassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (hasReleaseKey) signingConfig signingConfigs.persistent
+        }
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.mlkit:translate:17.0.3'
+    // Bundled OCR avoids a first-run Google Play Services download.
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
+    implementation platform('androidx.compose:compose-bom:2024.12.01')
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

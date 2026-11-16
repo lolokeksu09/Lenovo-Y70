@@ -1,0 +1,127 @@
+name: PDD Overlay RU beta10 Premium AMOLED 3D ARM64
+on:
+  push:
+    branches: [pdd-premium-amoled-3d-beta10-arm64]
+    paths:
+      - '.github/workflows/pdd-premium-amoled-beta10.yml'
+      - 'pdd-overlay-ru/beta10/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Integrate beta10 canonical source and check product invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta10/apply_premium_amoled_3d_beta10.py
+          base64 -d pdd-overlay-ru/source_bundle.base64 > "$RUNNER_TEMP/pdd-premium-beta10.zip"
+          unzip -tq "$RUNNER_TEMP/pdd-premium-beta10.zip"
+          unzip -q "$RUNNER_TEMP/pdd-premium-beta10.zip"
+          APP=pinduoduo_overlay_ru
+          test "$(find "$APP/app/src/main/java" -name '*.java' | wc -l)" -eq 0
+          grep -q 'versionCode 20' "$APP/app/build.gradle"
+          grep -q "versionName '0.2.0-beta.10'" "$APP/app/build.gradle"
+          grep -q "applicationId 'app.pinduoduo.overlayru'" "$APP/app/build.gradle"
+          grep -q "ndk { abiFilters 'arm64-v8a' }" "$APP/app/build.gradle"
+          for p in PddDesign PddNavigation PddBagArt; do
+            test -f "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/design/$p.kt"
+          done
+          grep -q 'PddFrame(PddTab.PHOTO' "$APP/app/src/main/java/app/pinduoduo/overlayru/ImageOcrActivity.kt"
+          grep -q 'PddFrame(PddTab.DICTIONARY' "$APP/app/src/main/java/app/pinduoduo/overlayru/GlossaryEditorActivity.kt"
+          grep -q 'PddFrame(PddTab.SETTINGS' "$APP/app/src/main/java/app/pinduoduo/overlayru/MainActivity.kt"
+          grep -q 'PddBottomBar(PddTab.HOME)' "$APP/app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeScreen.kt"
+
+      - name: Accessibility, privacy and licensing source validation
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+
+      - name: 66 JVM regression tests and actual ARM64 release
+        run: gradle -p pinduoduo_overlay_ru :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Check tests ran without failures or skipped cases
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root=Path("pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest")
+          expected={
+              "LicenseTokenVerifierTest":7, "LicenseSecurityMigrationTest":5,
+              "SettingsKotlinMigrationTest":4, "TranslationPolicyKotlinTest":3,
+              "OverlayPlacementKotlinTest":2, "OverlayCoordinatesKotlinTest":2,
+              "OverlayUpdatePolicyKotlinTest":1, "HomeReadinessTest":6,
+              "TranslationQueueGateTest":6, "PaymentActionPolicyTest":3,
+              "CustomGlossaryPolicyTest":4, "OcrTextPolicyTest":4,
+              "OcrImagePolicyTest":5, "OcrRegionTest":6,
+              "OcrPhotoViewportTest":8
+          }
+          n=0
+          for klass,count in expected.items():
+              reports=list(root.glob("TEST-*"+klass+".xml"))
+              assert len(reports)==1,(klass,reports)
+              test=ET.parse(reports[0]).getroot()
+              for field,num in [("tests",count),("failures",0),("errors",0),("skipped",0)]:
+                  assert int(test.get(field,-1))==num,(klass,field,test.get(field))
+              n+=count
+          assert n==66,n
+          print("PASS: 66 actual JVM regression tests")
+          PY
+
+      - name: Verify distributed APK is ARM64 only with OCR and translation libraries
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          apk=Path("pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk")
+          assert apk.is_file() and apk.stat().st_size>1000000
+          with zipfile.ZipFile(apk) as archive:
+              members=archive.namelist()
+              libs=[x for x in members if x.startswith('lib/') and x.endswith('.so')]
+              assert libs and all(x.startswith('lib/arm64-v8a/') for x in libs),libs
+              assert any(x.endswith('/libtranslate_jni.so') for x in libs),libs
+              assert any(x.endswith('/libmlkit_google_ocr_pipeline.so') for x in libs),libs
+              assert 'AndroidManifest.xml' in members
+              assert 'classes.dex' in members
+          print("PASS: ARM64 native payload and signed-ready APK",apk.stat().st_size)
+          PY
+
+      - name: Commit exact verified beta10 project source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pdd-overlay-ru/source_bundle.base64
+          if git diff --cached --quiet; then
+            echo "::error::Expected beta10 canonical archive update"
+            exit 1
+          fi
+          git commit -m 'feat(pdd): beta10 real premium Material3 tabs and settings Compose migration'
+          git fetch origin pdd-premium-amoled-3d-beta10-arm64
+          git rebase origin/pdd-premium-amoled-3d-beta10-arm64
+          git push origin HEAD:pdd-premium-amoled-3d-beta10-arm64
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-RU-v0.2.0-beta.10-ARM64-Premium-3D-APK-tests
+          path: |
+            pinduoduo_overlay_ru/app/build/outputs/apk/release/app-release-unsigned.apk
+            pinduoduo_overlay_ru/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
