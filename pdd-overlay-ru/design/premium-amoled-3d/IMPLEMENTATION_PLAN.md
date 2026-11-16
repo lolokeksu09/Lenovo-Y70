@@ -54,8 +54,8 @@ Pending offline glossary/model-state correction: [PR #21](https://github.com/lol
 - [x] Captured beta11 defect: without models, recognized `商品详情` and `查看物流` stayed untranslated despite existing built-in glossary entries (`43858964995`).
 - [x] Corrected OCR dispatch in PR #21 to try local correction/bundled glossary regardless of model readiness, leaving the ML Kit downloader gated by user consent.
 - [x] Android 35 E2E verifies **two Russian glossary outputs without model download**; run `43885916622` PASS with `Переведено 2 из 2 строк`, visible text, screenshots and no AndroidRuntime errors.
-- [ ] Final revision of PR #21: repeat Android 35 E2E after stabilizing hosted Pixel Launcher startup.
-- [ ] ARM64 release compile, 76/76 JVM tests, privacy gate, licensed BuildConfig: dedicated CI on PR #21 running.
+- [x] Final Android 35 E2E `43887705435` PASS (commit `895453f8a9374eaa77399251db60b1edbf5f7067`): Pixel Launcher ANR recovered without modifying PDD, real ML Kit OCR, `2/2` Russian text, focused AndroidRuntime log empty and screenshot reviewed.
+- [x] ARM64 Release validation `43887866819` PASS (commit `f0ec7cb4ce27c8119731ccb267b87804369e8319`): 76/76 tests, privacy gate, ARM64 native OCR/translate libs, configured PRO BuildConfig. No signed APK was published.
 - [ ] Merge PR #21 only after both final CI jobs pass; do not attach APK to the earlier GitHub prerelease.
 - [ ] Live PRO activation and entitlement renewal remain unverified. CI `43821463490` only confirms configured URL/public key.
 
