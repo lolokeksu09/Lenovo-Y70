@@ -96,7 +96,19 @@ No user screenshot, avatar, order or review personally identifiable data is comm
 - [x] File: `PDD-Overlay-RU-v0.2.0-beta.11-REVIEWS-INLINE-OCR-ARM64-SIGNED.apk`; SHA-256: `76bca3c1023f3b507b3a7a260b3b46494398e29989c3fa6b0f8fb04562218a0f`; 37,991,374 bytes. Version remains beta11/versionCode 21; signing does **not** mean install has been validated.
 - [ ] Verify same-version update over the existing beta11 on physical Lenovo without uninstalling or clearing data.
 - [ ] Confirm English→Russian model separately consented and ready, actual long review text readable; verify photo viewer inline Russian captions and original toggle on Lenovo.
-- [ ] Measure short overlay chip density/overlaps against real Lenovo screenshot. Source patch PR #23 limits translated captions to 12 visible, max two per 84dp vertical band, prioritizes review paragraphs, reserves system header/shop footer and avoids clipped captions. CI/test and real-device verification required.
+- [x] PR #23 source implementation: max 12 captions, max two per 84dp band, reviews prioritized, header/footer reserved, no incomplete short captions; 95/95 tests, privacy and ARM64 Release PASS in CI `43903172222`. **Actual Lenovo overlap comparison remains pending**.
+
+## J. Overlay density refinement — VERIFIED SOURCE, PHONE PENDING
+
+- [x] PR #23 squash merged: `97cf71444b0bc424c0196ff3dc03d00cde9d383e`; checked GitHub Action `43903172222` PASS, 95/95 JVM tests and unsigned ARM64 Release.
+- [x] Existing release keystore used to locally sign the verified CI build, Android SDK apksigner v2/v3 PASS and certificate matches prior beta11: `d0d4e5dfb604917e1896c9a4697f2743296e3fa7b137d5bacefdf7a8c7b519d3`.
+- [x] Private chat artifact `PDD-Overlay-RU-v0.2.0-beta.11-OVERLAY-DENSITY-ARM64-SIGNED.apk`, size `37991374`, SHA-256 `e0b9210efe600b5f01008d0d0b74c4b164a6b9ecc8933c127b8e48e3969e18ac`; native ZIP alignment 16 KiB and arm64-v8a verified. `versionCode 21` unchanged; no GitHub Release upload.
+- [ ] Confirm signed in-place update without data loss on user's Lenovo Legion Y70.
+- [ ] Real Pinduoduo before/after screenshot comparison (review readability, <=12 short captions, sticky footer visible). CI JVM tests do not verify visual appearance on the target device.
+- [ ] Confirm English→Russian model separately consented and ready; long review accessible in Pinduoduo view tree and fully translated. If text is a non-accessible Canvas, do not silently capture the screen.
+- [ ] Confirm OCR overlay original/translated toggle on actual Lenovo. Android 35 synthetic-image test passed in earlier PR #22.
+
+QA checklist: `pdd-overlay-ru/qa/LEGION_Y70_OVERLAY_DENSITY_QA.md`.
 
 ## Invariants
 - Package `app.pinduoduo.overlayru`, minSdk 26, targetSdk 35, ARM64 release only.
