@@ -1,0 +1,119 @@
+name: PDD Overlay RU beta11 stabilization ARM64
+on:
+  push:
+    branches: [pdd-overlay-ru-stabilization-beta11]
+    paths:
+      - '.github/workflows/pdd-stabilization-beta11.yml'
+      - 'pdd-overlay-ru/beta11/**'
+      - 'pdd-overlay-ru/android/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Bootstrap source tree only if not yet present
+        run: python3 pdd-overlay-ru/beta11/bootstrap_android.py
+      - name: Preserve current local validator paths
+        run: ln -s pdd-overlay-ru/android pinduoduo_overlay_ru
+      - name: Security and privacy source checks
+        run: bash pinduoduo_overlay_ru/scripts/test_local.sh
+      - name: Regression tests and ARM64 release compilation
+        run: gradle -p pdd-overlay-ru/android :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify license configuration was passed to BuildConfig
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          generated=Path("pdd-overlay-ru/android/app/build/generated/source/buildConfig/release")
+          found=list(generated.rglob("BuildConfig.java"))
+          assert len(found)==1,found
+          content=found[0].read_text()
+          configured=bool(os.environ.get("PDD_LICENSE_API_BASE_URL"))
+          assert configured==bool(os.environ.get("PDD_LICENSE_PUBLIC_KEY_B64")), "Incomplete PRO config"
+          for field in ("LICENSE_API_BASE_URL","LICENSE_PUBLIC_KEY_B64"):
+              matching=[line.strip() for line in content.splitlines() if "String "+field+" =" in line]
+              assert len(matching)==1,(field,len(matching))
+              blank=matching[0].endswith('= "";')
+              assert blank != configured,(field,"Gradle licensing environment mismatch")
+          print("PDD PRO build configuration:", "CONFIGURED" if configured else "NOT CONFIGURED — PRO activation unavailable")
+          PY
+      - name: Verify 71 tests and no ignored cases
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          path=Path("pdd-overlay-ru/android/app/build/test-results/testReleaseUnitTest")
+          reports=list(path.glob("TEST-*.xml"))
+          assert reports, "No JUnit test reports"
+          totals={"tests":0,"failures":0,"errors":0,"skipped":0}
+          for report in reports:
+              root=ET.parse(report).getroot()
+              for field in totals: totals[field]+=int(root.attrib.get(field,0))
+          new=list(path.glob("TEST-*CustomGlossaryEditPolicyTest.xml"))
+          assert len(new)==1 and int(ET.parse(new[0]).getroot().attrib["tests"])==5,new
+          assert totals=={"tests":71,"failures":0,"errors":0,"skipped":0},totals
+          print("PASS: 66 original + 5 rename policy regressions", totals)
+          PY
+      - name: Verify ABI, native libraries and package invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          base=Path("pdd-overlay-ru/android")
+          app=base/"app"
+          gradle=(app/"build.gradle").read_text()
+          assert "versionCode 21" in gradle
+          assert "versionName '0.2.0-beta.11'" in gradle
+          assert "applicationId 'app.pinduoduo.overlayru'" in gradle
+          assert "ndk { abiFilters 'arm64-v8a' }" in gradle
+          assert not list((app/"src/main/java").rglob("*.java"))
+          manifest=(app/"src/main/AndroidManifest.xml").read_text()
+          assert "android.permission.READ_MEDIA_IMAGES" not in manifest
+          assert "android.permission.SYSTEM_ALERT_WINDOW" not in manifest
+          apk=app/"build/outputs/apk/release/app-release-unsigned.apk"
+          assert apk.is_file() and apk.stat().st_size>1000000,apk
+          with zipfile.ZipFile(apk) as z:
+              paths=z.namelist()
+              libs=[p for p in paths if p.startswith("lib/") and p.endswith(".so")]
+              assert libs and all(p.startswith("lib/arm64-v8a/") for p in libs), libs
+              assert any(p.endswith("/libtranslate_jni.so") for p in libs)
+              assert any(p.endswith("/libmlkit_google_ocr_pipeline.so") for p in libs)
+              assert "AndroidManifest.xml" in paths and "classes.dex" in paths
+          print("PASS: Beta11 ARM64 release unsigned build")
+          PY
+      - name: Store readable Android source tree in repository
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pdd-overlay-ru/android
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(pdd): track canonical Android Studio sources [skip ci]"
+            git pull --rebase origin pdd-overlay-ru-stabilization-beta11
+            git push origin HEAD:pdd-overlay-ru-stabilization-beta11
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-beta11-ARM64-UNSIGNED-INTERNAL-tests
+          path: |
+            pdd-overlay-ru/android/app/build/outputs/apk/release/app-release-unsigned.apk
+            pdd-overlay-ru/android/app/build/test-results/testReleaseUnitTest/*.xml
+          if-no-files-found: warn
