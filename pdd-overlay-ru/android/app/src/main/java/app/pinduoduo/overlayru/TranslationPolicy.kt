@@ -35,10 +35,34 @@ object TranslationPolicy {
     fun sourceLanguage(value: String?): Int {
         if (value == null) return NONE
         if (containsChinese(value)) return CHINESE
-        // Product reviews commonly use em dashes and smart quotes. Allow
-        // typography, but never interpret Cyrillic/other scripts as English.
-        val englishPunctuation = "—–‘’“”…\u00A0\u2011"
-        if (value.any { it.code > 127 && it !in englishPunctuation }) return NONE
+        // Reviews may contain Latin accents and emoji/flags. A supplementary
+        // Unicode code point must not be rejected as two invalid surrogate chars.
+        // Never route mixed Cyrillic/Arabic words or currency to an English model.
+        var cursor = 0
+        while (cursor < value.length) {
+            val cp = Character.codePointAt(value, cursor)
+            cursor += Character.charCount(cp)
+            if (cp <= 127) continue
+            val kind = Character.getType(cp)
+            val allowed = when {
+                Character.isLetter(cp) ->
+                    Character.UnicodeScript.of(cp) == Character.UnicodeScript.LATIN
+                Character.isDigit(cp) || kind == Character.CURRENCY_SYMBOL -> false
+                cp == 0x200D || cp == 0xFE0F || cp == 0xFE0E -> true
+                cp in 0x1F000..0x1FAFF || cp in 0x2600..0x27BF -> true
+                kind == Character.NON_SPACING_MARK ||
+                    kind == Character.COMBINING_SPACING_MARK -> true
+                kind == Character.DASH_PUNCTUATION ||
+                    kind == Character.START_PUNCTUATION ||
+                    kind == Character.END_PUNCTUATION ||
+                    kind == Character.INITIAL_QUOTE_PUNCTUATION ||
+                    kind == Character.FINAL_QUOTE_PUNCTUATION ||
+                    kind == Character.OTHER_PUNCTUATION ||
+                    kind == Character.SPACE_SEPARATOR -> true
+                else -> false
+            }
+            if (!allowed) return NONE
+        }
 
         val matcher = LATIN_WORD.matcher(value)
         var count = 0
@@ -56,8 +80,9 @@ object TranslationPolicy {
         val s = text.trim()
         if (s.isEmpty() || s.length > 180 || sourceLanguage(s) == NONE) return false
         // Do not obscure prices, order totals, URLs, contacts or one-time codes.
-        if (s.contains('¥') || s.contains('￥') || s.contains('₽') ||
-            s.contains('\u0024') || AMOUNT.matcher(s).matches()) return false
+        if (s.codePoints().anyMatch {
+                Character.getType(it) == Character.CURRENCY_SYMBOL
+            } || AMOUNT.matcher(s).matches()) return false
         if (DIGITS.matcher(s).matches() || TOKEN.matcher(s).matches()) return false
         if (OTP.matcher(s).matches()) return false
         return true
