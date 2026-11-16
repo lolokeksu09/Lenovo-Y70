@@ -42,8 +42,27 @@ if [[ "$actual" != "$expected" ]]; then
 fi
 echo 'PASS: image inserted and byte-verified in Android MediaStore'
 sleep 3
+# Some hosted Android 35 emulators show a *system launcher* ANR over our
+# Activity immediately after boot. Handle only that exact unrelated system
+# dialog; a PDD crash is never dismissed or treated as a pass.
 timeout 40s adb shell am start -W -n "$APP/.HomeActivity" > "$OUT/launch.txt"
 sleep 4
+for attempt in 1 2 3; do
+  timeout 40s adb shell uiautomator dump /sdcard/pdd-home-preflight.xml > /dev/null
+  adb exec-out cat /sdcard/pdd-home-preflight.xml > "$OUT/window-before-photo.xml"
+  if grep -Fq "Pixel Launcher isn" "$OUT/window-before-photo.xml"; then
+    echo 'WARN: Android emulator launcher ANR; dismissing system-only dialog'
+    python3 "$QA" tap 'Close app' "$OUT/system-launcher-dialog.xml"
+    adb shell am force-stop com.google.android.apps.nexuslauncher || true
+    timeout 40s adb shell am start -W -n "$APP/.HomeActivity" >> "$OUT/launch.txt"
+    sleep 3
+    continue
+  fi
+  if grep -Fq 'Фото' "$OUT/window-before-photo.xml"; then
+    break
+  fi
+  sleep 3
+done
 python3 "$QA" tap 'Фото' "$OUT/window-before-photo.xml"
 sleep 3
 python3 "$QA" exists 'Перевод фото' "$OUT/window-photo.xml"
