@@ -1,0 +1,113 @@
+name: PDD reviews and inline OCR acceptance
+on:
+  push:
+    branches: [pdd-reviews-and-inline-photo-translation]
+    paths:
+      - '.github/workflows/pdd-reviews-inline-ocr.yml'
+      - 'pdd-overlay-ru/android/**'
+      - 'pdd-overlay-ru/qa/ocr_image_e2e.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64-jvm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Verify canonical project and original payment privacy safeguards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta11/bootstrap_android.py
+          ln -s pdd-overlay-ru/android pinduoduo_overlay_ru
+          bash pinduoduo_overlay_ru/scripts/test_local.sh
+          grep -q "ndk { abiFilters 'arm64-v8a' }" pdd-overlay-ru/android/app/build.gradle
+          grep -q "versionCode 21" pdd-overlay-ru/android/app/build.gradle
+      - name: ARM64 release compilation and updated review/inline regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p pdd-overlay-ru/android :app:testReleaseUnitTest :app:assembleRelease --no-daemon
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          import zipfile
+          app=Path("pdd-overlay-ru/android/app")
+          reports=list((app/"build/test-results/testReleaseUnitTest").glob("TEST-*.xml"))
+          assert reports,"No tests run"
+          totals={k:0 for k in ("tests","failures","errors","skipped")}
+          for f in reports:
+              e=ET.parse(f).getroot()
+              for k in totals: totals[k]+=int(e.get(k,"0"))
+          assert totals=={"tests":89,"failures":0,"errors":0,"skipped":0},totals
+          for name,count in {"ReviewTranslationPolicyTest":5,"ReviewOverlayPlacementTest":3,"OcrInlineTextPolicyTest":4}.items():
+              found=list((app/"build/test-results/testReleaseUnitTest").glob("TEST-*"+name+".xml"))
+              assert len(found)==1
+              assert int(ET.parse(found[0]).getroot().get("tests","0"))==count,(name,found)
+          apk=app/"build/outputs/apk/release/app-release-unsigned.apk"
+          assert apk.is_file() and apk.stat().st_size>1000000
+          with zipfile.ZipFile(apk) as z:
+              libs=[s for s in z.namelist() if s.startswith("lib/") and s.endswith(".so")]
+              assert libs and all(s.startswith("lib/arm64-v8a/") for s in libs)
+          print("PASS: 89/89 JVM tests and unsigned ARM64 release")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-review-inline-ARM64-internal
+          path: |
+            pdd-overlay-ru/android/app/build/test-results/testReleaseUnitTest/*.xml
+            pdd-overlay-ru/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: warn
+  android35-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build x86_64 emulator app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta11/bootstrap_android.py
+          sed -i "s/ndk { abiFilters 'arm64-v8a' }/ndk { abiFilters 'x86_64' }/" pdd-overlay-ru/android/app/build.gradle
+          gradle -p pdd-overlay-ru/android :app:assembleDebug --no-daemon
+      - name: Enable Android emulator hardware acceleration
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Test system gallery, offline OCR, and translated/original photo toggle
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 2048M
+          heap-size: 256M
+          disk-size: 4096M
+          disable-animations: true
+          script: bash pdd-overlay-ru/qa/ocr_image_e2e.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-review-inline-OCR-Android35-evidence
+          path: pdd-ocr-image-e2e-evidence/
+          if-no-files-found: warn
