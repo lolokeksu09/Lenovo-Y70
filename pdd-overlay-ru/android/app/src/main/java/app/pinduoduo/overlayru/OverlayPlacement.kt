@@ -27,4 +27,20 @@ object OverlayPlacement {
         if (width <= 0 || height <= 0) return null
         return intArrayOf(left, top, width, height)
     }
+
+    /** Multiline review captions stay within their original text rectangle. */
+    @JvmStatic
+    fun fitParagraph(
+        x: Int, y: Int, sourceWidth: Int, sourceHeight: Int,
+        viewportWidth: Int, viewportHeight: Int
+    ): IntArray? {
+        if (sourceWidth <= 0 || sourceHeight <= 0 ||
+            viewportWidth <= 0 || viewportHeight <= 0) return null
+        val left = x.coerceIn(0, viewportWidth)
+        val top = y.coerceIn(0, viewportHeight)
+        val right = (x.toLong() + sourceWidth).coerceIn(0L, viewportWidth.toLong()).toInt()
+        val bottom = (y.toLong() + sourceHeight).coerceIn(0L, viewportHeight.toLong()).toInt()
+        if (right - left < 120 || bottom - top < 50) return null
+        return intArrayOf(left, top, right - left, bottom - top)
+    }
 }

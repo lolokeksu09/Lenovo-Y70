@@ -1,6 +1,10 @@
 package app.pinduoduo.overlayru
 
 import android.graphics.Bitmap
+import android.graphics.Paint as AndroidPaint
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,6 +21,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -37,8 +43,9 @@ private val ViewerRed = Color(0xFFEA3A50)
 private val ViewerGreen = Color(0xFF69E0C0)
 
 /**
- * Opt-in image viewer. Never modifies pixels or hides purchase amounts.
- * Highlights source text boxes and shows Russian text only after user tap.
+ * Reversible in-view Russian captions: the underlying bitmap is never edited.
+ * Payment/price/OTP boxes are never covered, and captions too large for their
+ * OCR region leave the original visible with a selectable outline.
  */
 @Composable
 internal fun OcrImageViewer(
@@ -49,6 +56,7 @@ internal fun OcrImageViewer(
 ) {
     // Incoming ML Kit callbacks must not clear a selection or zoom.
     var selected by remember(preview) { mutableIntStateOf(-1) }
+    var showInlineTranslations by remember(preview) { mutableStateOf(true) }
     var viewport by remember(preview) { mutableStateOf(OcrPhotoViewport()) }
     var displaySize by remember(preview) { mutableStateOf(IntSize.Zero) }
     val liveRegions by rememberUpdatedState(regions)
@@ -94,6 +102,27 @@ internal fun OcrImageViewer(
                         }
                         TextButton(onClick = onDismiss, modifier = Modifier.height(48.dp)) {
                             Text("Готово", color = ViewerRed, fontSize = 14.sp)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = 16.dp, end = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            if (showInlineTranslations) "Русский текст поверх фото"
+                            else "Оригинальные надписи",
+                            fontSize = 12.sp, color = ViewerMuted
+                        )
+                        TextButton(onClick = {
+                            showInlineTranslations = !showInlineTranslations
+                        }) {
+                            Text(
+                                if (showInlineTranslations) "Показать оригинал"
+                                else "Показать перевод",
+                                color = ViewerGreen, fontSize = 12.sp
+                            )
                         }
                     }
                     Box(
@@ -186,6 +215,58 @@ internal fun OcrImageViewer(
                                         size = Size(rect.right - rect.left, rect.bottom - rect.top),
                                         cornerRadius = CornerRadius(4.dp.toPx())
                                     )
+                                }
+
+                                val source = lines.getOrNull(index)?.first.orEmpty()
+                                val translated = lines.getOrNull(index)?.second
+                                if (showInlineTranslations && OcrInlineTextPolicy.canCover(
+                                    source, translated, region,
+                                    rect.right - rect.left, rect.bottom - rect.top
+                                )) {
+                                    val message = translated!!.trim()
+                                    val padX = 4.dp.toPx()
+                                    val padY = 2.dp.toPx()
+                                    val maxWidth = (rect.right - rect.left - 2 * padX)
+                                        .toInt().coerceAtLeast(1)
+                                    val maxHeight = rect.bottom - rect.top - 2 * padY
+                                    val textPaint = TextPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                                        color = android.graphics.Color.WHITE
+                                        isSubpixelText = true
+                                    }
+                                    var fitted: StaticLayout? = null
+                                    for (fontSp in 16 downTo 10) {
+                                        textPaint.textSize = fontSp.sp.toPx()
+                                        val candidate = StaticLayout.Builder.obtain(
+                                            message, 0, message.length, textPaint, maxWidth
+                                        ).setAlignment(Layout.Alignment.ALIGN_CENTER)
+                                            .setIncludePad(false)
+                                            .build()
+                                        if (candidate.height <= maxHeight) {
+                                            fitted = candidate
+                                            break
+                                        }
+                                    }
+                                    fitted?.let { labelLayout ->
+                                        drawRoundRect(
+                                            color = ViewerSurface.copy(alpha = .97f),
+                                            topLeft = Offset(rect.left, rect.top),
+                                            size = Size(
+                                                rect.right - rect.left, rect.bottom - rect.top
+                                            ),
+                                            cornerRadius = CornerRadius(3.dp.toPx())
+                                        )
+                                        drawIntoCanvas { canvas ->
+                                            val native = canvas.nativeCanvas
+                                            val checkpoint = native.save()
+                                            native.translate(
+                                                rect.left + padX,
+                                                rect.top + padY +
+                                                    (maxHeight - labelLayout.height) / 2f
+                                            )
+                                            labelLayout.draw(native)
+                                            native.restoreToCount(checkpoint)
+                                        }
+                                    }
                                 }
                             }
                         }

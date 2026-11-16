@@ -3,7 +3,7 @@
 Updated: 2026-11-16. Canonical PDD branch: `pdd-overlay-ru-compose-single-v020`.
 Stabilization PR #17: **merged**, squash commit `8b6d16e1097a92c1e97b1cc399cc9a0b297b3a70`.
 Android interaction PR #18 and real Chinese OCR PR #19: **merged**.
-Pending offline glossary/model-state correction: [PR #21](https://github.com/lolokeksu09/Lenovo-Y70/pull/21).
+Offline glossary/model-state correction: PR #21 **merged**. Current feedback: long English reviews + in-image replacements.
 
 ## A. Design contract — COMPLETE (beta10)
 - [x] Store four UI references and refinement board as WebP.
@@ -64,6 +64,28 @@ Pending offline glossary/model-state correction: [PR #21](https://github.com/lol
 - [ ] Actual Pinduoduo Accessibility/overlay grants, recoveries and protected purchase controls.
 - [ ] Consented Chinese→Russian ML Kit model download, translated product text and offline re-use.
 - [ ] Live PRO activation and entitlement renewal; build-time configuration is not proof.
+
+## G. Physical-device report — 2026-11-16 (ACTIVE)
+
+Observed on Lenovo Legion Y70 running the user's PDD Overlay RU signed beta11 OCR-fix build:
+- [x] Screenshot captured: long English review about kiwifruit remains English. Many shorter translated chip overlays are visible. **Observed**, not proof that the English offline model is available.
+- [x] Source audit: generic translation policy rejects text over 180 characters and non-ASCII English punctuation, including an em dash, so a normal English review never reaches model translation.
+- [x] Source audit: OCR photo viewer draws recognized bounds and puts Russian in a secondary bottom panel; it does not paint translated words at their image coordinates.
+- [x] Added bounded long English review chunking and multiline anchored caption, guarded by explicit English consent/model readiness. Static JVM tests PASS (run `43895561486`). Real review not yet tested on Lenovo.
+- [x] Implemented reversible in-image translated text rendering for supported OCR rectangles with explicit original/translation toggle. Price/payment/OTP guards preserved; screenshots reviewed (run `43895561486`).
+- [x] 89/89 JVM tests, ARM64 release compile and privacy source gate PASS; Android 35 actual system gallery → ML Kit OCR → inline Russian overlay → original toggle → translation toggle PASS (run `43895561486`).
+- [ ] Validate on actual Lenovo screenshot: long review readable, existing short labels no overlaps; OCR viewer can toggle Russian on-image / original, no covered buttons or amounts. Emulator evidence is not phone validation.
+- [ ] Check explicit consent and downloaded **English→Russian** ML Kit models on Lenovo. Without them free-form English review translation cannot be claimed complete.
+- [ ] Verify any Pinduoduo view exposed as a WebView/Canvas can be reached through the scoped Accessibility tree. Where node.text is missing, require a different explicit on-device OCR mechanism; never enable silent whole-screen recording.
+
+No user screenshot, avatar, order or review personally identifiable data is committed to the repository.
+
+## H. PR #22 verification evidence
+
+- ARM64 Gradle release + privacy validation: PASS, 89/89 JVM tests, run `43895561486`.
+- Android 35 x86_64 real OCR image selection, two Chinese labels translated from bundled dictionary, screenshot of Russian text actually occupying the image rectangles, and reversible original/translation toggle: PASS, run `43895561486`. Reviewed `inline-russian-caption-viewer.png` and `original-photo-viewer.png`.
+- The screenshot's English prose review is a real Lenovo feedback case, but no English model/Accessibility hierarchy data was captured; long review translation on Lenovo remains NOT RUN.
+- Do not silently download models, record the screen or upload user content. No change to beta11 release signing or APK.
 
 ## Invariants
 - Package `app.pinduoduo.overlayru`, minSdk 26, targetSdk 35, ARM64 release only.

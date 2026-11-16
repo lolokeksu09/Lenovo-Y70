@@ -178,7 +178,7 @@ internal fun OcrScreenV2(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    "Посмотреть текст на изображении",
+                                    "Показать перевод поверх фото",
                                     color = bright, fontSize = 13.sp
                                 )
                             }

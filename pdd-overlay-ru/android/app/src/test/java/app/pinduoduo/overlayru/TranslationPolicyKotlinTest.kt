@@ -35,6 +35,16 @@ class TranslationPolicyKotlinTest {
         assertFalse(TranslationPolicy.shouldTranslate(null, false, false))
     }
 
+    @Test fun acceptsNaturalEnglishPunctuationButRejectsOtherLanguages() {
+        assertEquals(TranslationPolicy.ENGLISH,
+            TranslationPolicy.sourceLanguage("The padding—none of them have bruises."))
+        assertEquals(TranslationPolicy.ENGLISH,
+            TranslationPolicy.sourceLanguage("They’re fresh and look “excellent”."))
+        assertEquals(TranslationPolicy.NONE,
+            TranslationPolicy.sourceLanguage("Хорошие киви—fresh"))
+        assertTrue(TranslationPolicy.shouldTranslate("Looks fresh—even after delivery.", false, false))
+    }
+
     @Test fun rejectsLatinContactAndPriceWithoutObscuringMoney() {
         assertFalse(TranslationPolicy.shouldTranslate("Email admin@example.com", false, false))
         assertFalse(TranslationPolicy.shouldTranslate("订单 19 元", false, false))
