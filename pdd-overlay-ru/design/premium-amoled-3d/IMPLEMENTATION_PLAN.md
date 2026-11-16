@@ -46,8 +46,10 @@ Additional Android interaction test: [draft PR #18](https://github.com/lolokeksu
 - [x] System image picker opens and cancel returns safely to OCR without restarting the process. PASS in run `43825854300`.
 - [x] Review 5 screenshots (empty/create/rename/delete/OCR cancellation), app process and logs. All match expected transitions; scoped AndroidRuntime errors absent. CI run `43825854300` PASS.
 - [x] Merge test-only PR #18 into canonical branch after PASS; squash commit `6028b01034b2d768c07230fdac057179ebe6cb33`. No app binaries or Kotlin production code changed.
-- [ ] Real OCR of Chinese goods screenshot with explicit user image selection, and consented model download on Legion Y70.
+- [x] Android 35 emulator: synthetic Chinese image selected using actual system gallery → ML Kit reports two lines and renders `商品详情`, `查看物流`. PASS: run `43858964995`, screenshot `chinese-ocr-result.png`. Does NOT download translation models.
+- [ ] Real Chinese goods screenshot and separate consented model download on Lenovo Legion Y70.
 - [ ] Scope and security of live Accessibility against official Pinduoduo on Lenovo, excluding payment/OTP actions.
+- [ ] Validate OCR Chinese→Russian output after explicit model download; current Android emulator correctly says “Переведено 0 из 2 строк” with no model and must not falsely mark translations complete.
 - [ ] Live PRO activation and entitlement renewal remain unverified. CI `43821463490` only confirms configured URL/public key.
 
 ## Invariants
