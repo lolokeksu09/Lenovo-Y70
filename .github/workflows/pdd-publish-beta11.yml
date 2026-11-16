@@ -1,0 +1,182 @@
+name: PDD Overlay RU beta11 signed GitHub prerelease
+on:
+  push:
+    branches: [pdd-release-v020-beta11]
+    paths:
+      - '.github/workflows/pdd-publish-beta11.yml'
+      - 'pdd-overlay-ru/releases/v0.2.0-beta.11.md'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  signed-prerelease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TAG: v0.2.0-beta.11
+      EXPECTED_SIGNER_SHA256: d0d4e5dfb604917e1896c9a4697f2743296e3fa7b137d5bacefdf7a8c7b519d3
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+      PDD_KEYSTORE_B64: ${{ secrets.PDD_KEYSTORE_B64 }}
+      PDD_RELEASE_STORE_PASSWORD: ${{ secrets.PDD_RELEASE_STORE_PASSWORD }}
+      PDD_RELEASE_KEY_ALIAS: ${{ secrets.PDD_RELEASE_KEY_ALIAS }}
+      PDD_RELEASE_KEY_PASSWORD: ${{ secrets.PDD_RELEASE_KEY_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preflight trusted release signer and PRO configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in PDD_KEYSTORE_B64 PDD_RELEASE_STORE_PASSWORD PDD_RELEASE_KEY_ALIAS PDD_RELEASE_KEY_PASSWORD PDD_LICENSE_API_BASE_URL PDD_LICENSE_PUBLIC_KEY_B64; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error title=Missing release configuration::$name is not configured. No release will be published."
+              exit 1
+            fi
+          done
+          # A source-only prerelease may exist while GitHub signing credentials are
+          # being configured. Attach signed assets only if it still has no APK.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            existing="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '[.assets[] | select(.name | endswith(".apk"))] | length')"
+            if [[ "$existing" != "0" ]]; then
+              echo "::error title=Immutable binary::Signed release APK already exists. Refusing to replace it."
+              exit 1
+            fi
+          elif git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error title=Existing tag::Tag without a supported prerelease exists. Refusing to reuse it."
+            exit 1
+          fi
+          umask 077
+          KEYSTORE="$(mktemp "$RUNNER_TEMP/pdd-beta11-sign-XXXXXX.p12")"
+          trap 'rm -f "$KEYSTORE"' EXIT
+          printf '%s' "$PDD_KEYSTORE_B64" | base64 --decode > "$KEYSTORE"
+          test -s "$KEYSTORE"
+          keytool -list -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$PDD_RELEASE_STORE_PASSWORD" >/dev/null
+          echo "PDD_SIGNING_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+          # Keep key file for later steps, then remove it in the final cleanup step.
+          trap - EXIT
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build canonical app with 71-test quality gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta11/bootstrap_android.py
+          grep -q "versionCode 21" pdd-overlay-ru/android/app/build.gradle
+          grep -q "versionName '0.2.0-beta.11'" pdd-overlay-ru/android/app/build.gradle
+          grep -q "ndk { abiFilters 'arm64-v8a' }" pdd-overlay-ru/android/app/build.gradle
+          gradle -p pdd-overlay-ru/android :app:testReleaseUnitTest :app:assembleRelease --no-daemon
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          root = Path("pdd-overlay-ru/android/app/build/test-results/testReleaseUnitTest")
+          tests = failures = errors = skipped = 0
+          for file in root.glob("TEST-*.xml"):
+              x = ET.parse(file).getroot()
+              tests += int(x.get("tests", "0"))
+              failures += int(x.get("failures", "0"))
+              errors += int(x.get("errors", "0"))
+              skipped += int(x.get("skipped", "0"))
+          assert (tests, failures, errors, skipped) == (71, 0, 0, 0), (tests, failures, errors, skipped)
+          config = list(Path("pdd-overlay-ru/android/app/build/generated/source/buildConfig/release").rglob("BuildConfig.java"))
+          assert len(config) == 1
+          source = config[0].read_text()
+          for key in ("LICENSE_API_BASE_URL", "LICENSE_PUBLIC_KEY_B64"):
+              matching = [s for s in source.splitlines() if "String " + key + " =" in s]
+              assert len(matching) == 1 and not matching[0].strip().endswith('= "";'), key
+          print("PASS: 71/71 JVM tests, PRO fields configured, ARM64 beta11 product identity")
+          PY
+      - name: Align, locally sign and verify the actual release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-out
+          UNSIGNED="pdd-overlay-ru/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -s "$UNSIGNED"
+          ALIGN="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name zipalign | sort -V | tail -1)"
+          SIGN="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -1)"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name aapt | sort -V | tail -1)"
+          test -x "$ALIGN" && test -x "$SIGN" && test -x "$AAPT"
+          "$ALIGN" -P 16 -f -v 4 "$UNSIGNED" release-out/aligned-unsigned.apk >/dev/null
+          FINAL=release-out/PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk
+          "$SIGN" sign --ks "$PDD_SIGNING_KEYSTORE" --ks-type PKCS12 \
+            --ks-key-alias "$PDD_RELEASE_KEY_ALIAS" \
+            --ks-pass env:PDD_RELEASE_STORE_PASSWORD \
+            --key-pass env:PDD_RELEASE_KEY_PASSWORD \
+            --out "$FINAL" release-out/aligned-unsigned.apk
+          "$SIGN" verify --min-sdk-version 26 --verbose --print-certs "$FINAL" > release-out/SIGNING.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' release-out/SIGNING.txt
+          grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true' release-out/SIGNING.txt
+          actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' release-out/SIGNING.txt | head -1 | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if [[ "$actual" != "$EXPECTED_SIGNER_SHA256" ]]; then
+            echo "::error title=Wrong signing identity::Certificate differs from beta10/beta11; refusing incompatible release"
+            exit 1
+          fi
+          "$ALIGN" -P 16 -c -v 4 "$FINAL" > release-out/ALIGNMENT.txt
+          "$AAPT" dump badging "$FINAL" | grep '^package:' > release-out/IDENTITY.txt
+          grep -q "name='app.pinduoduo.overlayru'" release-out/IDENTITY.txt
+          grep -q "versionCode='21'" release-out/IDENTITY.txt
+          grep -q "versionName='0.2.0-beta.11'" release-out/IDENTITY.txt
+          unzip -t "$FINAL" > /dev/null
+          python3 - "$FINAL" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              libs=[n for n in z.namelist() if n.startswith("lib/") and n.endswith(".so")]
+              assert libs and all(n.startswith("lib/arm64-v8a/") for n in libs), libs
+              assert any(n.endswith("/libtranslate_jni.so") for n in libs)
+              assert any(n.endswith("/libmlkit_google_ocr_pipeline.so") for n in libs)
+          print("PASS: signer pinned, v2/v3 signatures and ARM64 only")
+          PY
+          (cd release-out && sha256sum PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk > SHA256SUMS.txt)
+      - name: Publish immutable signed prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              release-out/PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk \
+              release-out/SHA256SUMS.txt \
+              release-out/SIGNING.txt \
+              --repo "$GITHUB_REPOSITORY"
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "PDD Overlay RU v0.2.0-beta.11 — ARM64" \
+              --notes-file pdd-overlay-ru/releases/v0.2.0-beta.11.md \
+              --prerelease
+          else
+            gh release create "$TAG" \
+              release-out/PDD-Overlay-RU-v0.2.0-beta.11-ARM64-SIGNED.apk \
+              release-out/SHA256SUMS.txt \
+              release-out/SIGNING.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "PDD Overlay RU v0.2.0-beta.11 — ARM64" \
+              --notes-file pdd-overlay-ru/releases/v0.2.0-beta.11.md \
+              --prerelease
+          fi
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isPrerelease,isDraft,assets,url \
+            --jq '{tag: .tagName, prerelease: .isPrerelease, draft: .isDraft, url: .url, assets: [.assets[].name]}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-beta11-signed-release-verification
+          path: |
+            release-out/SHA256SUMS.txt
+            release-out/SIGNING.txt
+            release-out/ALIGNMENT.txt
+            release-out/IDENTITY.txt
+          if-no-files-found: warn
+      - name: Erase temporary release signing key
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${PDD_SIGNING_KEYSTORE:-}" && -f "$PDD_SIGNING_KEYSTORE" ]]; then
+            rm -f -- "$PDD_SIGNING_KEYSTORE"
+          fi
