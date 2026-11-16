@@ -131,7 +131,19 @@ PY
     fi
     echo 'PASS: offline glossary translated both Chinese OCR labels without downloading models'
     timeout 20s adb exec-out screencap -p > "$OUT/chinese-ocr-with-offline-glossary.png"
-echo 'PASS: seeded Chinese PNG → Android picker → real ML Kit OCR → Chinese text visible'
+    # Verify actual reversible translated overlays, not only the result list.
+    python3 "$QA" tap 'Показать перевод поверх фото' "$OUT/ocr-screen-before-viewer.xml"
+    sleep 3
+    python3 "$QA" exists 'Русский текст поверх фото' "$OUT/translated-photo-viewer.xml"
+    python3 "$QA" exists 'Показать оригинал' "$OUT/translated-photo-viewer.xml"
+    timeout 20s adb exec-out screencap -p > "$OUT/inline-russian-caption-viewer.png"
+    python3 "$QA" tap 'Показать оригинал' "$OUT/translated-photo-viewer.xml"
+    python3 "$QA" exists 'Оригинальные надписи' "$OUT/original-photo-viewer.xml"
+    python3 "$QA" exists 'Показать перевод' "$OUT/original-photo-viewer.xml"
+    timeout 20s adb exec-out screencap -p > "$OUT/original-photo-viewer.png"
+    python3 "$QA" tap 'Показать перевод' "$OUT/original-photo-viewer.xml"
+    python3 "$QA" exists 'Русский текст поверх фото' "$OUT/restored-translation-viewer.xml"
+    echo 'PASS: actual image OCR → offline Russian captions → reversible original/translation viewer'
     exit 0
   fi
   adb shell input swipe 520 1680 520 600 500
