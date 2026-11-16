@@ -1,0 +1,50 @@
+name: PDD beta10 extract verified Android interface contracts
+on:
+  push:
+    branches: [pdd-premium-amoled-3d-beta10-arm64]
+    paths:
+      - '.github/workflows/pdd-premium-beta10-extract.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Inspect canonical source boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import io,zipfile,base64,pathlib
+          z=zipfile.ZipFile(io.BytesIO(base64.b64decode(pathlib.Path('pdd-overlay-ru/source_bundle.base64').read_text().strip())))
+          out=pathlib.Path('pdd-overlay-ru/beta10/baseline')
+          out.mkdir(parents=True,exist_ok=True)
+          root='pinduoduo_overlay_ru/'
+          for short in [
+              'app/src/main/java/app/pinduoduo/overlayru/HomeActivity.kt',
+              'app/src/main/java/app/pinduoduo/overlayru/HomeViewModel.kt',
+              'app/src/main/java/app/pinduoduo/overlayru/ui/home/HomeUiState.kt',
+              'app/src/main/java/app/pinduoduo/overlayru/MainActivity.kt',
+              'app/src/main/java/app/pinduoduo/overlayru/ImageOcrActivity.kt',
+              'app/src/main/java/app/pinduoduo/overlayru/GlossaryEditorActivity.kt',
+              'app/build.gradle','app/src/main/AndroidManifest.xml',
+              'scripts/validate_sources.py',
+          ]:
+              if root+short not in z.namelist():
+                  raise RuntimeError(f'Missing canonical source: {short}')
+              target=out/pathlib.Path(short).name
+              # This verification snapshot is transient branch-only, not
+              # incorporated into the distribution APK as a resource.
+              target.write_bytes(z.read(root+short))
+              print(short, target.stat().st_size)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pdd-overlay-ru/beta10/baseline
+          git commit -m 'chore(pdd): snapshot beta9 UI contracts for safe premium migration'
+          git push origin HEAD:pdd-premium-amoled-3d-beta10-arm64
