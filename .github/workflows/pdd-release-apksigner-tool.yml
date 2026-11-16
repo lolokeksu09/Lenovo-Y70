@@ -19,9 +19,13 @@ jobs:
           test -n "$JAR" && test -s "$JAR"
           mkdir -p output
           cp "$JAR" output/apksigner.jar
-          sha256sum output/apksigner.jar
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$ZIPALIGN" && test -s "$ZIPALIGN"
+          cp "$ZIPALIGN" output/zipalign
+          chmod +x output/zipalign
+          sha256sum output/apksigner.jar output/zipalign
       - uses: actions/upload-artifact@v4
         with:
           name: PDD-android-sdk-apksigner-jar
-          path: output/apksigner.jar
+          path: output/
           if-no-files-found: error
