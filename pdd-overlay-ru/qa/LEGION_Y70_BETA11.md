@@ -45,4 +45,4 @@ Review the file before sending: logs may include device details. Do not send cre
 - PASS: 71/71 Gradle JVM tests, source/privacy gate, and ARM64 native library verification in GitHub Actions `43811452976`.
 - PASS: APK content ZIP/CRC, 4K shared-library alignment, cryptographically valid APK Signature Scheme v2/v3 using the same pinned certificate.
 - NOT RUN: in-place install, font 1.3×, manual OCR and Accessibility inside Pinduoduo on a physical Legion Y70.
-- Android 35 GitHub emulator: prior failure was before app launch due to missing KVM access (CI runner environment). The runner permission fix is tested separately and should not be counted as a device validation.
+- Android 35 GitHub emulator: run 43815178719 successfully booted with KVM permission and launched HomeActivity; the rest of navigation stopped at a shell multi-line `for` syntax error. Run the full script file with Bash and validate real tab switching before marking emulator smoke PASS.
