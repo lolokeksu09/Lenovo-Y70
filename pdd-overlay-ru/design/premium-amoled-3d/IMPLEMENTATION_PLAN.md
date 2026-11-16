@@ -125,12 +125,14 @@ Screenshots are private and not committed.
 - [x] Add six washer-fluid packaging terms to the offline Chinese glossary.
 - [x] Increase paragraph font only while full translated text fits the original
       rectangle; preserve protected controls.
-- [ ] Run 106/106 unit tests, ARM64 release and Android 35 photo OCR test.
+- [x] 106/106 JVM tests, ARM64 Release and privacy source checks PASS. Android 35 actual system photo picker → Chinese OCR → offline Russian image captions → original/translation toggle PASS in run `43910418828`. Screenshots and empty scoped AndroidRuntime log reviewed.
 - [ ] Confirm actual translation of the photographed bottle text on Lenovo
       with a separately consented Chinese model; no universal in-image
       translation is claimed for unreadable tiny print.
 - [ ] Confirm English model readiness and review Accessibility exposure on
       Lenovo; visual acceptance for paragraphs at 1.0 and 1.3 font scale.
+
+- [x] Same-signer ARM64 device-test APK signed locally from successful CI artifact: `PDD-Overlay-RU-v0.2.0-beta.11-LENOVO-OCR-REVIEW-ARM64-SIGNED.apk`, 37,991,374 bytes, SHA-256 `ac2f76315de95fd47443f3124a963337037f414f31709fe08bdef3cce7f8650c`. Android SDK apksigner v2/v3, beta10/beta11 certificate and 16 KiB alignment PASS. No GitHub Release upload.
 
 Document: `pdd-overlay-ru/qa/LEGION_Y70_PRODUCT_PHOTO_REVIEWS_2026-11-16.md`.
 
