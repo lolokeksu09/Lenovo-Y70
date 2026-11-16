@@ -42,9 +42,10 @@ Additional Android interaction test: [draft PR #18](https://github.com/lolokeksu
 - [x] Produce one **corrected signed ARM64 APK** after restoring PRO BuildConfig environment; obsolete earlier beta11 artifact must not be redistributed. SHA-256: `04ac0e85edc4a75176ffd1e0cdff3b1561ac93257b0444293d3def66d57abd71`. CI unsigned APK remains internal.
 
 ## E. Real Android UI interactions — TESTING IN PR #18
-- [ ] Automated dictionary add → persistence across process restart → rename (old key removed) → delete cancel → confirmed delete in Android 35 emulator.
-- [ ] System image picker opens and cancel returns safely to OCR without restarting the process.
-- [ ] Review screenshots, app process checks, failures; then merge test-only PR #18 if verified.
+- [x] Automated dictionary add → persistence across process restart → rename (old key removed) → delete cancel → confirmed delete in Android 35 emulator. PASS in run `43825854300`.
+- [x] System image picker opens and cancel returns safely to OCR without restarting the process. PASS in run `43825854300`.
+- [x] Review 5 screenshots (empty/create/rename/delete/OCR cancellation), app process and logs. All match expected transitions; scoped AndroidRuntime errors absent. CI run `43825854300` PASS.
+- [ ] Merge test-only PR #18 after confirming target branch and workflow applicability.
 - [ ] Real OCR of Chinese goods screenshot with explicit user image selection, and consented model download on Legion Y70.
 - [ ] Scope and security of live Accessibility against official Pinduoduo on Lenovo, excluding payment/OTP actions.
 - [ ] Live PRO activation and entitlement renewal remain unverified. CI `43821463490` only confirms configured URL/public key.

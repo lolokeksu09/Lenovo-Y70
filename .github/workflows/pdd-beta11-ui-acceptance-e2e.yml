@@ -1,7 +1,7 @@
 name: PDD beta11 dictionary and OCR picker E2E
 on:
   push:
-    branches: [pdd-beta11-ui-acceptance-e2e]
+    branches: [pdd-beta11-ui-acceptance-e2e, pdd-overlay-ru-compose-single-v020]
     paths:
       - '.github/workflows/pdd-beta11-ui-acceptance-e2e.yml'
       - 'pdd-overlay-ru/qa/ui_control.py'
