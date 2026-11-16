@@ -499,7 +499,6 @@ class PddAccessibilityService : AccessibilityService() {
         if (fit[2] < dp(24f) || fit[3] < dp(17f)) return false
         val placement = Rect(fit[0], fit[1], fit[0] + fit[2], fit[1] + fit[3])
         if (overlaps(placement, occupied)) return false
-        occupied.add(placement)
 
         // Never cover an entire prose paragraph with a clipped translation.
         // Measure full multiline content and retain original on any overflow.
@@ -517,6 +516,8 @@ class PddAccessibilityService : AccessibilityService() {
                     .setIncludePad(false).build()
                 layout.height <= fit[3] - dp(6f)
             } ?: return false else 12f
+        // A paragraph that cannot fit must not reserve space or hide other UI.
+        occupied.add(placement)
         var label = activeLabels[key]
         if (label == null) {
             label = TextView(this)
