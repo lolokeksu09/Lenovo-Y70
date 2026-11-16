@@ -66,6 +66,10 @@ old_checks=old_checks.replace("activity=(a/'java/app/pinduoduo/overlayru/MainAct
                               "activity=(a/'java/app/pinduoduo/overlayru/MainActivity.kt').read_text()\n"+settings_ui,1)
 old_checks=old_checks.replace("assert 'Скачать модель английский' in activity",
                               "assert 'englishPreparing' in activity and 'ModelItem(' in settings_ui",1)
+old_checks=old_checks.replace(
+    "assert 'putBoolean(TranslationEngine.PREF_WIFI_ONLY, checked)' in activity",
+    "assert 'putBoolean(TranslationEngine.PREF_WIFI_ONLY,checked)' in activity",1
+)
 old_checks=old_checks.replace("assert 'ColorStateList' in activity",
                               "assert 'PddFrame(PddTab.SETTINGS' in activity",1)
 old_checks=old_checks.replace("assert 'visibility = View.GONE' in activity",
