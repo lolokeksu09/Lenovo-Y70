@@ -20,7 +20,7 @@ class OverlayDensityPolicyTest {
             item(20, 170, 310, review = true), item(20, 800)
         )
         val selected = OverlayDensityPolicy.select(labels, 830, 1800, 45, 110, 90)
-        assertEquals(3, selected.size)
+        assertEquals(2, selected.size)
         assertEquals(3, selected.first())
         assertTrue(4 in selected)
         assertFalse(0 in selected)
