@@ -488,14 +488,14 @@ class PddAccessibilityService : AccessibilityService() {
         val sourceX = local[0]
         val sourceY = local[1]
         val widthGoal = ceil(translation.length * dp(7.5f) + dp(16f)).toInt()
-        val fit = if (paragraph) {
+        val fit = (if (paragraph) {
             OverlayPlacement.fitParagraph(
                 sourceX, sourceY, local[2], local[3], maxX, maxY
             )
         } else OverlayPlacement.fit(
             sourceX, sourceY, local[2], local[3],
             widthGoal, maxX, maxY, dp(8f).toInt()
-        ) ?: return false
+        )) ?: return false
         if (fit[2] < dp(24f) || fit[3] < dp(17f)) return false
         val placement = Rect(fit[0], fit[1], fit[0] + fit[2], fit[1] + fit[3])
         if (overlaps(placement, occupied)) return false
