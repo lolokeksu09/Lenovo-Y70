@@ -132,7 +132,21 @@ PY
     echo 'PASS: offline glossary translated both Chinese OCR labels without downloading models'
     timeout 20s adb exec-out screencap -p > "$OUT/chinese-ocr-with-offline-glossary.png"
     # Verify actual reversible translated overlays, not only the result list.
-    python3 "$QA" tap 'Показать перевод поверх фото' "$OUT/ocr-screen-before-viewer.xml"
+    # Return toward the top from OCR results; the viewer action sits next to
+    # the preview, above the translated list. Do not assume a fixed screen size.
+    opened=0
+    for attempt in 1 2 3 4; do
+      if python3 "$QA" tap 'Показать перевод поверх фото' "$OUT/ocr-screen-before-viewer.xml"; then
+        opened=1
+        break
+      fi
+      adb shell input swipe 520 620 520 1750 470
+      sleep 2
+    done
+    if [[ "$opened" != 1 ]]; then
+      echo 'FAIL: inline OCR viewer button unavailable after returning to preview' >&2
+      exit 1
+    fi
     sleep 3
     python3 "$QA" exists 'Русский текст поверх фото' "$OUT/translated-photo-viewer.xml"
     python3 "$QA" exists 'Показать оригинал' "$OUT/translated-photo-viewer.xml"

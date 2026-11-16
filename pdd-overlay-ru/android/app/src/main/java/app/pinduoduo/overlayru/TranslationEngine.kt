@@ -406,8 +406,11 @@ class TranslationEngine private constructor(private val context: Context) {
     fun translateReview(text: String?, onReady: Consumer<String?>?): String? {
         val raw = text?.trim() ?: return null
         val chunks = ReviewTranslationPolicy.chunks(raw) ?: return null
+        // A locally cached model is not consent: English is separately opt-in.
+        if (!enabled() || !englishModelReady ||
+            !prefs().getBoolean(PREF_EN_MODEL_ALLOWED, false)) return null
         reviewCache[raw]?.let { return it }
-        if (!enabled() || !englishModelReady || onReady == null) return null
+        if (onReady == null) return null
 
         val key = "review:" + raw
         val ticket = reviewPending.reserve(key, SystemClock.uptimeMillis(), onReady).ticket
@@ -443,7 +446,7 @@ class TranslationEngine private constructor(private val context: Context) {
             }
         }
         timeout = Runnable { finish(null) }
-        main.postDelayed(timeout, 120_000L)
+        timeout?.let { main.postDelayed(it, 120_000L) }
         translateNext(0)
         return null
     }
