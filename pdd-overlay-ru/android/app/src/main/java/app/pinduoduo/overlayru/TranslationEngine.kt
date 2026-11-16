@@ -183,12 +183,14 @@ class TranslationEngine private constructor(private val context: Context) {
         inspectionCompleted = true
         lastInspection = status
 
-        if (ModelAvailability.usable(en, ru)) {
-            englishModelReady = true
-            englishLastError = ""
-        }
-        if (ModelAvailability.usable(zh, ru)) {
-            chineseModelReady = true
+        englishModelReady = ModelAvailability.afterInspection(
+            englishModelReady, en, ru, scanSucceeded = !failed
+        )
+        chineseModelReady = ModelAvailability.afterInspection(
+            chineseModelReady, zh, ru, scanSucceeded = !failed
+        )
+        if (englishModelReady && !failed) englishLastError = ""
+        if (chineseModelReady && !failed) {
             lastError = ""
             Log.i(TAG, "cached translation models found; ready restored")
         } else if (failed) {

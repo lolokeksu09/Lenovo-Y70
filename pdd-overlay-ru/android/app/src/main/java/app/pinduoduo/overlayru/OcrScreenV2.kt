@@ -286,7 +286,7 @@ internal fun OcrScreenV2(
                                     Text("Языковая модель", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = bright)
                                     Text(
                                         if (modelReady) "Офлайн-перевод доступен"
-                                        else "Для перевода скачай модель",
+                                        else "Новые фразы — после загрузки модели",
                                         fontSize = 11.sp, color = subdued, lineHeight = 17.sp
                                     )
                                 }

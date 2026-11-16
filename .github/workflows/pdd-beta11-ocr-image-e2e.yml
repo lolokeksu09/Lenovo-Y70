@@ -1,12 +1,15 @@
 name: PDD beta11 real Chinese image OCR E2E
 on:
   push:
-    branches: [pdd-beta11-ocr-image-e2e, pdd-overlay-ru-compose-single-v020]
+    branches: [pdd-ocr-offline-glossary-hardening, pdd-overlay-ru-compose-single-v020]
     paths:
       - '.github/workflows/pdd-beta11-ocr-image-e2e.yml'
       - 'pdd-overlay-ru/qa/ocr_image_e2e.sh'
       - 'pdd-overlay-ru/qa/pick_photo.py'
       - 'pdd-overlay-ru/qa/fixtures/**'
+      - 'pdd-overlay-ru/android/app/src/main/java/app/pinduoduo/overlayru/ImageOcrActivity.kt'
+      - 'pdd-overlay-ru/android/app/src/main/java/app/pinduoduo/overlayru/ModelAvailability.kt'
+      - 'pdd-overlay-ru/android/app/src/main/java/app/pinduoduo/overlayru/TranslationEngine.kt'
   workflow_dispatch:
 permissions:
   contents: read
@@ -30,7 +33,19 @@ jobs:
         run: |
           set -euo pipefail
           sed -i "s/ndk { abiFilters 'arm64-v8a' }/ndk { abiFilters 'x86_64' }/" pdd-overlay-ru/android/app/build.gradle
-          gradle -p pdd-overlay-ru/android :app:assembleDebug --no-daemon
+          gradle -p pdd-overlay-ru/android :app:testDebugUnitTest :app:assembleDebug --no-daemon
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          reports = list(Path("pdd-overlay-ru/android/app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+          assert reports, "Expected JVM test output"
+          totals = {k:0 for k in ("tests","errors","failures","skipped")}
+          for f in reports:
+              root=ET.parse(f).getroot()
+              for k in totals: totals[k]+=int(root.get(k,"0"))
+          assert totals == {"tests":76,"errors":0,"failures":0,"skipped":0}, totals
+          print("PASS: 76/76 JVM regression tests")
+          PY
       - name: Enable KVM
         run: |
           test -c /dev/kvm
