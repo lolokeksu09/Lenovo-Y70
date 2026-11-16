@@ -56,3 +56,11 @@ bash /storage/emulated/0/Download/device_check_termux.sh
 ```
 
 The script checks only version, ABI, package presence, Accessibility permission and process state through your existing Shizuku `~/rish`. It never changes settings, grants permissions, reads payment data or collects a logcat. Output goes to `/storage/emulated/0/Download/PDD-beta11-device-check.txt`. It does not test UI interaction; use the manual screen matrix above.
+
+## Emulated navigation evidence
+
+Run `43820223348` (`b29bbec7`) passed all four Activity transitions and returned to Home. Actual screenshots show Home, Dictionary and Settings. The Photo Activity was resumed but its immediate screenshot still contained Home while the next UIAutomator dump confirmed the Photo screen. Treat Photo rendering as **not independently screenshot-verified** until the UI gate waits for the `Перевод фото` heading before capture.
+
+## PRO configuration build regression
+
+The initial beta11 CI workflow omitted the `PDD_LICENSE_API_BASE_URL` and `PDD_LICENSE_PUBLIC_KEY_B64` job variables passed in beta10. This can cause a release build with an empty license endpoint and trust anchor. The updated workflow passes the existing repository variables, and checks generated BuildConfig fields without printing secrets. Until configured values are verified, beta11 PRO activation is **NOT VERIFIED**. The app's free translation remains separate from licensing.

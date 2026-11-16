@@ -26,6 +26,27 @@ audit_screen() {
     grep -E 'topResumedActivity|mResumedActivity' "$OUT/$name-activity.txt" >&2 || true
     return 1
   fi
+  local expected_heading
+  case "$expected" in
+    HomeActivity) expected_heading='Перевод' ;;
+    ImageOcrActivity) expected_heading='Перевод фото' ;;
+    GlossaryEditorActivity) expected_heading='Мой словарь' ;;
+    MainActivity) expected_heading='Настройки перевода' ;;
+  esac
+  local visible=0
+  for attempt in 1 2 3 4 5; do
+    timeout 35s adb shell uiautomator dump /sdcard/pdd-visible.xml > /dev/null
+    adb exec-out cat /sdcard/pdd-visible.xml > "$OUT/$name-visible.xml"
+    if grep -Fq "text=\"$expected_heading\"" "$OUT/$name-visible.xml"; then
+      visible=1
+      break
+    fi
+    sleep 2
+  done
+  if [ "$visible" != 1 ]; then
+    echo "FAIL: $expected resumed but its visible heading '$expected_heading' was not drawn" >&2
+    return 1
+  fi
   timeout 20s adb exec-out screencap -p > "$OUT/$name.png"
   test "$(wc -c < "$OUT/$name.png")" -gt 4000
 }

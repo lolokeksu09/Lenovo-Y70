@@ -14,6 +14,9 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +36,24 @@ jobs:
         run: bash pinduoduo_overlay_ru/scripts/test_local.sh
       - name: Regression tests and ARM64 release compilation
         run: gradle -p pdd-overlay-ru/android :app:testReleaseUnitTest :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify license configuration was passed to BuildConfig
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          generated=Path("pdd-overlay-ru/android/app/build/generated/source/buildConfig/release")
+          found=list(generated.rglob("BuildConfig.java"))
+          assert len(found)==1,found
+          content=found[0].read_text()
+          configured=bool(os.environ.get("PDD_LICENSE_API_BASE_URL"))
+          assert configured==bool(os.environ.get("PDD_LICENSE_PUBLIC_KEY_B64")), "Incomplete PRO config"
+          for field in ("LICENSE_API_BASE_URL","LICENSE_PUBLIC_KEY_B64"):
+              matching=[line.strip() for line in content.splitlines() if "String "+field+" =" in line]
+              assert len(matching)==1,(field,len(matching))
+              blank=matching[0].endswith('= "";')
+              assert blank != configured,(field,"Gradle licensing environment mismatch")
+          print("PDD PRO build configuration:", "CONFIGURED" if configured else "NOT CONFIGURED — PRO activation unavailable")
+          PY
       - name: Verify 71 tests and no ignored cases
         run: |
           python3 - <<'PY'
