@@ -86,11 +86,11 @@ for relative, data in files.items():
 (android / ".gitignore").write_text("""/build/
 /app/build/
 /.gradle/
-/.kоtlin/
+/.kotlin/
 /local.properties
 /.idea/
 /.cxx/
 *.apk
 *.aab
-""".replace("к", "k"))
+""")
 print(f"PASS: bootstrapped {len(files)} Android Studio source files for beta11")
