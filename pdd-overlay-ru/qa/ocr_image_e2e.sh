@@ -89,23 +89,28 @@ PY
     # Offline bundled dictionary must translate known product labels even when
 # ML Kit translation models have not been downloaded or consented to.
 # This assertion catches the old 'if (!engine.ready()) continue' bug.
-    adb shell input swipe 520 1710 520 760 450 || true
-    sleep 1
-    adb shell uiautomator dump /sdcard/pdd-offline-glossary.xml > /dev/null
-    adb exec-out cat /sdcard/pdd-offline-glossary.xml > "$OUT/offline-glossary.xml"
-    python3 - "$OUT/offline-glossary.xml" <<'PY'
-import sys
-import xml.etree.ElementTree as ET
-root = ET.parse(sys.argv[1]).getroot()
-labels = [n.attrib.get("text", "") for n in root.iter("node")]
-expected = ("Переведено 2 из 2 строк", "Описание товара", "Отследить доставку")
-missing = [item for item in expected if item not in labels]
-if missing:
-    print("FAIL: offline built-in glossary not applied after OCR:", missing)
-    print("Visible labels:", [v[:80] for v in labels if v][:40])
-    sys.exit(1)
-print("PASS: offline built-in glossary translated both OCR labels without language models")
-PY
+    # Collect visible Compose texts across a few bounded scroll positions:
+    # Android's system font/viewport can move the row summary out of view.
+    found_summary=0
+    found_description=0
+    found_tracking=0
+    for step in 1 2 3 4; do
+      adb shell uiautomator dump /sdcard/pdd-offline-glossary.xml > /dev/null
+      adb exec-out cat /sdcard/pdd-offline-glossary.xml > "$OUT/offline-glossary-$step.xml"
+      grep -Fq 'Переведено 2 из 2 строк' "$OUT/offline-glossary-$step.xml" && found_summary=1 || true
+      grep -Fq 'Описание товара' "$OUT/offline-glossary-$step.xml" && found_description=1 || true
+      grep -Fq 'Отследить доставку' "$OUT/offline-glossary-$step.xml" && found_tracking=1 || true
+      if [[ "$found_summary:$found_description:$found_tracking" == "1:1:1" ]]; then
+        break
+      fi
+      adb shell input swipe 520 1710 520 760 450
+      sleep 2
+    done
+    if [[ "$found_summary:$found_description:$found_tracking" != "1:1:1" ]]; then
+      echo "FAIL: offline glossary OCR incomplete: summary=$found_summary description=$found_description tracking=$found_tracking" >&2
+      exit 1
+    fi
+    echo 'PASS: offline glossary translated both Chinese OCR labels without downloading models'
     timeout 20s adb exec-out screencap -p > "$OUT/chinese-ocr-with-offline-glossary.png"
 echo 'PASS: seeded Chinese PNG → Android picker → real ML Kit OCR → Chinese text visible'
     exit 0
