@@ -1,0 +1,73 @@
+name: PDD overlay density and review-first acceptance
+on:
+  push:
+    branches: [pdd-overlay-density-review-first]
+    paths:
+      - '.github/workflows/pdd-overlay-density.yml'
+      - 'pdd-overlay-ru/android/**'
+      - 'pdd-overlay-ru/design/premium-amoled-3d/IMPLEMENTATION_PLAN.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PDD_LICENSE_API_BASE_URL: ${{ vars.PDD_LICENSE_API_BASE_URL }}
+      PDD_LICENSE_PUBLIC_KEY_B64: ${{ vars.PDD_LICENSE_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Verify canonical files and existing overlay privacy rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 pdd-overlay-ru/beta11/bootstrap_android.py
+          ln -s pdd-overlay-ru/android pinduoduo_overlay_ru
+          bash pinduoduo_overlay_ru/scripts/test_local.sh
+          grep -q "ndk { abiFilters 'arm64-v8a' }" pdd-overlay-ru/android/app/build.gradle
+          grep -q "versionCode 21" pdd-overlay-ru/android/app/build.gradle
+      - name: Run density regression tests and compile ARM64 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p pdd-overlay-ru/android :app:testReleaseUnitTest :app:assembleRelease --no-daemon
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          import zipfile
+          app=Path('pdd-overlay-ru/android/app')
+          folder=app/'build/test-results/testReleaseUnitTest'
+          tests=list(folder.glob('TEST-*.xml'))
+          assert tests, "No unit tests executed"
+          totals={k:0 for k in ('tests','failures','errors','skipped')}
+          for f in tests:
+              root=ET.parse(f).getroot()
+              for key in totals:
+                  totals[key]+=int(root.get(key,'0'))
+          assert totals=={'tests':95,'failures':0,'errors':0,'skipped':0},totals
+          density=list(folder.glob('TEST-*OverlayDensityPolicyTest.xml'))
+          assert len(density)==1
+          assert int(ET.parse(density[0]).getroot().get('tests','0'))==6
+          apk=app/'build/outputs/apk/release/app-release-unsigned.apk'
+          assert apk.stat().st_size > 1000000
+          with zipfile.ZipFile(apk) as z:
+              libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
+              assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
+          print('PASS: 95 JVM regressions, review-first density and ARM64 release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PDD-overlay-density-ARM64-internal
+          path: |
+            pdd-overlay-ru/android/app/build/test-results/testReleaseUnitTest/*.xml
+            pdd-overlay-ru/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: warn
