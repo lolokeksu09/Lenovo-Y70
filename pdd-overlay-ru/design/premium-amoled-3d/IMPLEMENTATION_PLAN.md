@@ -136,6 +136,8 @@ Screenshots are private and not committed.
 
 Document: `pdd-overlay-ru/qa/LEGION_Y70_PRODUCT_PHOTO_REVIEWS_2026-11-16.md`.
 
+- [x] PR #24 squash-merged into the canonical branch as `a25c9ee84d4fe41a5364bff49bcceb2361bb3507`; actual Lenovo screenshots are still a separately unverified acceptance gate.
+
 ## Invariants
 - Package `app.pinduoduo.overlayru`, minSdk 26, targetSdk 35, ARM64 release only.
 - Chinese and English ML Kit model downloads require explicit separate consent.
