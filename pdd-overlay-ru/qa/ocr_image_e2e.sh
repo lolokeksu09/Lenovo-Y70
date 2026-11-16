@@ -23,10 +23,11 @@ timeout 25s adb shell content insert --uri "$MEDIA" \
   --bind "_display_name:s:$NAME" \
   --bind 'mime_type:s:image/png' \
   --bind 'relative_path:s:Pictures/PddQa' > "$OUT/media-insert.txt"
+# Query without SQL selection: adb shell argument splitting strips quotes and
+# caused Android's provider to reject the filename as a raw SQL token.
 timeout 25s adb shell content query --uri "$MEDIA" \
-  --projection _id:_display_name \
-  --where "_display_name='$NAME'" > "$OUT/media-rows.txt"
-MEDIA_ID="$(sed -nE 's/.*_id=([0-9]+).*/\1/p' "$OUT/media-rows.txt" | head -1)"
+  --projection _id:_display_name > "$OUT/media-rows.txt"
+MEDIA_ID="$(grep -F "$NAME" "$OUT/media-rows.txt" | sed -nE 's/.*_id=([0-9]+).*/\1/p' | head -1)"
 if [[ ! "$MEDIA_ID" =~ ^[0-9]+$ ]]; then
   echo 'FAIL: no synthetic image row in Android MediaStore' >&2
   exit 1
