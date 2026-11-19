@@ -140,7 +140,8 @@ public class AppListAdapter extends BaseAdapter {
         }
 
         boolean isProtected = PackageHelper.isProtectedOrNonDisable(app.packageName);
-        holder.btnToggle.setEnabled(app.enabledState != null);
+        boolean protectedDialer = PackageHelper.isProtectedDialer(context, app.packageName);
+        holder.btnToggle.setEnabled(app.enabledState != null && !protectedDialer);
         if (app.enabledState == null) {
             holder.tvStatus.setText("● Состояние неизвестно");
             holder.tvStatus.setTextColor(0xFF9E9E9E);
@@ -158,10 +159,16 @@ public class AppListAdapter extends BaseAdapter {
             holder.btnToggle.setBackgroundResource(R.drawable.btn_green);
         }
 
+        if (protectedDialer) {
+            holder.btnToggle.setText("Защищено системой");
+            holder.btnToggle.setBackgroundResource(R.drawable.btn_chip);
+        }
+
         holder.btnToggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (toggleListener != null && app.enabledState != null) {
+                if (toggleListener != null && app.enabledState != null &&
+                        !PackageHelper.isProtectedDialer(context, app.packageName)) {
                     toggleListener.onToggle(app, !app.isEnabled);
                 }
             }

@@ -187,6 +187,16 @@ public class DebloatActivity extends Activity {
         refreshPresetList();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Returning from system App Info may have changed the live state.
+        if (isAppsLoaded && layoutManualTab != null &&
+                layoutManualTab.getVisibility() == View.VISIBLE) {
+            loadInstalledApps();
+        }
+    }
+
     private void switchTab(boolean showPreset) {
         if (showPreset) {
             btnTabPreset.setBackgroundResource(R.drawable.btn_primary);
@@ -671,7 +681,7 @@ public class DebloatActivity extends Activity {
                                         final boolean ok = enable
                                             ? PackageHelper.enablePackage(DebloatActivity.this, app.packageName)
                                             : PackageHelper.disablePackage(DebloatActivity.this, app.packageName);
-                                        final Boolean liveState = PackageHelper.getPackageEnabledState(
+                                        final Boolean liveState = PackageHelper.getVerifiedPackageEnabledState(
                                             DebloatActivity.this, app.packageName);
                                         final boolean verifiedState = ok && liveState != null &&
                                             liveState.booleanValue() == enable;
