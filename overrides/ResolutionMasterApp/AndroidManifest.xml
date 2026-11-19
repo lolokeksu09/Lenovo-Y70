@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.moto.resolutionmaster"
-    android:versionCode="39"
-    android:versionName="3.1.7-audit">
+    android:versionCode="40"
+    android:versionName="3.1.8-audit">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -107,20 +107,6 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="status_bar_network_speed_monitor" />
-        </service>
-
-        <!-- Optional, explicit per-app assistance. Settings-only accessibility events. -->
-        <service
-            android:name=".PackageEnableAccessibilityService"
-            android:label="Lenovo Y70: включение приложений"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/enable_assist_service" />
         </service>
 
         <!-- Boot Receiver for Auto-Start Speed Indicator -->
