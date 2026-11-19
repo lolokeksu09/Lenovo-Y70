@@ -124,7 +124,12 @@ public class PackageHelper {
                 "com.android.phone".equals(packageName) ||
                 "com.android.providers.settings".equals(packageName) ||
                 "com.android.permissioncontroller".equals(packageName) ||
-                "com.google.android.permissioncontroller".equals(packageName)) return true;
+                "com.google.android.permissioncontroller".equals(packageName) ||
+                "com.android.launcher3".equals(packageName) ||
+                "com.motorola.launcher3".equals(packageName) ||
+                "com.google.android.gms".equals(packageName) ||
+                "com.android.networkstack".equals(packageName) ||
+                "com.google.android.networkstack".equals(packageName)) return true;
         try {
             android.content.Intent home = new android.content.Intent(android.content.Intent.ACTION_MAIN);
             home.addCategory(android.content.Intent.CATEGORY_HOME);
@@ -143,6 +148,10 @@ public class PackageHelper {
      * not be marked as frozen without reading the actual system state.
      */
     public static boolean disablePackage(Context context, String packageName) {
+        if (packageName == null || !packageName.matches("[A-Za-z0-9_.]+")) {
+            error(String.valueOf(packageName), "Некорректное имя пакета");
+            return false;
+        }
         LAST_ERRORS.remove(packageName);
         if (isCriticalPackage(context, packageName)) {
             error(packageName, "Критический пакет защищён от отключения");
