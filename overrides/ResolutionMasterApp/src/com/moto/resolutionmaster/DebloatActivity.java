@@ -67,6 +67,7 @@ public class DebloatActivity extends Activity {
     private boolean settingsPageLeft = false;
     private boolean waitingAccessibilityGrant = false;
 
+    private final DebloatFilterSelection filterSelection = new DebloatFilterSelection();
     private AppListAdapter appListAdapter;
     private final List<AppInfo> installedApps = new ArrayList<>();
     private boolean isAppsLoaded = false;
@@ -761,12 +762,16 @@ public class DebloatActivity extends Activity {
                             }
                         });
 
+                            // Adapter was absent when the user chose a category:
+                            // apply the persisted selection BEFORE showing rows.
+                            appListAdapter.setFilter(filterSelection.getMode());
                             if (lvApps != null) {
                                 lvApps.setAdapter(appListAdapter);
                             }
                         } else {
-                            // Preserve selected category and search query across refresh.
+                            // Apply the current user selection after each async reload.
                             appListAdapter.updateList(installedApps);
+                            appListAdapter.setFilter(filterSelection.getMode());
                         }
                         updateDisabledSummary();
                     }
@@ -1240,34 +1245,42 @@ public class DebloatActivity extends Activity {
         View.OnClickListener filterListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                resetFilterButtons();
-                int id = v.getId();
-                if (id == R.id.btn_filter_all) {
-                    btnFilterAll.setBackgroundResource(R.drawable.btn_primary);
-                    btnFilterAll.setTextColor(0xFFFFFFFF);
-                    if (appListAdapter != null) appListAdapter.setFilter(0);
-                } else if (id == R.id.btn_filter_system) {
-                    btnFilterSystem.setBackgroundResource(R.drawable.btn_primary);
-                    btnFilterSystem.setTextColor(0xFFFFFFFF);
-                    if (appListAdapter != null) appListAdapter.setFilter(1);
-                } else if (id == R.id.btn_filter_user) {
-                    btnFilterUser.setBackgroundResource(R.drawable.btn_primary);
-                    btnFilterUser.setTextColor(0xFFFFFFFF);
-                    if (appListAdapter != null) appListAdapter.setFilter(2);
-                } else if (id == R.id.btn_filter_disabled) {
-                    btnFilterDisabled.setBackgroundResource(R.drawable.btn_primary);
-                    btnFilterDisabled.setTextColor(0xFFFFFFFF);
-                    if (appListAdapter != null) appListAdapter.setFilter(3);
-                    // Re-read live PackageManager state instead of trusting old rows.
-                    loadInstalledApps();
-                }
+                final int id = v.getId();
+                if (id == R.id.btn_filter_all) selectFilter(0);
+                else if (id == R.id.btn_filter_system) selectFilter(1);
+                else if (id == R.id.btn_filter_user) selectFilter(2);
+                else if (id == R.id.btn_filter_disabled) selectFilter(3);
             }
         };
-
         btnFilterAll.setOnClickListener(filterListener);
         btnFilterSystem.setOnClickListener(filterListener);
         btnFilterUser.setOnClickListener(filterListener);
         btnFilterDisabled.setOnClickListener(filterListener);
+        selectFilter(0);
+    }
+
+    /**
+     * Keep visual selection and underlying data predicate in sync.
+     * The adapter may not exist yet while PackageHelper scans the device.
+     */
+    private void selectFilter(int mode) {
+        filterSelection.select(mode);
+        final int selected = filterSelection.getMode();
+        resetFilterButtons();
+        Button active;
+        if (selected == 1) active = btnFilterSystem;
+        else if (selected == 2) active = btnFilterUser;
+        else if (selected == 3) active = btnFilterDisabled;
+        else active = btnFilterAll;
+        active.setBackgroundResource(R.drawable.btn_primary);
+        active.setTextColor(0xFFFFFFFF);
+        if (appListAdapter != null) {
+            appListAdapter.setFilter(selected);
+        }
+        if (selected == 3 && isAppsLoaded) {
+            // Re-read actual per-user package state without resetting category.
+            loadInstalledApps();
+        }
     }
 
     private void resetFilterButtons() {
