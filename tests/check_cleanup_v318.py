@@ -46,7 +46,7 @@ assert "previewEnableAllDisabled()" in activity
 assert "Заморозить" not in adapter + activity
 assert "Заморожено (AppOps)" not in adapter + activity
 assert "isProtectedInDebloater(context, app.packageName)" in adapter
-assert "btnToggle.setEnabled(!isProtected" in activity
+assert "btnToggle.setEnabled(installed && enabledState != null && !isProtected)" in activity
 assert "btnToggle.setEnabled(app.enabledState != null && !isProtected)" in adapter
 assert "Boolean enabledState = installed" in activity
 assert "if (installed && Boolean.FALSE.equals(enabledState))" in activity
