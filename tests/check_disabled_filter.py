@@ -22,7 +22,7 @@ assert "public Boolean enabledState;" in app
 assert "public void setEnabledState(Boolean state)" in app
 assert "Boolean.FALSE.equals(isEnabled)" in policy
 assert "currentFilter == 3 && !DisabledFilterPolicy.matches(a.enabledState)" in adapter
-assert "holder.btnToggle.setEnabled(app.enabledState != null && !protectedDialer)" in adapter
+assert "holder.btnToggle.setEnabled(app.enabledState != null && !isProtected)" in adapter
 assert 'holder.tvStatus.setText("● Состояние неизвестно")' in adapter
 
 # Switching or reloading must recompute the current filter from fresh state.
@@ -43,7 +43,7 @@ assert "PackageStateResolver.Snapshot snapshot = readShellPackageSnapshot(contex
 assert "snapshot.resolve(" in pkg
 assert "isProtectedDialer(context, packageName)" in pkg
 assert "tm.getDefaultDialerPackage()" in pkg
-assert "PackageHelper.isProtectedDialer(context, app.packageName)" in adapter
+assert "PackageHelper.isProtectedInDebloater(context, app.packageName)" in adapter
 assert "localExplicitDisabled && Boolean.FALSE.equals(local)" in resolver
 assert "if (inEnabled) return Boolean.TRUE" in resolver
 print("PASS: per-user shell/PM reconciled disabled status")

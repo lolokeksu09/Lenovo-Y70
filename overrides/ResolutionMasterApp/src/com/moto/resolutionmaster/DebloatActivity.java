@@ -65,7 +65,6 @@ public class DebloatActivity extends Activity {
     private int settingsRestoreIndex = 0;
     private String pendingSettingsPackage = null;
     private boolean settingsPageLeft = false;
-    private boolean waitingAccessibilityGrant = false;
 
     private final DebloatFilterSelection filterSelection = new DebloatFilterSelection();
     private AppListAdapter appListAdapter;
@@ -227,11 +226,6 @@ public class DebloatActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (waitingAccessibilityGrant) {
-            waitingAccessibilityGrant = false;
-            if (!isFinishing()) showNextSettingsPackage();
-            return;
-        }
         if (pendingSettingsPackage != null && settingsPageLeft) {
             final String pkg = pendingSettingsPackage;
             pendingSettingsPackage = null;
@@ -349,9 +343,11 @@ public class DebloatActivity extends Activity {
 
         for (final DebloatPreset.PresetItem item : items) {
             final boolean installed = PackageHelper.isPackageInstalled(this, item.packageName);
-            final boolean enabled = installed && PackageHelper.isPackageEnabled(this, item.packageName);
+            final Boolean enabledState = installed
+                ? PackageHelper.getPackageEnabledState(this, item.packageName) : null;
+            final boolean enabled = Boolean.TRUE.equals(enabledState);
 
-            if (!enabled) {
+            if (installed && Boolean.FALSE.equals(enabledState)) {
                 disabledCount++;
             }
 
@@ -368,48 +364,49 @@ public class DebloatActivity extends Activity {
             tvDesc.setText(item.description);
             tvCat.setText(item.category);
 
-            final boolean isProtected = PackageHelper.isProtectedOrNonDisable(item.packageName);
+            final boolean isProtected = PackageHelper.isProtectedInDebloater(this, item.packageName);
+            btnToggle.setEnabled(installed && enabledState != null && !isProtected);
 
             if (!installed) {
-                tvStatus.setText("Не установлен / Удален");
+                tvStatus.setText("Не установлен / Удалён");
                 tvStatus.setTextColor(0xFF6B7280);
                 btnToggle.setVisibility(View.GONE);
+            } else if (enabledState == null) {
+                tvStatus.setText("Состояние неизвестно");
+                tvStatus.setTextColor(0xFF9E9E9E);
+                btnToggle.setText("Недоступно");
+                btnToggle.setBackgroundResource(R.drawable.btn_chip);
             } else if (!enabled) {
-                if (isProtected) {
-                    tvStatus.setText("Заморожено (AppOps) ✓");
-                } else {
-                    tvStatus.setText("Отключено ✓");
-                }
-                tvStatus.setTextColor(0xFF10B981); // accent_green
+                tvStatus.setText("Отключено");
+                tvStatus.setTextColor(0xFFEF4444);
                 btnToggle.setText("Включить");
                 btnToggle.setBackgroundResource(R.drawable.btn_green);
             } else {
                 tvStatus.setText("Активно");
-                tvStatus.setTextColor(0xFFF59E0B); // accent_yellow
-                btnToggle.setText(isProtected ? "Заморозить" : "Отключить");
+                tvStatus.setTextColor(0xFF10B981);
+                btnToggle.setText("Отключить");
                 btnToggle.setBackgroundResource(R.drawable.btn_red);
+            }
+            if (isProtected && installed) {
+                btnToggle.setText("Защищено системой");
+                btnToggle.setBackgroundResource(R.drawable.btn_chip);
             }
 
             btnToggle.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (enabled) {
-                        boolean ok = PackageHelper.disablePackage(DebloatActivity.this, item.packageName);
-                        if (ok) {
-                            String msg = isProtected ?
-                                item.title + " заморожен в фоне (AppOps)" :
-                                item.title + " отключен";
-                            Toast.makeText(DebloatActivity.this, msg, Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(DebloatActivity.this, "Ошибка (требуются права Shizuku/Root)", Toast.LENGTH_SHORT).show();
-                        }
+                    if (isProtected || enabledState == null || !installed) return;
+                    final boolean ok = enabled
+                        ? PackageHelper.disablePackage(DebloatActivity.this, item.packageName)
+                        : PackageHelper.enablePackage(DebloatActivity.this, item.packageName);
+                    if (ok) {
+                        Toast.makeText(DebloatActivity.this,
+                            item.title + (enabled ? " отключён" : " включён"),
+                            Toast.LENGTH_SHORT).show();
                     } else {
-                        boolean ok = PackageHelper.enablePackage(DebloatActivity.this, item.packageName);
-                        if (ok) {
-                            Toast.makeText(DebloatActivity.this, item.title + " включен", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(DebloatActivity.this, "Ошибка (требуются права Shizuku/Root)", Toast.LENGTH_SHORT).show();
-                        }
+                        Toast.makeText(DebloatActivity.this,
+                            PackageHelper.getLastOperationError(item.packageName),
+                            Toast.LENGTH_LONG).show();
                     }
                     refreshPresetList();
                 }
@@ -939,6 +936,11 @@ public class DebloatActivity extends Activity {
         showNextSettingsPackage();
     }
 
+    /**
+     * Safe fallback for ROM-disabled packages (enabled=2/4).
+     * Android's real App Info page performs the operation. We only verify
+     * the result when the user returns; no Accessibility permission required.
+     */
     private void showNextSettingsPackage() {
         if (isFinishing()) return;
         if (settingsRestoreIndex >= settingsRestoreQueue.size()) {
@@ -949,87 +951,31 @@ public class DebloatActivity extends Activity {
             return;
         }
         final String pkg = settingsRestoreQueue.get(settingsRestoreIndex);
-        final boolean serviceReady = PackageEnableAccessibilityService.isEnabled(this);
-        final String[] options = {
-            serviceReady ? "Включить автоматически (специальный доступ)"
-                         : "Настроить автовключение (один раз)",
-            "Открыть системную страницу вручную",
-            "Пропустить это приложение"
-        };
         new AlertDialog.Builder(this)
             .setTitle("Восстановление: " + (settingsRestoreIndex + 1) + "/" +
                 settingsRestoreQueue.size())
-            .setMessage(pkg + "\n\n" +
-                "Автовключение использует системную страницу Android: служба " +
-                "может нажать только «Включить» для выбранного пакета. " +
-                "При неподдерживаемом интерфейсе выбери ручной способ.")
-            .setItems(options, new DialogInterface.OnClickListener() {
+            .setMessage(pkg +
+                "\n\nНа системной странице нажми «Включить», если кнопка доступна. " +
+                "После возврата Lenovo Y70 проверит состояние и предложит следующий пакет.")
+            .setPositiveButton("Открыть настройки", new DialogInterface.OnClickListener() {
                 @Override public void onClick(DialogInterface dialog, int which) {
-                    if (which == 0) {
-                        if (serviceReady) {
-                            if (PackageEnableAccessibilityService.arm(
-                                    DebloatActivity.this, pkg)) {
-                                openPackageDetailsForRestore(pkg);
-                            } else {
-                                Toast.makeText(DebloatActivity.this,
-                                    "Не удалось подготовить безопасное автовключение",
-                                    Toast.LENGTH_LONG).show();
-                                showNextSettingsPackage();
-                            }
-                        } else {
-                            explainAndRequestAccessibilityGrant();
-                        }
-                    } else if (which == 1) {
-                        PackageEnableAccessibilityService.cancel();
-                        openPackageDetailsForRestore(pkg);
-                    } else {
-                        settingsRestoreIndex++;
-                        showNextSettingsPackage();
-                    }
+                    openPackageDetailsForRestore(pkg);
+                }
+            })
+            .setNeutralButton("Пропустить", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    settingsRestoreIndex++;
+                    showNextSettingsPackage();
                 }
             })
             .setNegativeButton("Завершить", new DialogInterface.OnClickListener() {
                 @Override public void onClick(DialogInterface dialog, int which) {
-                    PackageEnableAccessibilityService.cancel();
                     settingsRestoreQueue.clear();
                     settingsRestoreIndex = 0;
                     loadInstalledApps();
                 }
             })
             .setCancelable(false)
-            .show();
-    }
-
-    private void explainAndRequestAccessibilityGrant() {
-        new AlertDialog.Builder(this)
-            .setTitle("Доступ к специальным возможностям")
-            .setMessage("Android потребует вручную включить службу «Lenovo Y70: " +
-                "включение приложений». Такая служба имеет доступ к содержимому " +
-                "экрана и может нажимать кнопки. Наш режим ограничен окном " +
-                "системных настроек и действует только по разовому запросу.\n\n" +
-                "Если не хочешь давать этот доступ, можно продолжить вручную. " +
-                "На Android 13+ для APK, установленного из файла, может также " +
-                "потребоваться разрешить «Ограниченные настройки» в сведениях о приложении.")
-            .setPositiveButton("Открыть специальные возможности",
-                new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        try {
-                            waitingAccessibilityGrant = true;
-                            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-                        } catch (Throwable e) {
-                            waitingAccessibilityGrant = false;
-                            Toast.makeText(DebloatActivity.this,
-                                "Экран специальных возможностей недоступен",
-                                Toast.LENGTH_LONG).show();
-                            showNextSettingsPackage();
-                        }
-                    }
-                })
-            .setNegativeButton("Вернуться", new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface dialog, int which) {
-                    showNextSettingsPackage();
-                }
-            })
             .show();
     }
 
@@ -1041,13 +987,11 @@ public class DebloatActivity extends Activity {
             settingsPageLeft = false;
             startActivity(intent);
         } catch (android.content.ActivityNotFoundException e) {
-            PackageEnableAccessibilityService.cancel();
             pendingSettingsPackage = null;
             Toast.makeText(this, "Системная страница приложения недоступна",
                 Toast.LENGTH_LONG).show();
             showNextSettingsPackage();
         } catch (SecurityException e) {
-            PackageEnableAccessibilityService.cancel();
             pendingSettingsPackage = null;
             Toast.makeText(this, "Прошивка запретила открытие страницы приложения",
                 Toast.LENGTH_LONG).show();
