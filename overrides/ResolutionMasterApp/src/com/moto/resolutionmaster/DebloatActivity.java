@@ -50,6 +50,13 @@ public class DebloatActivity extends Activity {
     private Button btnFilterDisabled;
     private ProgressBar pbLoadingApps;
     private ListView lvApps;
+    private Button btnEnableAllDisabled;
+    private Button btnRefreshApps;
+    private TextView tvDisabledSummary;
+    private TextView tvBulkEnableProgress;
+    private ProgressBar pbBulkEnable;
+    private boolean bulkBusy = false;
+    private int appsLoadSerial = 0;
 
     private AppListAdapter appListAdapter;
     private final List<AppInfo> installedApps = new ArrayList<>();
@@ -179,6 +186,20 @@ public class DebloatActivity extends Activity {
         btnFilterDisabled = findViewById(R.id.btn_filter_disabled);
         pbLoadingApps = findViewById(R.id.pb_loading_apps);
         lvApps = findViewById(R.id.lv_apps);
+        btnEnableAllDisabled = findViewById(R.id.btn_enable_all_disabled);
+        btnRefreshApps = findViewById(R.id.btn_refresh_apps);
+        tvDisabledSummary = findViewById(R.id.tv_disabled_summary);
+        tvBulkEnableProgress = findViewById(R.id.tv_bulk_enable_progress);
+        pbBulkEnable = findViewById(R.id.pb_bulk_enable);
+        btnEnableAllDisabled.setEnabled(false);
+        btnRefreshApps.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { loadInstalledApps(); }
+        });
+        btnEnableAllDisabled.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { previewEnableAllDisabled(); }
+        });
 
         setupFilters();
         setupSearch();
@@ -191,7 +212,7 @@ public class DebloatActivity extends Activity {
     protected void onResume() {
         super.onResume();
         // Returning from system App Info may have changed the live state.
-        if (isAppsLoaded && layoutManualTab != null &&
+        if (!bulkBusy && isAppsLoaded && layoutManualTab != null &&
                 layoutManualTab.getVisibility() == View.VISIBLE) {
             loadInstalledApps();
         }
@@ -655,6 +676,8 @@ public class DebloatActivity extends Activity {
     }
 
     private void loadInstalledApps() {
+        if (bulkBusy) return;
+        final int request = ++appsLoadSerial;
         if (pbLoadingApps != null) pbLoadingApps.setVisibility(View.VISIBLE);
 
         new Thread(new Runnable() {
@@ -664,6 +687,7 @@ public class DebloatActivity extends Activity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        if (request != appsLoadSerial || isFinishing()) return;
                         installedApps.clear();
                         installedApps.addAll(apps);
                         isAppsLoaded = true;
@@ -674,7 +698,7 @@ public class DebloatActivity extends Activity {
                             appListAdapter = new AppListAdapter(DebloatActivity.this, installedApps, new AppListAdapter.OnAppToggleListener() {
                             @Override
                             public void onToggle(final AppInfo app, final boolean enable) {
-                                if (!pendingTogglePackages.add(app.packageName)) return;
+                                if (bulkBusy || !pendingTogglePackages.add(app.packageName)) return;
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -703,6 +727,7 @@ public class DebloatActivity extends Activity {
                                                 }
                                                 // Rebuild the active filter, not just currently visible rows.
                                                 appListAdapter.refreshFilter();
+                                                updateDisabledSummary();
                                             }
                                         });
                                     }
@@ -717,6 +742,226 @@ public class DebloatActivity extends Activity {
                             // Preserve selected category and search query across refresh.
                             appListAdapter.updateList(installedApps);
                         }
+                        updateDisabledSummary();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** Never present the bulk action as available for stale or unknown states. */
+    private void updateDisabledSummary() {
+        int disabled = 0;
+        int protectedCount = 0;
+        int unknown = 0;
+        for (AppInfo app : installedApps) {
+            if (app.enabledState == null) {
+                unknown++;
+            } else if (Boolean.FALSE.equals(app.enabledState)) {
+                if (PackageHelper.isProtectedInDebloater(this, app.packageName)) {
+                    protectedCount++;
+                } else {
+                    disabled++;
+                }
+            }
+        }
+        if (tvDisabledSummary != null) {
+            tvDisabledSummary.setText("Можно включить: " + disabled +
+                " · Защищённых: " + protectedCount +
+                " · Не определено: " + unknown);
+        }
+        if (btnEnableAllDisabled != null) {
+            btnEnableAllDisabled.setEnabled(!bulkBusy && disabled > 0);
+        }
+    }
+
+    private void setBulkBusy(boolean busy) {
+        bulkBusy = busy;
+        if (btnEnableAllDisabled != null) btnEnableAllDisabled.setEnabled(!busy);
+        if (btnRefreshApps != null) btnRefreshApps.setEnabled(!busy);
+        if (btnFilterAll != null) btnFilterAll.setEnabled(!busy);
+        if (btnFilterSystem != null) btnFilterSystem.setEnabled(!busy);
+        if (btnFilterUser != null) btnFilterUser.setEnabled(!busy);
+        if (btnFilterDisabled != null) btnFilterDisabled.setEnabled(!busy);
+        if (etSearch != null) etSearch.setEnabled(!busy);
+        if (lvApps != null) lvApps.setEnabled(!busy);
+        if (!busy) updateDisabledSummary();
+    }
+
+    /**
+     * The preview always loads a FRESH snapshot. A button click alone never
+     * changes system packages; there is a second explicit confirmation.
+     */
+    private void previewEnableAllDisabled() {
+        if (bulkBusy) return;
+        setBulkBusy(true);
+        if (tvBulkEnableProgress != null) {
+            tvBulkEnableProgress.setVisibility(View.VISIBLE);
+            tvBulkEnableProgress.setText("Проверяю отключённые пакеты...");
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final boolean permitted = ShellHelper.isShizukuPermissionGranted() ||
+                    ShellHelper.isRootAvailable();
+                final List<AppInfo> latest = permitted
+                    ? PackageHelper.getInstalledApps(DebloatActivity.this)
+                    : new ArrayList<AppInfo>();
+                final List<BulkEnablePolicy.Candidate> candidates = new ArrayList<>();
+                int protectedCount = 0;
+                int unknownCount = 0;
+                for (AppInfo app : latest) {
+                    boolean protectedPkg = PackageHelper.isProtectedInDebloater(
+                        DebloatActivity.this, app.packageName);
+                    candidates.add(new BulkEnablePolicy.Candidate(
+                        app.packageName, app.enabledState, protectedPkg));
+                    if (Boolean.FALSE.equals(app.enabledState) && protectedPkg) protectedCount++;
+                    if (app.enabledState == null) unknownCount++;
+                }
+                final List<String> targets = BulkEnablePolicy.select(candidates);
+                final int skippedProtected = protectedCount;
+                final int skippedUnknown = unknownCount;
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) return;
+                        setBulkBusy(false);
+                        if (tvBulkEnableProgress != null)
+                            tvBulkEnableProgress.setVisibility(View.GONE);
+                        if (!permitted) {
+                            new AlertDialog.Builder(DebloatActivity.this)
+                                .setTitle("Нужен Shizuku или Root")
+                                .setMessage("Для массового включения требуется доступ к системному состоянию приложений.")
+                                .setPositiveButton("Открыть Shizuku", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        ShellHelper.openShizuku(DebloatActivity.this);
+                                    }
+                                })
+                                .setNegativeButton("Отмена", null)
+                                .show();
+                            return;
+                        }
+                        if (targets.isEmpty()) {
+                            new AlertDialog.Builder(DebloatActivity.this)
+                                .setTitle("Нет подтверждённых отключений")
+                                .setMessage("Защищённых пакетов: " + skippedProtected +
+                                    ", неопределённых: " + skippedUnknown +
+                                    ". Неопределённые состояния не изменяются.")
+                                .setPositiveButton("Понятно", null)
+                                .show();
+                            loadInstalledApps();
+                            return;
+                        }
+                        StringBuilder preview = new StringBuilder();
+                        preview.append("Будут включены ").append(targets.size())
+                            .append(" подтверждённо отключённых пакетов.\\n\\n");
+                        int previewCount = Math.min(targets.size(), 18);
+                        for (int i = 0; i < previewCount; i++) {
+                            preview.append("• ").append(targets.get(i)).append("\\n");
+                        }
+                        if (targets.size() > previewCount) {
+                            preview.append("… и ещё ").append(targets.size() - previewCount).append("\\n");
+                        }
+                        preview.append("\\nПропущено защищённых: ").append(skippedProtected)
+                            .append("; неизвестных: ").append(skippedUnknown).append(".")
+                            .append("\\n\\nВнимание: могут включиться ранее намеренно отключённые " +
+                                "системные приложения. Это может изменить поведение, " +
+                                "приватность и расход заряда. Данные программ не удаляются.");
+                        new AlertDialog.Builder(DebloatActivity.this)
+                            .setTitle("Включить все отключённые?")
+                            .setMessage(preview.toString())
+                            .setPositiveButton("Включить " + targets.size(), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    performBulkEnable(targets);
+                                }
+                            })
+                            .setNegativeButton("Отмена", null)
+                            .show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** Re-check EVERY package immediately before and after the shell command. */
+    private void performBulkEnable(final List<String> targets) {
+        if (bulkBusy || targets == null || targets.isEmpty()) return;
+        setBulkBusy(true);
+        if (pbBulkEnable != null) {
+            pbBulkEnable.setVisibility(View.VISIBLE);
+            pbBulkEnable.setMax(targets.size());
+            pbBulkEnable.setProgress(0);
+        }
+        if (tvBulkEnableProgress != null) {
+            tvBulkEnableProgress.setVisibility(View.VISIBLE);
+            tvBulkEnableProgress.setText("Включено 0 из " + targets.size());
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int success = 0;
+                int skipped = 0;
+                final List<String> failures = new ArrayList<>();
+                for (int i = 0; i < targets.size(); i++) {
+                    String pkg = targets.get(i);
+                    boolean ok = PackageHelper.enableConfirmedDisabledPackage(
+                        DebloatActivity.this, pkg);
+                    if (ok) {
+                        success++;
+                    } else {
+                        String reason = PackageHelper.getLastOperationError(pkg);
+                        if (reason.startsWith("Пропуск:")) {
+                            skipped++;
+                        } else {
+                            failures.add(pkg + ": " + reason);
+                        }
+                    }
+                    final int completed = i + 1;
+                    final int enabledNow = success;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (pbBulkEnable != null) pbBulkEnable.setProgress(completed);
+                            if (tvBulkEnableProgress != null) {
+                                tvBulkEnableProgress.setText("Проверено " + completed +
+                                    "/" + targets.size() + " · Включено: " + enabledNow);
+                            }
+                        }
+                    });
+                }
+                final int enabledCount = success;
+                final int skippedCount = skipped;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) return;
+                        if (pbBulkEnable != null) pbBulkEnable.setVisibility(View.GONE);
+                        if (tvBulkEnableProgress != null)
+                            tvBulkEnableProgress.setVisibility(View.GONE);
+                        setBulkBusy(false);
+                        loadInstalledApps();
+                        StringBuilder details = new StringBuilder();
+                        details.append("Подтверждено включение: ").append(enabledCount)
+                            .append("/").append(targets.size())
+                            .append("\\nПропущено: ").append(skippedCount)
+                            .append("\\nОшибок: ").append(failures.size());
+                        int limit = Math.min(8, failures.size());
+                        for (int i = 0; i < limit; i++) {
+                            details.append("\\n• ").append(failures.get(i));
+                        }
+                        if (failures.size() > limit) {
+                            details.append("\\n… ещё ошибок: ")
+                                .append(failures.size() - limit);
+                        }
+                        new AlertDialog.Builder(DebloatActivity.this)
+                            .setTitle(failures.isEmpty() && skippedCount == 0
+                                ? "Включение подтверждено" : "Частичное выполнение")
+                            .setMessage(details.toString())
+                            .setPositiveButton("Готово", null)
+                            .show();
                     }
                 });
             }
