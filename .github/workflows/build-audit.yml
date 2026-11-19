@@ -1,0 +1,60 @@
+name: Build Lenovo Y70 v3.0 audit
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: f1rzen-n/LenovoMotorolovichY70
+          ref: 10ffc78b9c97326467dc457513d6182581416991
+          path: upstream
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate patched source
+        run: python tests/check_static.py
+      - name: Prepare Android SDK standalone build tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sdk = $env:ANDROID_HOME
+          $manager = Get-ChildItem (Join-Path $sdk 'cmdline-tools') -Recurse -Filter sdkmanager.bat | Select-Object -First 1
+          if (-not $manager) { throw 'sdkmanager not found' }
+          & $manager.FullName 'platforms;android-34' 'build-tools;35.0.0'
+          if ($LASTEXITCODE -ne 0) { throw 'sdkmanager failed' }
+          $target = Join-Path $PWD 'upstream/build-tools'
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          $bt = Join-Path $sdk 'build-tools/35.0.0'
+          Copy-Item (Join-Path $bt 'aapt2.exe') (Join-Path $target 'aapt2.exe')
+          Copy-Item (Join-Path $sdk 'platforms/android-34/android.jar') (Join-Path $target 'android.jar')
+          Copy-Item (Join-Path $bt 'lib/d8.jar') (Join-Path $target 'r8.jar')
+          Copy-Item (Join-Path $bt 'lib/apksigner.jar') (Join-Path $target 'apksig.jar')
+      - name: Overlay corrected sources
+        shell: pwsh
+        run: Copy-Item 'overrides/ResolutionMasterApp/*' 'upstream/ResolutionMasterApp/' -Recurse -Force
+      - name: Build signed debug APK
+        working-directory: upstream
+        run: python build_apk.py
+      - name: Check APK format
+        run: python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v2.9.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lenovo-Y70-v3.0-audit-debug
+          path: upstream/LenovoMotorolovichY70_v2.9.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LenovoMotorolovichY70</string>
+    <string name="device_edition">Legion Y70 / Moto Edge 70 Max Edition</string>
+    
+    <!-- Status Card -->
+    <string name="status_header">ТЕКУЩИЕ ПАРАМЕТРЫ ЭКРАНА</string>
+    <string name="status_dpi_format">Плотность: %d DPI</string>
+    <string name="status_fps_format">Частота: %d Гц</string>
+    <string name="status_daemon_active">Привилегии: WRITE_SECURE_SETTINGS ✓</string>
+    <string name="status_daemon_inactive">Привилегии: Требуется WRITE_SECURE_SETTINGS</string>
+
+    <!-- Section 1: Resolution -->
+    <string name="section_res_title">РАЗРЕШЕНИЕ ЭКРАНА</string>
+
+    <!-- FHD+ Profile -->
+    <string name="profile_fhd_title">FHD+ Баланс (1080p)</string>
+    <string name="profile_fhd_badge">-40% GPU</string>
+    <string name="profile_fhd_desc">1080 × 2376 • 390 DPI\nСнижает нагрев, нагрузку на Adreno и продлевает работу батареи.</string>
+    <string name="btn_fhd_text">Включить FHD+ (1080p)</string>
+
+    <!-- QHD+ Profile -->
+    <string name="profile_qhd_title">QHD+ Родное (Заводское)</string>
+    <string name="profile_qhd_badge">100% Четкость</string>
+    <string name="profile_qhd_desc">1440 × 3168 • 520 DPI\nПолный сброс настроек до заводских. Идеальная четкость и штатная работа сканера.</string>
+    <string name="btn_qhd_text">Вернуть QHD+ (Родное)</string>
+
+    <!-- HD+ Profile -->
+    <string name="profile_hd_title">HD+ Экстрим (720p)</string>
+    <string name="profile_hd_badge">Max Battery</string>
+    <string name="profile_hd_desc">720 × 1584 • 260 DPI\nЭкстремальная экономия батареи, когда осталось меньше 10% заряда.</string>
+    <string name="btn_hd_text">Включить HD+ (720p)</string>
+
+    <!-- Section 2: Refresh Rate -->
+    <string name="section_fps_title">ЧАСТОТА ОБНОВЛЕНИЯ (ГЕРЦОВКА)</string>
+    <string name="section_fps_desc">Предпочтение частоты обновления экрана. Реальная герцовка зависит от системы и режима энергосбережения, опрос сенсора здесь не регулируется.</string>
+
+    <string name="fps_144_title">144 Гц (Экстрим)</string>
+    <string name="fps_144_badge">Запрос 144 Гц</string>
+    <string name="fps_144_desc">Запрашивает 144 Гц при наличии поддержки, но не гарантирует частоту экрана или опрос сенсора 1500 Гц.</string>
+    <string name="btn_fps_144">Зафиксировать 144 Гц</string>
+
+    <string name="fps_120_title">120 Гц (Баланс)</string>
+    <string name="fps_120_badge">Запрос 120 Гц</string>
+    <string name="fps_120_desc">Запрашивает 120 Гц. Итоговый режим определяет система.</string>
+    <string name="btn_fps_120">Зафиксировать 120 Гц</string>
+
+    <string name="fps_90_title">90 Гц (Золотая середина)</string>
+    <string name="fps_90_badge">Запрос 90 Гц</string>
+    <string name="fps_90_desc">Запрашивает 90 Гц, если режим доступен.</string>
+    <string name="btn_fps_90">Зафиксировать 90 Гц</string>
+
+    <string name="fps_60_title">60 Гц (Энергосбережение)</string>
+    <string name="fps_60_badge">Запрос 60 Гц</string>
+    <string name="fps_60_desc">Запрашивает 60 Гц, не изменяя аппаратный опрос сенсора.</string>
+    <string name="btn_fps_60">Зафиксировать 60 Гц</string>
+
+    <string name="fps_auto_title">Авто (Динамический)</string>
+    <string name="fps_auto_badge">Адаптивный</string>
+    <string name="fps_auto_desc">Возвращает автоматическое управление частотой системе.</string>
+    <string name="btn_fps_auto">Включить Авто режим</string>
+
+    <string name="toast_fps_applied">Установлена частота: %s</string>
+
+    <!-- Shizuku Integration -->
+    <string name="shizuku_title_granted">Shizuku: Подключен ✓</string>
+    <string name="shizuku_desc_granted">Доступ получен! Частота экрана переключается автономно прямо на телефоне без ПК.</string>
+    <string name="shizuku_title_running_no_perm">Shizuku: Запущен (нужен доступ)</string>
+    <string name="shizuku_desc_running_no_perm">Служба активна! Нажмите «Разрешить доступ», чтобы активировать управление герцовкой.</string>
+    <string name="shizuku_title_installed">Shizuku: Установлен (Не запущен)</string>
+    <string name="shizuku_desc_installed">Запустите службу Shizuku через «Беспроводную отладку» (без ПК).</string>
+    <string name="shizuku_title_not_installed">Автономная герцовка без ПК</string>
+    <string name="shizuku_desc_not_installed">Для переключения герцовки на Android 14 требуется Shizuku (без ПК) или Root.</string>
+    <string name="btn_shizuku_grant">Разрешить доступ Shizuku</string>
+    <string name="btn_shizuku_open">Открыть Shizuku</string>
+    <string name="btn_shizuku_start">Запустить / Открыть Shizuku</string>
+    <string name="btn_shizuku_download">Скачать Shizuku</string>
+    <string name="dialog_download_title">Где скачать Shizuku?</string>
+    <string name="source_google_play">Google Play Store</string>
+    <string name="source_github">GitHub Releases (Прямой APK)</string>
+    <string name="source_4pda">Тема на 4PDA (Форум)</string>
+
+    <!-- Notice Card -->
+    <string name="notice_header">ℹ️ Важные заметки:</string>
+    <string name="notice_content">• Сканер отпечатка: при разрешении, отличном от родного 1440p, подэкранный сканер может быть аппаратно смещен. Для разблокировки используйте Face Unlock или PIN.\n• Безопасность: при смене разрешения включается 15-секундный таймер подтверждения. Если вы не подтвердите, экран автоматически вернется в родные 1440p.\n• Шторка: добавьте плитки «Режим экрана» и «Герцовка» в шторку быстрых настроек для мгновенного переключения!</string>
+
+    <!-- Dialogs & Toasts -->
+    <string name="dialog_confirm_title">Подтверждение экрана</string>
+    <string name="dialog_confirm_msg">Установлен режим %1$s.\n\nПодтвердите, что всё отображается корректно.\nАвтоматический откат через: %2$d сек...</string>
+    <string name="dialog_keep">Оставить</string>
+    <string name="dialog_rollback">Откатить сейчас</string>
+    <string name="toast_saved">Настройки сохранены!</string>
+    <string name="toast_restored">Возвращено родное разрешение 1440 × 3168</string>
+    <string name="toast_timeout">Таймер истек: автоматический возврат на 1440p</string>
+
+    <!-- Permission -->
+    <string name="perm_title">Требуется разрешение</string>
+    <string name="perm_msg">Для смены разрешения и частоты экрана без Root приложению требуется разрешение WRITE_SECURE_SETTINGS.\n\nВыполните в ADB:\nadb shell pm grant com.moto.resolutionmaster android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="perm_ok">Понятно</string>
+
+    <!-- Quick Settings Tiles -->
+    <string name="tile_label">Режим экрана</string>
+    <string name="tile_fhd_label">FHD+ (1080p)</string>
+    <string name="tile_fhd_sub">1080 × 2376</string>
+    <string name="tile_qhd_label">QHD+ (1440p)</string>
+    <string name="tile_qhd_sub">Родное 2K</string>
+
+    <string name="tile_fps_label">Герцовка</string>
+
+    <!-- Refresh Rate Activation Dialog -->
+    <string name="dialog_fps_title">Активация: %s</string>
+    <string name="dialog_fps_msg">В Android 14+ система блокирует изменение герцовки обычным приложениям.\n\nДля включения выберите удобный вариант:\n\n1. Shizuku (без ПК) — активируйте Shizuku через «Беспроводную отладку», и переключение будет работать в приложении в 1 клик.\n\n2. Через ПК (ADB) — выполните команду один раз:\n%s</string>
+    <string name="dialog_fps_copy">Скопировать команду ADB</string>
+    <string name="dialog_fps_close">Понятно</string>
+    <string name="toast_copied">Команда ADB скопирована в буфер обмена!</string>
+
+    <!-- Section: Touch Control -->
+    <string name="section_touch_title">Скорость указателя (мышь/трекпад)</string>
+    <string name="touch_badge">Android pointer_speed</string>
+    <string name="touch_desc" formatted="false">pointer_speed изменяет скорость мыши/трекпада от -7 до +7. Чувствительность сенсорного экрана и его опрос этим не регулируются.</string>
+    <string name="touch_speed_label">Скорость указателя:</string>
+    <string name="btn_touch_turbo" formatted="false">Указатель +7</string>
+    <string name="btn_touch_stock" formatted="false">Указатель 0</string>
+    <string name="btn_touch_game" formatted="false">Указатель +5</string>
+    <string name="btn_apply_full_turbo">Запросить 144 Гц и анимации 0.5x</string>
+    <string name="btn_reset_full_stock" formatted="false">Сбросить герцовку, указатель и анимации</string>
+    <string name="anim_boost_title">🚀 Ускорение системных анимаций (0.5x)</string>
+    <string name="anim_boost_desc">Снижает задержку системных переходов и окон в 2 раза, ускоряя визуальный отклик интерфейса.</string>
+    <string name="btn_anim_05">🚀 Ускорить (0.5x)</string>
+    <string name="btn_anim_10">🔄 Сток (1.0x)</string>
+</resources>
