@@ -31,7 +31,8 @@ assert "PackageHelper.getVerifiedPackageEnabledState(" in activity
 assert "if (Boolean.TRUE.equals(confirmed))" in activity
 assert "settingsRestoreIndex++" in activity
 assert '.setNegativeButton("Через настройки"' in activity
-assert '.setPositiveButton("Открыть настройки"' in activity
+assert '"Открыть системную страницу вручную"' in activity
+assert "openPackageDetailsForRestore(pkg)" in activity
 assert '.setNegativeButton("Завершить"' in activity
 assert "pendingSettingsPackage != null && settingsPageLeft" in activity
 assert "settingsRestoreQueue.clear()" in activity
