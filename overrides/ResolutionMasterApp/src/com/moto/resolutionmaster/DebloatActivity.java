@@ -485,7 +485,7 @@ public class DebloatActivity extends Activity {
                             StringBuilder details = new StringBuilder();
                             int limit = Math.min(8, failures.size());
                             for (int i = 0; i < limit; i++) {
-                                details.append("• ").append(failures.get(i)).append("\\n");
+                                details.append("• ").append(failures.get(i)).append("\n");
                             }
                             if (failures.size() > limit) {
                                 details.append("И ещё ошибок: ").append(failures.size() - limit);
@@ -494,7 +494,7 @@ public class DebloatActivity extends Activity {
                                 .setTitle("Частичное выполнение пресета")
                                 .setMessage("Подтверждено: отключено " + finalDisabled +
                                     "/" + toDisable.size() + ", восстановлено " + finalEnabled +
-                                    "/" + toEnable.size() + ".\\n\\n" + details)
+                                    "/" + toEnable.size() + ".\n\n" + details)
                                 .setPositiveButton("Понятно", null)
                                 .show();
                         } else {
