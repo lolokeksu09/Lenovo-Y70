@@ -1594,7 +1594,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="⚡ Фикс NFC (Mir Pay / СБПэй)"
+                    android:text="NFC: маршрутизация"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1607,7 +1607,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Применение NFC-маршрутов не гарантирует оплату. Проверьте отдельно на устройстве и терминале."
+                    android:text="Экспериментально"
                     android:textColor="@color/accent_green"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1617,7 +1617,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Применение NFC-маршрутов не гарантирует оплату. Проверьте отдельно на устройстве и терминале."
+                android:text="Маршрутизация NFC не гарантирует оплату. Проверяйте совместимость на устройстве и терминале."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:lineSpacingExtra="3dp" />
@@ -1656,7 +1656,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/btn_primary"
-                android:text="⚡ Активировать фикс (в 1 клик)"
+                android:text="Применить NFC-маршруты"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
@@ -1724,7 +1724,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LenovoMotorolovichY70 v2.9"
+                android:text="LenovoMotorolovichY70 v3.0.1-audit"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
