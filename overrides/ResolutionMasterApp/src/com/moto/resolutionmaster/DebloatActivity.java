@@ -187,6 +187,16 @@ public class DebloatActivity extends Activity {
         refreshPresetList();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Returning from system App Info may have changed the live state.
+        if (isAppsLoaded && layoutManualTab != null &&
+                layoutManualTab.getVisibility() == View.VISIBLE) {
+            loadInstalledApps();
+        }
+    }
+
     private void switchTab(boolean showPreset) {
         if (showPreset) {
             btnTabPreset.setBackgroundResource(R.drawable.btn_primary);
