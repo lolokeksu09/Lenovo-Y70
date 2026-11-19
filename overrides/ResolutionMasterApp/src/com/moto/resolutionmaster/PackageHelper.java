@@ -291,8 +291,9 @@ public class PackageHelper {
         // If it stayed enabled, remove the pending record. Unknown state keeps
         // the record for recovery after a crash or permission loss.
         if (Boolean.TRUE.equals(after)) clearAfterRestore(context, packageName);
-        error(packageName, "Отключение не подтверждено. pm: " + disable.detail +
-            " (" + disable.exitCode + "), suspend: " + suspend.detail + " (" + suspend.exitCode + ")");
+        error(packageName, "Отключение не подтверждено: " +
+            BulkEnableFailure.explain(disable.exitCode, disable.detail) + "; suspend: " +
+            BulkEnableFailure.explain(suspend.exitCode, suspend.detail));
         return false;
     }
 
@@ -324,9 +325,9 @@ public class PackageHelper {
             clearAfterRestore(context, packageName);
             return true;
         }
-        error(packageName, "Восстановление не подтверждено. pm: " + enabled.detail +
-            " (" + enabled.exitCode + "), unsuspend: " + unsuspended.detail +
-            " (" + unsuspended.exitCode + ")");
+        error(packageName, "Восстановление не подтверждено: " +
+            BulkEnableFailure.explain(enabled.exitCode, enabled.detail) + "; unsuspend: " +
+            BulkEnableFailure.explain(unsuspended.exitCode, unsuspended.detail));
         return false;
     }
 
