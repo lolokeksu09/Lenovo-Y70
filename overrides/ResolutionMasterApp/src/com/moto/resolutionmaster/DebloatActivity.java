@@ -908,6 +908,8 @@ public class DebloatActivity extends Activity {
             public void run() {
                 int success = 0;
                 int skipped = 0;
+                int blocked = 0;
+                final List<String> blockedPackages = new ArrayList<>();
                 final List<String> failures = new ArrayList<>();
                 for (int i = 0; i < targets.size(); i++) {
                     String pkg = targets.get(i);
@@ -919,6 +921,9 @@ public class DebloatActivity extends Activity {
                         String reason = PackageHelper.getLastOperationError(pkg);
                         if (reason.startsWith("Пропуск:")) {
                             skipped++;
+                        } else if (reason.startsWith("Ограничение Android:")) {
+                            blocked++;
+                            blockedPackages.add(pkg);
                         } else {
                             failures.add(pkg + ": " + reason);
                         }
@@ -938,6 +943,7 @@ public class DebloatActivity extends Activity {
                 }
                 final int enabledCount = success;
                 final int skippedCount = skipped;
+                final int blockedCount = blocked;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -947,23 +953,67 @@ public class DebloatActivity extends Activity {
                             tvBulkEnableProgress.setVisibility(View.GONE);
                         setBulkBusy(false);
                         loadInstalledApps();
+                        // A one-screen summary; never put system-server Java
+                        // stack traces or dozens of package errors in a dialog.
                         StringBuilder details = new StringBuilder();
-                        details.append("Подтверждено включение: ").append(enabledCount)
-                            .append("/").append(targets.size())
+                        details.append("Включено: ").append(enabledCount).append("/")
+                            .append(targets.size())
+                            .append("\nЗапрещено прошивкой: ").append(blockedCount)
                             .append("\nПропущено: ").append(skippedCount)
-                            .append("\nОшибок: ").append(failures.size());
-                        int limit = Math.min(8, failures.size());
-                        for (int i = 0; i < limit; i++) {
-                            details.append("\n• ").append(failures.get(i));
+                            .append("\nДругие ошибки: ").append(failures.size());
+                        if (blockedCount > 0) {
+                            details.append("\n\nAndroid не разрешает включать эти пакеты через Shizuku. ")
+                                .append("Для некоторых пакетов может потребоваться Root, ")
+                                .append("но даже он не гарантирует снятие защиты.");
+                            int shown = Math.min(4, blockedPackages.size());
+                            for (int i = 0; i < shown; i++) {
+                                details.append("\n• ").append(blockedPackages.get(i));
+                            }
+                            if (blockedPackages.size() > shown)
+                                details.append("\n… и ещё ").append(blockedPackages.size() - shown);
                         }
-                        if (failures.size() > limit) {
-                            details.append("\n… ещё ошибок: ")
-                                .append(failures.size() - limit);
+                        if (!failures.isEmpty()) {
+                            details.append("\n\nДругие ошибки:");
+                            int shown = Math.min(3, failures.size());
+                            for (int i = 0; i < shown; i++)
+                                details.append("\n• ").append(failures.get(i));
+                            if (failures.size() > shown)
+                                details.append("\n… и ещё ").append(failures.size() - shown);
                         }
+                        final StringBuilder report = new StringBuilder();
+                        report.append("Lenovo Y70 — результат включения отключённых\n")
+                            .append("Включено: ").append(enabledCount).append("/")
+                            .append(targets.size()).append("\n")
+                            .append("Заблокировано Android: ").append(blockedCount).append("\n")
+                            .append("Пропущено: ").append(skippedCount).append("\n")
+                            .append("Ошибки: ").append(failures.size()).append("\n");
+                        if (!blockedPackages.isEmpty()) {
+                            report.append("\nЗаблокированные пакеты:\n");
+                            for (String pkg : blockedPackages) report.append(pkg).append("\n");
+                        }
+                        if (!failures.isEmpty()) {
+                            report.append("\nДругие ошибки:\n");
+                            for (String failure : failures) report.append(failure).append("\n");
+                        }
+                        final String reportText = report.toString();
                         new AlertDialog.Builder(DebloatActivity.this)
-                            .setTitle(failures.isEmpty() && skippedCount == 0
-                                ? "Включение подтверждено" : "Частичное выполнение")
+                            .setTitle(blockedCount == 0 && failures.isEmpty() && skippedCount == 0
+                                ? "Включение подтверждено" : "Результат восстановления")
                             .setMessage(details.toString())
+                            .setNeutralButton("Копировать отчёт", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    android.content.ClipboardManager clipboard =
+                                        (android.content.ClipboardManager) getSystemService(
+                                            android.content.Context.CLIPBOARD_SERVICE);
+                                    if (clipboard != null) {
+                                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText(
+                                            "Lenovo Y70 Debloater", reportText));
+                                        Toast.makeText(DebloatActivity.this,
+                                            "Отчёт скопирован", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            })
                             .setPositiveButton("Готово", null)
                             .show();
                     }
