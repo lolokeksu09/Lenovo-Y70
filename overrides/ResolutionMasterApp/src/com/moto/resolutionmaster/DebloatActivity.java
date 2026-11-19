@@ -660,7 +660,8 @@ public class DebloatActivity extends Activity {
 
                         if (pbLoadingApps != null) pbLoadingApps.setVisibility(View.GONE);
 
-                        appListAdapter = new AppListAdapter(DebloatActivity.this, installedApps, new AppListAdapter.OnAppToggleListener() {
+                        if (appListAdapter == null) {
+                            appListAdapter = new AppListAdapter(DebloatActivity.this, installedApps, new AppListAdapter.OnAppToggleListener() {
                             @Override
                             public void onToggle(final AppInfo app, final boolean enable) {
                                 if (!pendingTogglePackages.add(app.packageName)) return;
@@ -670,25 +671,28 @@ public class DebloatActivity extends Activity {
                                         final boolean ok = enable
                                             ? PackageHelper.enablePackage(DebloatActivity.this, app.packageName)
                                             : PackageHelper.disablePackage(DebloatActivity.this, app.packageName);
-                                        final boolean verifiedState = ok && PackageHelper.isPackageEnabled(
+                                        final Boolean liveState = PackageHelper.getPackageEnabledState(
                                             DebloatActivity.this, app.packageName);
-                                        final String failure = ok ? "" :
-                                            PackageHelper.getLastOperationError(app.packageName);
+                                        final boolean verifiedState = ok && liveState != null &&
+                                            liveState.booleanValue() == enable;
+                                        final String failure = ok
+                                            ? "Состояние изменилось или не читается. Обновите список."
+                                            : PackageHelper.getLastOperationError(app.packageName);
                                         runOnUiThread(new Runnable() {
                                             @Override
                                             public void run() {
                                                 pendingTogglePackages.remove(app.packageName);
-                                                if (ok) {
-                                                    app.isEnabled = verifiedState;
-                                                    String state = verifiedState ? "включено" : "отключено";
+                                                app.setEnabledState(liveState);
+                                                if (verifiedState) {
                                                     Toast.makeText(DebloatActivity.this,
-                                                        app.label + ": " + state + " (проверено)",
+                                                        app.label + ": " + (enable ? "включено" : "отключено") + " (проверено)",
                                                         Toast.LENGTH_SHORT).show();
                                                 } else {
                                                     Toast.makeText(DebloatActivity.this,
                                                         failure, Toast.LENGTH_LONG).show();
                                                 }
-                                                appListAdapter.notifyDataSetChanged();
+                                                // Rebuild the active filter, not just currently visible rows.
+                                                appListAdapter.refreshFilter();
                                             }
                                         });
                                     }
@@ -696,8 +700,12 @@ public class DebloatActivity extends Activity {
                             }
                         });
 
-                        if (lvApps != null) {
-                            lvApps.setAdapter(appListAdapter);
+                            if (lvApps != null) {
+                                lvApps.setAdapter(appListAdapter);
+                            }
+                        } else {
+                            // Preserve selected category and search query across refresh.
+                            appListAdapter.updateList(installedApps);
                         }
                     }
                 });
@@ -727,6 +735,8 @@ public class DebloatActivity extends Activity {
                     btnFilterDisabled.setBackgroundResource(R.drawable.btn_primary);
                     btnFilterDisabled.setTextColor(0xFFFFFFFF);
                     if (appListAdapter != null) appListAdapter.setFilter(3);
+                    // Re-read live PackageManager state instead of trusting old rows.
+                    loadInstalledApps();
                 }
             }
         };
