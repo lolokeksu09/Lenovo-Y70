@@ -97,32 +97,73 @@ public class PackageHelper {
      * Actual enabled/disabled PackageManager state for UI filters.
      * Suspension is a separate Android state and must not appear as "disabled".
      */
-    public static Boolean getPackageEnabledState(Context context, String packageName) {
-        if (packageName == null || packageName.isEmpty()) return null;
-        PackageManager pm = context.getPackageManager();
-        final ApplicationInfo ai;
-        try {
-            ai = pm.getApplicationInfo(packageName, 0);
-        } catch (Throwable t) {
-            Log.w(TAG, "Cannot read ApplicationInfo for " + packageName, t);
-            return null;
+    private static final class LocalState {
+        final Boolean enabled;
+        final boolean explicitlyDisabled;
+        LocalState(Boolean enabled, boolean explicitlyDisabled) {
+            this.enabled = enabled;
+            this.explicitlyDisabled = explicitlyDisabled;
         }
+    }
 
-        boolean enabled = ai.enabled;
+    private static LocalState readLocalState(Context context, String packageName) {
+        if (packageName == null || packageName.isEmpty()) return new LocalState(null, false);
         try {
-            int state = pm.getApplicationEnabledSetting(packageName);
-            if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
-                    state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER ||
-                    state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED) {
-                enabled = false;
-            } else if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-                enabled = true;
+            PackageManager pm = context.getPackageManager();
+            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+            int state;
+            try {
+                state = pm.getApplicationEnabledSetting(packageName);
+            } catch (Throwable error) {
+                Log.w(TAG, "Enabled setting cannot be read for " + packageName, error);
+                return new LocalState(ai.enabled ? Boolean.TRUE : null, false);
             }
-        } catch (Throwable t) {
-            // The ApplicationInfo object is still valid PackageManager evidence.
-            Log.w(TAG, "Component state unavailable for " + packageName, t);
+
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+                return new LocalState(Boolean.TRUE, false);
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
+                    state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
+                // A contradictory firmware report is UNKNOWN until verified by shell.
+                return new LocalState(ai.enabled ? null : Boolean.FALSE, true);
+            }
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED) {
+                // Android distinguishes "disabled until used" from user-disabled.
+                return new LocalState(null, false);
+            }
+            return new LocalState(ai.enabled ? Boolean.TRUE : null, false);
+        } catch (Throwable error) {
+            Log.w(TAG, "Package state not readable for " + packageName, error);
+            return new LocalState(null, false);
         }
-        return Boolean.valueOf(enabled);
+    }
+
+    /** In-process state only. A null status must never be treated as disabled. */
+    public static Boolean getPackageEnabledState(Context context, String packageName) {
+        return readLocalState(context, packageName).enabled;
+    }
+
+    /**
+     * Query the same user (0) targeted by Debloater's pm operations.
+     * Both successful -e and -d lists are required to classify a shell result.
+     * Called in the background once per full list, not once per package.
+     */
+    private static PackageStateResolver.Snapshot readShellPackageSnapshot(Context context) {
+        if (!ShellHelper.isShizukuPermissionGranted() && !ShellHelper.isRootAvailable()) {
+            return PackageStateResolver.Snapshot.fromShell(false, "", false, "");
+        }
+        ShellHelper.CommandResult enabled = ShellHelper.runCommandWithResult(
+            context, "pm list packages -e --user 0");
+        ShellHelper.CommandResult disabled = ShellHelper.runCommandWithResult(
+            context, "pm list packages -d --user 0");
+        return PackageStateResolver.Snapshot.fromShell(
+            enabled.success, enabled.detail, disabled.success, disabled.detail);
+    }
+
+    /** Use for a single confirmation after a user-initiated operation. */
+    public static Boolean getVerifiedPackageEnabledState(Context context, String packageName) {
+        LocalState local = readLocalState(context, packageName);
+        PackageStateResolver.Snapshot snapshot = readShellPackageSnapshot(context);
+        return snapshot.resolve(packageName, local.enabled, local.explicitlyDisabled, snapshot);
     }
 
     /**
@@ -151,8 +192,31 @@ public class PackageHelper {
         return Boolean.FALSE.equals(getPackageEnabledState(context, packageName));
     }
 
+    /**
+     * Protect dialers, especially the current default phone handler.
+     * The system Settings may forbid disabling it even if vendor package
+     * APIs report confusing enabled states.
+     */
+    public static boolean isProtectedDialer(Context context, String packageName) {
+        if ("com.android.dialer".equals(packageName)) return true;
+        if (packageName == null) return false;
+        try {
+            android.telecom.TelecomManager tm = (android.telecom.TelecomManager)
+                context.getSystemService(Context.TELECOM_SERVICE);
+            return tm != null && packageName.equals(tm.getDefaultDialerPackage());
+        } catch (Throwable e) {
+            Log.w(TAG, "Cannot determine default dialer", e);
+            return false;
+        }
+    }
+
+    public static boolean isProtectedInDebloater(Context context, String packageName) {
+        return isProtectedOrNonDisable(packageName) || isCriticalPackage(context, packageName);
+    }
+
     private static boolean isCriticalPackage(Context context, String packageName) {
         if (packageName == null || !packageName.matches("[A-Za-z0-9_.]+")) return true;
+        if (isProtectedDialer(context, packageName)) return true;
         if (packageName.equals(context.getPackageName()) ||
                 packageName.equals(ShellHelper.SHIZUKU_PACKAGE) ||
                 "android".equals(packageName) ||
@@ -269,6 +333,7 @@ public class PackageHelper {
     public static List<AppInfo> getInstalledApps(Context context) {
         List<AppInfo> result = new ArrayList<>();
         PackageManager pm = context.getPackageManager();
+        final PackageStateResolver.Snapshot snapshot = readShellPackageSnapshot(context);
 
         try {
             List<PackageInfo> packages = pm.getInstalledPackages(PackageManager.GET_META_DATA);
@@ -297,7 +362,9 @@ public class PackageHelper {
                 }
 
                 boolean isSystem = (pi.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-                Boolean enabledState = getPackageEnabledState(context, pkg);
+                LocalState local = readLocalState(context, pkg);
+                Boolean enabledState = snapshot.resolve(
+                    pkg, local.enabled, local.explicitlyDisabled, snapshot);
 
                 PackageDescriptions.PackageMeta meta = PackageDescriptions.getMeta(pkg);
 
