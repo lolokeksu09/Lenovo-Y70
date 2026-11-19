@@ -29,11 +29,18 @@ assert "isModifiedByApp" in pkg
 assert "pm disable-user --user 0" in pkg
 assert "readEnabledState(context, packageName)" in pkg
 assert "isProtectedOrNonDisable(packageName)" in pkg
+assert "if (ri == null || ri.activityInfo == null) return true" in pkg
+assert '"com.android.systemui".equals(packageName)' in pkg
+assert "Не удалось сохранить журнал отката; действие отменено" in pkg
 assert "toEnable.add(pkg)" in debloat
 assert "PackageHelper.isModifiedByApp" in debloat
 assert "PackageHelper.getModifiedPackages" in debloat
 assert "Все приложения устройства" not in debloat
 assert "Система находится в заводском состоянии" not in debloat
+assert "pendingTogglePackages.add(app.packageName)" in debloat
+assert "PackageHelper.getLastOperationError(pkg)" in debloat
+assert 'setTitle("Частичное выполнение пресета")' in debloat
+assert "Разрешения" not in debloat or "Shizuku" in debloat
 
 # NFC must not silently retry aggressive low-level writes or delete other modules.
 assert "extractDexHelper(context)" in nfc
