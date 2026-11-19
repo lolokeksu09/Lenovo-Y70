@@ -671,7 +671,7 @@ public class DebloatActivity extends Activity {
                                         final boolean ok = enable
                                             ? PackageHelper.enablePackage(DebloatActivity.this, app.packageName)
                                             : PackageHelper.disablePackage(DebloatActivity.this, app.packageName);
-                                        final Boolean liveState = PackageHelper.getPackageEnabledState(
+                                        final Boolean liveState = PackageHelper.getVerifiedPackageEnabledState(
                                             DebloatActivity.this, app.packageName);
                                         final boolean verifiedState = ok && liveState != null &&
                                             liveState.booleanValue() == enable;
