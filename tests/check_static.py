@@ -15,4 +15,16 @@ assert "100% терминалов РФ" not in menu
 for p in [r/"AndroidManifest.xml",r/"res/values/strings.xml",r/"res/layout/activity_main.xml",r/"res/layout/activity_main_menu.xml"]:
     ET.parse(p)
     assert "Сенсор 1500 Гц" not in p.read_text(encoding="utf-8")
-print("PASS: static assertions and XML parsing")
+# The NFC header must remain compact: no paragraph-length badge in a weighted row.
+nfc = (src/"NfcFixHelper.java").read_text(encoding="utf-8")
+layout = (r/"res/layout/activity_main_menu.xml").read_text(encoding="utf-8")
+manifest = ET.parse(r/"AndroidManifest.xml").getroot()
+android_ns = "{http://schemas.android.com/apk/res/android}"
+assert manifest.attrib[android_ns + "versionCode"] == "31"
+assert manifest.attrib[android_ns + "versionName"] == "3.0.1-audit"
+assert 'android:text="Экспериментально"' in layout
+assert 'android:text="LenovoMotorolovichY70 v3.0.1-audit"' in layout
+assert "100% терминалов" not in nfc and "100% терминалов" not in layout
+assert "100% Russian POS" not in nfc
+assert "Маршрутизация DH обнаружена (оплата не проверена)" in nfc
+print("PASS: source assertions, XML, NFC layout and truthful status")
