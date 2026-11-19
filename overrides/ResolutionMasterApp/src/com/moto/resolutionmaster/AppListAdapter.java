@@ -139,9 +139,8 @@ public class AppListAdapter extends BaseAdapter {
             holder.tvDesc.setVisibility(View.GONE);
         }
 
-        boolean isProtected = PackageHelper.isProtectedOrNonDisable(app.packageName);
-        boolean protectedDialer = PackageHelper.isProtectedDialer(context, app.packageName);
-        holder.btnToggle.setEnabled(app.enabledState != null && !protectedDialer);
+        boolean isProtected = PackageHelper.isProtectedInDebloater(context, app.packageName);
+        holder.btnToggle.setEnabled(app.enabledState != null && !isProtected);
         if (app.enabledState == null) {
             holder.tvStatus.setText("● Состояние неизвестно");
             holder.tvStatus.setTextColor(0xFF9E9E9E);
@@ -150,16 +149,16 @@ public class AppListAdapter extends BaseAdapter {
         } else if (app.isEnabled) {
             holder.tvStatus.setText("● Активно");
             holder.tvStatus.setTextColor(0xFF10B981); // accent_green
-            holder.btnToggle.setText(isProtected ? "Заморозить" : "Отключить");
+            holder.btnToggle.setText("Отключить");
             holder.btnToggle.setBackgroundResource(R.drawable.btn_red);
         } else {
-            holder.tvStatus.setText(isProtected ? "● Заморожено (AppOps)" : "● Отключено");
+            holder.tvStatus.setText("● Отключено");
             holder.tvStatus.setTextColor(0xFFEF4444); // accent_red
             holder.btnToggle.setText("Включить");
             holder.btnToggle.setBackgroundResource(R.drawable.btn_green);
         }
 
-        if (protectedDialer) {
+        if (isProtected) {
             holder.btnToggle.setText("Защищено системой");
             holder.btnToggle.setBackgroundResource(R.drawable.btn_chip);
         }
@@ -168,7 +167,7 @@ public class AppListAdapter extends BaseAdapter {
             @Override
             public void onClick(View v) {
                 if (toggleListener != null && app.enabledState != null &&
-                        !PackageHelper.isProtectedDialer(context, app.packageName)) {
+                        !PackageHelper.isProtectedInDebloater(context, app.packageName)) {
                     toggleListener.onToggle(app, !app.isEnabled);
                 }
             }
