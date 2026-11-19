@@ -128,5 +128,4 @@
     <string name="anim_boost_desc">Снижает задержку системных переходов и окон в 2 раза, ускоряя визуальный отклик интерфейса.</string>
     <string name="btn_anim_05">🚀 Ускорить (0.5x)</string>
     <string name="btn_anim_10">🔄 Сток (1.0x)</string>
-    <string name="enable_assist_description">По явному запросу пользователя помогает нажать «Включить» для одного выбранного приложения на странице Android Settings. Не выполняет других действий.</string>
 </resources>
