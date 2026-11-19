@@ -54,6 +54,8 @@ public class DebloatActivity extends Activity {
     private AppListAdapter appListAdapter;
     private final List<AppInfo> installedApps = new ArrayList<>();
     private boolean isAppsLoaded = false;
+    private final java.util.Set<String> pendingTogglePackages =
+        java.util.Collections.synchronizedSet(new java.util.HashSet<String>());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -442,10 +444,12 @@ public class DebloatActivity extends Activity {
                 int count = 0;
                 int disabledOk = 0;
                 int enabledOk = 0;
+                final List<String> failures = new ArrayList<>();
 
                 for (String pkg : toDisable) {
                     boolean ok = PackageHelper.disablePackage(DebloatActivity.this, pkg);
                     if (ok) disabledOk++;
+                    else failures.add(pkg + ": " + PackageHelper.getLastOperationError(pkg));
                     count++;
                     final int progress = count;
                     runOnUiThread(new Runnable() {
@@ -459,6 +463,7 @@ public class DebloatActivity extends Activity {
                 for (String pkg : toEnable) {
                     boolean ok = PackageHelper.enablePackage(DebloatActivity.this, pkg);
                     if (ok) enabledOk++;
+                    else failures.add(pkg + ": " + PackageHelper.getLastOperationError(pkg));
                     count++;
                     final int progress = count;
                     runOnUiThread(new Runnable() {
@@ -476,9 +481,27 @@ public class DebloatActivity extends Activity {
                     public void run() {
                         if (pbPresetBatch != null) pbPresetBatch.setVisibility(View.GONE);
                         refreshPresetList();
-                        Toast.makeText(DebloatActivity.this, 
-                            "Результат: отключено " + finalDisabled + "/" + toDisable.size() + ", восстановлено " + finalEnabled + "/" + toEnable.size(), 
-                            Toast.LENGTH_LONG).show();
+                        if (!failures.isEmpty()) {
+                            StringBuilder details = new StringBuilder();
+                            int limit = Math.min(8, failures.size());
+                            for (int i = 0; i < limit; i++) {
+                                details.append("• ").append(failures.get(i)).append("\\n");
+                            }
+                            if (failures.size() > limit) {
+                                details.append("И ещё ошибок: ").append(failures.size() - limit);
+                            }
+                            new AlertDialog.Builder(DebloatActivity.this)
+                                .setTitle("Частичное выполнение пресета")
+                                .setMessage("Подтверждено: отключено " + finalDisabled +
+                                    "/" + toDisable.size() + ", восстановлено " + finalEnabled +
+                                    "/" + toEnable.size() + ".\\n\\n" + details)
+                                .setPositiveButton("Понятно", null)
+                                .show();
+                        } else {
+                            Toast.makeText(DebloatActivity.this,
+                                "Подтверждено: отключено " + finalDisabled +
+                                ", восстановлено " + finalEnabled, Toast.LENGTH_LONG).show();
+                        }
                     }
                 });
             }
@@ -640,20 +663,36 @@ public class DebloatActivity extends Activity {
                         appListAdapter = new AppListAdapter(DebloatActivity.this, installedApps, new AppListAdapter.OnAppToggleListener() {
                             @Override
                             public void onToggle(final AppInfo app, final boolean enable) {
-                                boolean ok;
-                                if (enable) {
-                                    ok = PackageHelper.enablePackage(DebloatActivity.this, app.packageName);
-                                } else {
-                                    ok = PackageHelper.disablePackage(DebloatActivity.this, app.packageName);
-                                }
-                                if (ok) {
-                                    app.isEnabled = enable;
-                                    appListAdapter.notifyDataSetChanged();
-                                    String state = enable ? "включено" : "отключено";
-                                    Toast.makeText(DebloatActivity.this, app.label + " " + state, Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(DebloatActivity.this, PackageHelper.getLastOperationError(app.packageName), Toast.LENGTH_LONG).show();
-                                }
+                                if (!pendingTogglePackages.add(app.packageName)) return;
+                                new Thread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        final boolean ok = enable
+                                            ? PackageHelper.enablePackage(DebloatActivity.this, app.packageName)
+                                            : PackageHelper.disablePackage(DebloatActivity.this, app.packageName);
+                                        final boolean verifiedState = ok && PackageHelper.isPackageEnabled(
+                                            DebloatActivity.this, app.packageName);
+                                        final String failure = ok ? "" :
+                                            PackageHelper.getLastOperationError(app.packageName);
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                pendingTogglePackages.remove(app.packageName);
+                                                if (ok) {
+                                                    app.isEnabled = verifiedState;
+                                                    String state = verifiedState ? "включено" : "отключено";
+                                                    Toast.makeText(DebloatActivity.this,
+                                                        app.label + ": " + state + " (проверено)",
+                                                        Toast.LENGTH_SHORT).show();
+                                                } else {
+                                                    Toast.makeText(DebloatActivity.this,
+                                                        failure, Toast.LENGTH_LONG).show();
+                                                }
+                                                appListAdapter.notifyDataSetChanged();
+                                            }
+                                        });
+                                    }
+                                }).start();
                             }
                         });
 
