@@ -343,9 +343,11 @@ public class DebloatActivity extends Activity {
 
         for (final DebloatPreset.PresetItem item : items) {
             final boolean installed = PackageHelper.isPackageInstalled(this, item.packageName);
-            final boolean enabled = installed && PackageHelper.isPackageEnabled(this, item.packageName);
+            final Boolean enabledState = installed
+                ? PackageHelper.getPackageEnabledState(this, item.packageName) : null;
+            final boolean enabled = Boolean.TRUE.equals(enabledState);
 
-            if (!enabled) {
+            if (installed && Boolean.FALSE.equals(enabledState)) {
                 disabledCount++;
             }
 
@@ -362,48 +364,49 @@ public class DebloatActivity extends Activity {
             tvDesc.setText(item.description);
             tvCat.setText(item.category);
 
-            final boolean isProtected = PackageHelper.isProtectedOrNonDisable(item.packageName);
+            final boolean isProtected = PackageHelper.isProtectedInDebloater(this, item.packageName);
+            btnToggle.setEnabled(installed && enabledState != null && !isProtected);
 
             if (!installed) {
-                tvStatus.setText("Не установлен / Удален");
+                tvStatus.setText("Не установлен / Удалён");
                 tvStatus.setTextColor(0xFF6B7280);
                 btnToggle.setVisibility(View.GONE);
+            } else if (enabledState == null) {
+                tvStatus.setText("Состояние неизвестно");
+                tvStatus.setTextColor(0xFF9E9E9E);
+                btnToggle.setText("Недоступно");
+                btnToggle.setBackgroundResource(R.drawable.btn_chip);
             } else if (!enabled) {
-                if (isProtected) {
-                    tvStatus.setText("Заморожено (AppOps) ✓");
-                } else {
-                    tvStatus.setText("Отключено ✓");
-                }
-                tvStatus.setTextColor(0xFF10B981); // accent_green
+                tvStatus.setText("Отключено");
+                tvStatus.setTextColor(0xFFEF4444);
                 btnToggle.setText("Включить");
                 btnToggle.setBackgroundResource(R.drawable.btn_green);
             } else {
                 tvStatus.setText("Активно");
-                tvStatus.setTextColor(0xFFF59E0B); // accent_yellow
-                btnToggle.setText(isProtected ? "Заморозить" : "Отключить");
+                tvStatus.setTextColor(0xFF10B981);
+                btnToggle.setText("Отключить");
                 btnToggle.setBackgroundResource(R.drawable.btn_red);
+            }
+            if (isProtected && installed) {
+                btnToggle.setText("Защищено системой");
+                btnToggle.setBackgroundResource(R.drawable.btn_chip);
             }
 
             btnToggle.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (enabled) {
-                        boolean ok = PackageHelper.disablePackage(DebloatActivity.this, item.packageName);
-                        if (ok) {
-                            String msg = isProtected ?
-                                item.title + " заморожен в фоне (AppOps)" :
-                                item.title + " отключен";
-                            Toast.makeText(DebloatActivity.this, msg, Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(DebloatActivity.this, "Ошибка (требуются права Shizuku/Root)", Toast.LENGTH_SHORT).show();
-                        }
+                    if (isProtected || enabledState == null || !installed) return;
+                    final boolean ok = enabled
+                        ? PackageHelper.disablePackage(DebloatActivity.this, item.packageName)
+                        : PackageHelper.enablePackage(DebloatActivity.this, item.packageName);
+                    if (ok) {
+                        Toast.makeText(DebloatActivity.this,
+                            item.title + (enabled ? " отключён" : " включён"),
+                            Toast.LENGTH_SHORT).show();
                     } else {
-                        boolean ok = PackageHelper.enablePackage(DebloatActivity.this, item.packageName);
-                        if (ok) {
-                            Toast.makeText(DebloatActivity.this, item.title + " включен", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(DebloatActivity.this, "Ошибка (требуются права Shizuku/Root)", Toast.LENGTH_SHORT).show();
-                        }
+                        Toast.makeText(DebloatActivity.this,
+                            PackageHelper.getLastOperationError(item.packageName),
+                            Toast.LENGTH_LONG).show();
                     }
                     refreshPresetList();
                 }
