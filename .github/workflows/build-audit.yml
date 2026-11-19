@@ -1,4 +1,4 @@
-name: Build Lenovo Y70 v3.1.2 audit
+name: Build Lenovo Y70 v3.1.3 audit
 
 on:
   push:
@@ -52,6 +52,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & java -cp $out com.moto.resolutionmaster.PackageStateResolverTest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify bulk restore UI and safety invariants
+        run: python tests/check_bulk_enable.py
+      - name: Run bulk restore JVM selection test
+        shell: pwsh
+        run: |
+          $out = Join-Path $PWD 'tests/bulk-enable-classes'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          & javac -encoding UTF-8 -d $out 'overrides/ResolutionMasterApp/src/com/moto/resolutionmaster/BulkEnablePolicy.java' 'tests/BulkEnablePolicyTest.java'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & java -cp $out com.moto.resolutionmaster.BulkEnablePolicyTest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Prepare Android SDK standalone build tools
         shell: pwsh
         run: |
@@ -76,13 +87,13 @@ jobs:
         run: python build_apk.py
       - name: Rename APK to current version
         shell: pwsh
-        run: Move-Item 'upstream/LenovoMotorolovichY70_v2.9.apk' 'upstream/LenovoMotorolovichY70_v3.1.2-audit.apk'
+        run: Move-Item 'upstream/LenovoMotorolovichY70_v2.9.apk' 'upstream/LenovoMotorolovichY70_v3.1.3-audit.apk'
       - name: Check APK format
         run: |
-          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v3.1.2-audit.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
+          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v3.1.3-audit.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
       - uses: actions/upload-artifact@v4
         with:
-          name: Lenovo-Y70-v3.1.2-audit-debug
-          path: upstream/LenovoMotorolovichY70_v3.1.2-audit.apk
+          name: Lenovo-Y70-v3.1.3-audit-debug
+          path: upstream/LenovoMotorolovichY70_v3.1.3-audit.apk
           if-no-files-found: error
           retention-days: 14
