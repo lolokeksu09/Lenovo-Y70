@@ -794,6 +794,10 @@ public class DebloatActivity extends Activity {
      */
     private void previewEnableAllDisabled() {
         if (bulkBusy) return;
+        if (!pendingTogglePackages.isEmpty()) {
+            Toast.makeText(this, "Сначала дождитесь завершения текущего действия", Toast.LENGTH_LONG).show();
+            return;
+        }
         setBulkBusy(true);
         if (tvBulkEnableProgress != null) {
             tvBulkEnableProgress.setVisibility(View.VISIBLE);
@@ -856,17 +860,17 @@ public class DebloatActivity extends Activity {
                         }
                         StringBuilder preview = new StringBuilder();
                         preview.append("Будут включены ").append(targets.size())
-                            .append(" подтверждённо отключённых пакетов.\\n\\n");
+                            .append(" подтверждённо отключённых пакетов.\n\n");
                         int previewCount = Math.min(targets.size(), 18);
                         for (int i = 0; i < previewCount; i++) {
-                            preview.append("• ").append(targets.get(i)).append("\\n");
+                            preview.append("• ").append(targets.get(i)).append("\n");
                         }
                         if (targets.size() > previewCount) {
-                            preview.append("… и ещё ").append(targets.size() - previewCount).append("\\n");
+                            preview.append("… и ещё ").append(targets.size() - previewCount).append("\n");
                         }
-                        preview.append("\\nПропущено защищённых: ").append(skippedProtected)
+                        preview.append("\nПропущено защищённых: ").append(skippedProtected)
                             .append("; неизвестных: ").append(skippedUnknown).append(".")
-                            .append("\\n\\nВнимание: могут включиться ранее намеренно отключённые " +
+                            .append("\n\nВнимание: могут включиться ранее намеренно отключённые " +
                                 "системные приложения. Это может изменить поведение, " +
                                 "приватность и расход заряда. Данные программ не удаляются.");
                         new AlertDialog.Builder(DebloatActivity.this)
@@ -946,14 +950,14 @@ public class DebloatActivity extends Activity {
                         StringBuilder details = new StringBuilder();
                         details.append("Подтверждено включение: ").append(enabledCount)
                             .append("/").append(targets.size())
-                            .append("\\nПропущено: ").append(skippedCount)
-                            .append("\\nОшибок: ").append(failures.size());
+                            .append("\nПропущено: ").append(skippedCount)
+                            .append("\nОшибок: ").append(failures.size());
                         int limit = Math.min(8, failures.size());
                         for (int i = 0; i < limit; i++) {
-                            details.append("\\n• ").append(failures.get(i));
+                            details.append("\n• ").append(failures.get(i));
                         }
                         if (failures.size() > limit) {
-                            details.append("\\n… ещё ошибок: ")
+                            details.append("\n… ещё ошибок: ")
                                 .append(failures.size() - limit);
                         }
                         new AlertDialog.Builder(DebloatActivity.this)
