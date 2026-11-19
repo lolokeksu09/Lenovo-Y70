@@ -3,6 +3,8 @@ name: Build Lenovo Y70 v3.0 audit
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
