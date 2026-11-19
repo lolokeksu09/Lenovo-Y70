@@ -95,23 +95,51 @@ public class PackageHelper {
      */
     private static Boolean readEnabledState(Context context, String packageName) {
         if (packageName == null || packageName.isEmpty()) return null;
+        PackageManager pm = context.getPackageManager();
+        final ApplicationInfo ai;
         try {
-            PackageManager pm = context.getPackageManager();
-            ApplicationInfo ai = pm.getApplicationInfo(packageName, 0);
+            ai = pm.getApplicationInfo(packageName, 0);
+        } catch (Throwable t) {
+            Log.w(TAG, "Cannot read ApplicationInfo for " + packageName, t);
+            return null;
+        }
+
+        // ApplicationInfo.enabled is actual PackageManager data, not our prefs.
+        // Extra reads may be restricted on vendor ROMs; failure in one must not
+        // turn an otherwise enabled application into "disabled".
+        boolean enabled = ai.enabled;
+        try {
             int state = pm.getApplicationEnabledSetting(packageName);
             if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
                     state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER ||
-                    state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED) return false;
-            if (pm.isPackageSuspended(packageName)) return false;
-            return ai.enabled;
+                    state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED) {
+                enabled = false;
+            } else if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                enabled = true;
+            }
         } catch (Throwable t) {
-            Log.w(TAG, "Unable to verify package " + packageName, t);
-            return null;
+            Log.w(TAG, "Component state unavailable for " + packageName, t);
         }
+        try {
+            if (pm.isPackageSuspended(packageName)) enabled = false;
+        } catch (Throwable t) {
+            Log.w(TAG, "Suspension state unavailable for " + packageName, t);
+        }
+        return Boolean.valueOf(enabled);
+    }
+
+    /** Nullable live Android state. null means unknown, not disabled. */
+    public static Boolean getPackageEnabledState(Context context, String packageName) {
+        return readEnabledState(context, packageName);
     }
 
     public static boolean isPackageEnabled(Context context, String packageName) {
         return Boolean.TRUE.equals(readEnabledState(context, packageName));
+    }
+
+    /** Only confirmed negative state is eligible for the Disabled tab. */
+    public static boolean isPackageDisabledVerified(Context context, String packageName) {
+        return Boolean.FALSE.equals(readEnabledState(context, packageName));
     }
 
     private static boolean isCriticalPackage(Context context, String packageName) {
@@ -260,11 +288,11 @@ public class PackageHelper {
                 }
 
                 boolean isSystem = (pi.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-                boolean isEnabled = isPackageEnabled(context, pkg);
+                Boolean enabledState = getPackageEnabledState(context, pkg);
 
                 PackageDescriptions.PackageMeta meta = PackageDescriptions.getMeta(pkg);
 
-                result.add(new AppInfo(pkg, label, icon, isSystem, isEnabled,
+                result.add(new AppInfo(pkg, label, icon, isSystem, enabledState,
                         meta.description, meta.safetyLevel, meta.getSafetyLabel(), meta.getSafetyColor()));
             }
         } catch (Throwable t) {
