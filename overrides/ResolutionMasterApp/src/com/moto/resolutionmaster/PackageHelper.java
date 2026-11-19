@@ -135,11 +135,11 @@ public class PackageHelper {
             home.addCategory(android.content.Intent.CATEGORY_HOME);
             android.content.pm.ResolveInfo ri = context.getPackageManager().resolveActivity(
                 home, PackageManager.MATCH_DEFAULT_ONLY);
-            return ri != null && ri.activityInfo != null &&
-                packageName.equals(ri.activityInfo.packageName);
+            if (ri == null || ri.activityInfo == null) return true; // Fail closed.
+            return packageName.equals(ri.activityInfo.packageName);
         } catch (Throwable t) {
-            // If the device cannot resolve its launcher, never infer broader safety.
-            return false;
+            // Refuse debloat when the active launcher cannot be verified.
+            return true;
         }
     }
 
