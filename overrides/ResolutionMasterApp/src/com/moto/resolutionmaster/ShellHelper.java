@@ -74,7 +74,7 @@ public class ShellHelper {
             return new CommandResult(false, -1, "Требуется доступ Shizuku или Root");
         }
         final String marker = "__RM_EXIT_CODE__=";
-        final String wrapped = "{ " + cmd + "; } 2>&1; printf '\\n" + marker + "%s\\n' "$?"";
+        final String wrapped = "{ " + cmd + "; } 2>&1; printf '\\n" + marker + "%s\\n' \"$?\"";
         final String output = runCommandWithOutput(context, wrapped);
         if (output == null) {
             return new CommandResult(false, -1, "Нет ответа от Shell");
