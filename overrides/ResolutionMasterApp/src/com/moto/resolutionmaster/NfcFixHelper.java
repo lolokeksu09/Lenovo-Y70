@@ -76,13 +76,19 @@ public class NfcFixHelper {
                 info.status = NfcStatus.NFC_OFF;
                 return info;
             }
-            if (helperStatus.contains("before=DH,DH,DH") || helperStatus.contains("after=DH,DH,DH")) {
+            // Prefer post-operation values; a stale before= field is not success.
+            Matcher after = Pattern.compile("after=(DH|eSE1),(DH|eSE1),(DH|eSE1)").matcher(helperStatus);
+            Matcher before = Pattern.compile("before=(DH|eSE1),(DH|eSE1),(DH|eSE1)").matcher(helperStatus);
+            String observed = null;
+            if (after.find()) observed = after.group(1) + "," + after.group(2) + "," + after.group(3);
+            else if (before.find()) observed = before.group(1) + "," + before.group(2) + "," + before.group(3);
+            if ("DH,DH,DH".equals(observed)) {
                 info.status = NfcStatus.FIXED_100_PERCENT;
                 return info;
-            } else if (helperStatus.contains("before=DH,DH,eSE1") || helperStatus.contains("after=DH,DH,eSE1")) {
+            } else if ("DH,DH,eSE1".equals(observed)) {
                 info.status = NfcStatus.LEGACY_FIX;
                 return info;
-            } else if (helperStatus.contains("before=eSE1,eSE1,eSE1") || helperStatus.contains("after=eSE1,eSE1,eSE1")) {
+            } else if ("eSE1,eSE1,eSE1".equals(observed)) {
                 info.status = NfcStatus.FACTORY_STOCK;
                 return info;
             }
@@ -173,61 +179,49 @@ public class NfcFixHelper {
         }
     }
 
+    /**
+     * Apply only when routes can be read. Do not retry aggressive low-level
+     * operations or modify other installed Magisk modules.
+     */
     public static boolean applyMasterFix(Context context) {
-        extractDexHelper(context);
-
+        if (!extractDexHelper(context)) return false;
+        RoutingInfo before = getLiveRoutingInfo(context);
+        if (before.status == NfcStatus.FIXED_100_PERCENT) return true;
+        if (before.status != NfcStatus.LEGACY_FIX &&
+                before.status != NfcStatus.FACTORY_STOCK) {
+            Log.w(TAG, "NFC routing not readable; aborting apply");
+            return false;
+        }
         String cmd = "CLASSPATH=" + DEX_TARGET + " app_process /system/bin NfcFix apply";
         String output = ShellHelper.runCommandWithOutput(context, cmd);
-        Log.i(TAG, "applyMasterFix output: " + output);
-
         if (output == null || !output.contains("result=ok")) {
-            // Try force-apply in case SKU is modified by custom ROM or previous Magisk module
-            String forceCmd = "CLASSPATH=" + DEX_TARGET + " app_process /system/bin NfcFix force-apply";
-            output = ShellHelper.runCommandWithOutput(context, forceCmd);
-            Log.i(TAG, "force-apply output: " + output);
+            Log.w(TAG, "NFC apply failed; no automatic retry");
+            return false;
         }
-
-        if (output == null || !output.contains("result=ok")) {
-            // Try running as shell UID 2000 via root if needed
-            if (ShellHelper.isRootAvailable()) {
-                String suCmd = "su 2000 -c \"CLASSPATH=" + DEX_TARGET + " app_process /system/bin NfcFix apply\"";
-                output = ShellHelper.runCommandWithOutput(context, suCmd);
-                Log.i(TAG, "su 2000 apply output: " + output);
-            }
-        }
-
-        // Clean up any obsolete Magisk modules to prevent rollback conflicts
-        if (ShellHelper.isRootAvailable()) {
-            ShellHelper.runCommand(context, "rm -rf " + MODULE_PATH + " /data/adb/modules/fix_nfc_on_Lenovo_Legion_Y70");
-        }
-
-        return output != null && output.contains("result=ok");
+        RoutingInfo after = getLiveRoutingInfo(context);
+        return after.status == NfcStatus.FIXED_100_PERCENT;
     }
 
+    /**
+     * Explicit user-requested rollback with readback and no implicit deletion.
+     */
     public static boolean revertToStock(Context context) {
-        extractDexHelper(context);
-
+        if (!extractDexHelper(context)) return false;
+        RoutingInfo before = getLiveRoutingInfo(context);
+        if (before.status == NfcStatus.FACTORY_STOCK) return true;
+        if (before.status != NfcStatus.FIXED_100_PERCENT &&
+                before.status != NfcStatus.LEGACY_FIX) {
+            Log.w(TAG, "NFC routing not readable; aborting rollback");
+            return false;
+        }
         String cmd = "CLASSPATH=" + DEX_TARGET + " app_process /system/bin NfcFix undo";
         String output = ShellHelper.runCommandWithOutput(context, cmd);
-        Log.i(TAG, "revertToStock output: " + output);
-
         if (output == null || !output.contains("result=ok")) {
-            String forceCmd = "CLASSPATH=" + DEX_TARGET + " app_process /system/bin NfcFix force-undo";
-            output = ShellHelper.runCommandWithOutput(context, forceCmd);
+            Log.w(TAG, "NFC undo failed; no automatic retry");
+            return false;
         }
-
-        if (output == null || !output.contains("result=ok")) {
-            if (ShellHelper.isRootAvailable()) {
-                String suCmd = "su 2000 -c \"CLASSPATH=" + DEX_TARGET + " app_process /system/bin NfcFix undo\"";
-                output = ShellHelper.runCommandWithOutput(context, suCmd);
-            }
-        }
-
-        if (ShellHelper.isRootAvailable()) {
-            ShellHelper.runCommand(context, "rm -rf " + MODULE_PATH + " /data/adb/modules/fix_nfc_on_Lenovo_Legion_Y70");
-        }
-
-        return output != null && output.contains("result=ok");
+        RoutingInfo after = getLiveRoutingInfo(context);
+        return after.status == NfcStatus.FACTORY_STOCK;
     }
 
     public static File exportModuleZip(Context context) {
@@ -365,7 +359,7 @@ public class NfcFixHelper {
                 "MODDIR=/data/adb/modules/moto_y70_nfc_fix\n" +
                 "unzip -o \"$ZIPFILE\" \"nfc-fix.dex\" -d \"/data/local/tmp\" >&2\n" +
                 "CLASSPATH=/data/local/tmp/nfc-fix.dex app_process /system/bin NfcFix undo\n" +
-                "rm -rf /data/adb/modules/moto_y70_nfc_fix /data/adb/modules/fix_nfc_on_Lenovo_Legion_Y70\n" +
+                "rm -rf /data/adb/modules/moto_y70_nfc_fix\n" +
                 "ui_print \"- Reverted NFC routes to factory eSE1!\"\n" +
                 "exit 0\n";
 
