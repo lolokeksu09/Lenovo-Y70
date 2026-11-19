@@ -3,6 +3,9 @@ package com.moto.resolutionmaster;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.Settings;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -57,6 +60,11 @@ public class DebloatActivity extends Activity {
     private ProgressBar pbBulkEnable;
     private boolean bulkBusy = false;
     private int appsLoadSerial = 0;
+    // Explicit per-package Settings workflow. Nothing is changed automatically.
+    private final List<String> settingsRestoreQueue = new ArrayList<>();
+    private int settingsRestoreIndex = 0;
+    private String pendingSettingsPackage = null;
+    private boolean settingsPageLeft = false;
 
     private AppListAdapter appListAdapter;
     private final List<AppInfo> installedApps = new ArrayList<>();
@@ -209,9 +217,21 @@ public class DebloatActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        if (pendingSettingsPackage != null) settingsPageLeft = true;
+        super.onPause();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
-        // Returning from system App Info may have changed the live state.
+        if (pendingSettingsPackage != null && settingsPageLeft) {
+            final String pkg = pendingSettingsPackage;
+            pendingSettingsPackage = null;
+            settingsPageLeft = false;
+            verifyReturnedSettingsPackage(pkg);
+            return;
+        }
         if (!bulkBusy && isAppsLoaded && layoutManualTab != null &&
                 layoutManualTab.getVisibility() == View.VISIBLE) {
             loadInstalledApps();
@@ -890,6 +910,131 @@ public class DebloatActivity extends Activity {
         }).start();
     }
 
+    /**
+     * Guided recovery uses the same Android app-info page which successfully
+     * changed expressweather and brapps from enabled=2 to enabled=0.
+     * It never invokes an undocumented API or bypasses platform permissions.
+     */
+    private void beginSettingsRecovery(List<String> blocked) {
+        settingsRestoreQueue.clear();
+        settingsRestoreIndex = 0;
+        for (String pkg : blocked) {
+            if (pkg != null && pkg.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+") &&
+                    !PackageHelper.isProtectedInDebloater(this, pkg) &&
+                    !settingsRestoreQueue.contains(pkg)) {
+                settingsRestoreQueue.add(pkg);
+            }
+        }
+        showNextSettingsPackage();
+    }
+
+    private void showNextSettingsPackage() {
+        if (isFinishing()) return;
+        if (settingsRestoreIndex >= settingsRestoreQueue.size()) {
+            settingsRestoreQueue.clear();
+            settingsRestoreIndex = 0;
+            Toast.makeText(this, "Список для ручного восстановления завершён",
+                Toast.LENGTH_LONG).show();
+            loadInstalledApps();
+            return;
+        }
+        final String pkg = settingsRestoreQueue.get(settingsRestoreIndex);
+        new AlertDialog.Builder(this)
+            .setTitle("Через настройки: " + (settingsRestoreIndex + 1) + "/" +
+                settingsRestoreQueue.size())
+            .setMessage(pkg +
+                "\n\nНа странице приложения нажми «Включить», если кнопка доступна. " +
+                "Затем вернись в Lenovo Y70 — статус проверится автоматически. " +
+                "Защита прошивки может не позволить включение.")
+            .setPositiveButton("Открыть настройки", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    openPackageDetailsForRestore(pkg);
+                }
+            })
+            .setNeutralButton("Пропустить", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    settingsRestoreIndex++;
+                    showNextSettingsPackage();
+                }
+            })
+            .setNegativeButton("Завершить", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    settingsRestoreQueue.clear();
+                    settingsRestoreIndex = 0;
+                    loadInstalledApps();
+                }
+            })
+            .setCancelable(false)
+            .show();
+    }
+
+    private void openPackageDetailsForRestore(String pkg) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + pkg));
+            pendingSettingsPackage = pkg;
+            settingsPageLeft = false;
+            startActivity(intent);
+        } catch (android.content.ActivityNotFoundException e) {
+            pendingSettingsPackage = null;
+            Toast.makeText(this, "Системная страница приложения недоступна",
+                Toast.LENGTH_LONG).show();
+            showNextSettingsPackage();
+        } catch (SecurityException e) {
+            pendingSettingsPackage = null;
+            Toast.makeText(this, "Прошивка запретила открытие страницы приложения",
+                Toast.LENGTH_LONG).show();
+            showNextSettingsPackage();
+        }
+    }
+
+    private void verifyReturnedSettingsPackage(final String pkg) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final Boolean confirmed = PackageHelper.getVerifiedPackageEnabledState(
+                    DebloatActivity.this, pkg);
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (isFinishing()) return;
+                        loadInstalledApps();
+                        if (Boolean.TRUE.equals(confirmed)) {
+                            settingsRestoreIndex++;
+                            Toast.makeText(DebloatActivity.this,
+                                pkg + ": теперь включено", Toast.LENGTH_SHORT).show();
+                            showNextSettingsPackage();
+                        } else {
+                            new AlertDialog.Builder(DebloatActivity.this)
+                                .setTitle("Включение не подтверждено")
+                                .setMessage(pkg + "\n\n" +
+                                    (confirmed == null
+                                        ? "Системный статус недоступен. Проверь Shizuku."
+                                        : "Пакет по-прежнему отключён. Возможно, прошивка запрещает включение."))
+                                .setPositiveButton("Повторить", new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface dialog, int which) {
+                                        showNextSettingsPackage();
+                                    }
+                                })
+                                .setNeutralButton("Пропустить", new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface dialog, int which) {
+                                        settingsRestoreIndex++;
+                                        showNextSettingsPackage();
+                                    }
+                                })
+                                .setNegativeButton("Завершить", new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface dialog, int which) {
+                                        settingsRestoreQueue.clear();
+                                        settingsRestoreIndex = 0;
+                                    }
+                                })
+                                .setCancelable(false)
+                                .show();
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
     /** Re-check EVERY package immediately before and after the shell command. */
     private void performBulkEnable(final List<String> targets) {
         if (bulkBusy || targets == null || targets.isEmpty()) return;
@@ -996,7 +1141,7 @@ public class DebloatActivity extends Activity {
                             for (String failure : failures) report.append(failure).append("\n");
                         }
                         final String reportText = report.toString();
-                        new AlertDialog.Builder(DebloatActivity.this)
+                        AlertDialog.Builder resultDialog = new AlertDialog.Builder(DebloatActivity.this)
                             .setTitle(blockedCount == 0 && failures.isEmpty() && skippedCount == 0
                                 ? "Включение подтверждено" : "Результат восстановления")
                             .setMessage(details.toString())
@@ -1014,8 +1159,15 @@ public class DebloatActivity extends Activity {
                                     }
                                 }
                             })
-                            .setPositiveButton("Готово", null)
-                            .show();
+                            .setPositiveButton("Готово", null);
+                        if (blockedCount > 0) {
+                            resultDialog.setNegativeButton("Через настройки", new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface dialog, int which) {
+                                    beginSettingsRecovery(blockedPackages);
+                                }
+                            });
+                        }
+                        resultDialog.show();
                     }
                 });
             }
