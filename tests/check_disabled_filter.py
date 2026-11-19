@@ -22,7 +22,7 @@ assert "public Boolean enabledState;" in app
 assert "public void setEnabledState(Boolean state)" in app
 assert "Boolean.FALSE.equals(isEnabled)" in policy
 assert "currentFilter == 3 && !DisabledFilterPolicy.matches(a.enabledState)" in adapter
-assert "holder.btnToggle.setEnabled(app.enabledState != null)" in adapter
+assert "holder.btnToggle.setEnabled(app.enabledState != null && !protectedDialer)" in adapter
 assert 'holder.tvStatus.setText("● Состояние неизвестно")' in adapter
 
 # Switching or reloading must recompute the current filter from fresh state.
