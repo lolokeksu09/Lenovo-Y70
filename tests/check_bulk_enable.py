@@ -42,7 +42,8 @@ assert "getVerifiedPackageEnabledState(context, packageName)" in method
 assert "if (current == null)" in method
 assert "if (current.booleanValue())" in method
 assert '"pm enable --user 0 "' in method
-assert "command.success && Boolean.TRUE.equals(after)" in method
+assert "if (!command.success)" in method
+assert "if (Boolean.TRUE.equals(after))" in method
 assert "clearAfterRestore(context, packageName)" in method
 assert "pm unsuspend" not in method
 assert "cmd appops" not in method
