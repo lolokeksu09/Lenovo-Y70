@@ -93,7 +93,11 @@ public class PackageHelper {
      * null = cannot verify through PackageManager. Never interpret null as disabled.
      * A SharedPreferences flag does NOT prove the live package or AppOps state.
      */
-    private static Boolean readEnabledState(Context context, String packageName) {
+    /**
+     * Actual enabled/disabled PackageManager state for UI filters.
+     * Suspension is a separate Android state and must not appear as "disabled".
+     */
+    public static Boolean getPackageEnabledState(Context context, String packageName) {
         if (packageName == null || packageName.isEmpty()) return null;
         PackageManager pm = context.getPackageManager();
         final ApplicationInfo ai;
@@ -104,9 +108,6 @@ public class PackageHelper {
             return null;
         }
 
-        // ApplicationInfo.enabled is actual PackageManager data, not our prefs.
-        // Extra reads may be restricted on vendor ROMs; failure in one must not
-        // turn an otherwise enabled application into "disabled".
         boolean enabled = ai.enabled;
         try {
             int state = pm.getApplicationEnabledSetting(packageName);
@@ -118,28 +119,36 @@ public class PackageHelper {
                 enabled = true;
             }
         } catch (Throwable t) {
+            // The ApplicationInfo object is still valid PackageManager evidence.
             Log.w(TAG, "Component state unavailable for " + packageName, t);
-        }
-        try {
-            if (pm.isPackageSuspended(packageName)) enabled = false;
-        } catch (Throwable t) {
-            Log.w(TAG, "Suspension state unavailable for " + packageName, t);
         }
         return Boolean.valueOf(enabled);
     }
 
-    /** Nullable live Android state. null means unknown, not disabled. */
-    public static Boolean getPackageEnabledState(Context context, String packageName) {
-        return readEnabledState(context, packageName);
+    /**
+     * Effective state for existing package operations. A suspended package is
+     * operationally unavailable but remains *enabled* in the UI category.
+     */
+    private static Boolean readEnabledState(Context context, String packageName) {
+        Boolean declaredEnabled = getPackageEnabledState(context, packageName);
+        if (!Boolean.TRUE.equals(declaredEnabled)) return declaredEnabled;
+        try {
+            if (context.getPackageManager().isPackageSuspended(packageName)) {
+                return Boolean.FALSE;
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Suspension status unavailable for " + packageName, t);
+        }
+        return declaredEnabled;
     }
 
     public static boolean isPackageEnabled(Context context, String packageName) {
         return Boolean.TRUE.equals(readEnabledState(context, packageName));
     }
 
-    /** Only confirmed negative state is eligible for the Disabled tab. */
+    /** Only genuinely disabled (not suspended) packages qualify. */
     public static boolean isPackageDisabledVerified(Context context, String packageName) {
-        return Boolean.FALSE.equals(readEnabledState(context, packageName));
+        return Boolean.FALSE.equals(getPackageEnabledState(context, packageName));
     }
 
     private static boolean isCriticalPackage(Context context, String packageName) {
