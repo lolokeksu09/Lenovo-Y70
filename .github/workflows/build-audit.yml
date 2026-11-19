@@ -12,9 +12,11 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Verify runner started
+        run: echo "Runner started on Ubuntu"
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
