@@ -189,7 +189,7 @@ public class PackageHelper {
 
     /** Only genuinely disabled (not suspended) packages qualify. */
     public static boolean isPackageDisabledVerified(Context context, String packageName) {
-        return Boolean.FALSE.equals(getPackageEnabledState(context, packageName));
+        return Boolean.FALSE.equals(getVerifiedPackageEnabledState(context, packageName));
     }
 
     /**
