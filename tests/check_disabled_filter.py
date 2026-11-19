@@ -11,7 +11,7 @@ policy = (src / "DisabledFilterPolicy.java").read_text(encoding="utf-8")
 
 # Unknown must stay distinct from disabled across the entire data flow.
 assert "public static Boolean getPackageEnabledState" in pkg
-ui_state_reader = pkg.split("public static Boolean getPackageEnabledState", 1)[1].split("private static Boolean readEnabledState", 1)[0]
+ui_state_reader = pkg.split("private static LocalState readLocalState", 1)[1].split("public static Boolean getPackageEnabledState", 1)[0]
 assert "isPackageSuspended" not in ui_state_reader, "Suspended must not mean disabled in UI filter"
 assert "COMPONENT_ENABLED_STATE_DISABLED_USER" in ui_state_reader
 assert "Boolean enabledState = snapshot.resolve(" in pkg
