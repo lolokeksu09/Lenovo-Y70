@@ -330,6 +330,49 @@ public class PackageHelper {
         return false;
     }
 
+    /**
+     * Explicit bulk-restore action. Unlike legacy enablePackage(), this does not
+     * unsuspend applications or reset their AppOps settings. Restore ONLY a
+     * package that is still confirmed disabled for Android user 0.
+     */
+    public static boolean enableConfirmedDisabledPackage(Context context, String packageName) {
+        if (packageName == null ||
+                !packageName.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")) {
+            error(String.valueOf(packageName), "Пропуск: некорректное имя пакета");
+            return false;
+        }
+        LAST_ERRORS.remove(packageName);
+        if (isProtectedInDebloater(context, packageName)) {
+            error(packageName, "Пропуск: защищённая системная служба");
+            return false;
+        }
+        if (!ShellHelper.isShizukuPermissionGranted() && !ShellHelper.isRootAvailable()) {
+            error(packageName, "Нет разрешения Shizuku/Root");
+            return false;
+        }
+
+        Boolean current = getVerifiedPackageEnabledState(context, packageName);
+        if (current == null) {
+            error(packageName, "Пропуск: система не подтвердила отключение пакета");
+            return false;
+        }
+        if (current.booleanValue()) {
+            error(packageName, "Пропуск: приложение уже включено");
+            return false;
+        }
+
+        ShellHelper.CommandResult command = ShellHelper.runCommandWithResult(
+            context, "pm enable --user 0 " + packageName);
+        Boolean after = getVerifiedPackageEnabledState(context, packageName);
+        if (command.success && Boolean.TRUE.equals(after)) {
+            clearAfterRestore(context, packageName);
+            return true;
+        }
+        error(packageName, "Включение не подтверждено (код: " + command.exitCode +
+            "). " + command.detail);
+        return false;
+    }
+
     public static List<AppInfo> getInstalledApps(Context context) {
         List<AppInfo> result = new ArrayList<>();
         PackageManager pm = context.getPackageManager();
