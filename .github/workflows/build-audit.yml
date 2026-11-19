@@ -51,7 +51,8 @@ jobs:
         working-directory: upstream
         run: python build_apk.py
       - name: Check APK format
-        run: python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v2.9.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
+        run: |
+          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v2.9.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
       - uses: actions/upload-artifact@v4
         with:
           name: Lenovo-Y70-v3.0-audit-debug
