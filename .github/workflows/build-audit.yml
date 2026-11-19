@@ -1,4 +1,4 @@
-name: Build Lenovo Y70 v3.0 audit
+name: Build Lenovo Y70 v3.0.1 audit
 
 on:
   push:
@@ -50,12 +50,15 @@ jobs:
       - name: Build signed debug APK
         working-directory: upstream
         run: python build_apk.py
+      - name: Rename APK to current version
+        shell: pwsh
+        run: Move-Item 'upstream/LenovoMotorolovichY70_v2.9.apk' 'upstream/LenovoMotorolovichY70_v3.0.1-audit.apk'
       - name: Check APK format
         run: |
-          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v2.9.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
+          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v3.0.1-audit.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
       - uses: actions/upload-artifact@v4
         with:
-          name: Lenovo-Y70-v3.0-audit-debug
-          path: upstream/LenovoMotorolovichY70_v2.9.apk
+          name: Lenovo-Y70-v3.0.1-audit-debug
+          path: upstream/LenovoMotorolovichY70_v3.0.1-audit.apk
           if-no-files-found: error
           retention-days: 14
