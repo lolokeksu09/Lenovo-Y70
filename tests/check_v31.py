@@ -54,7 +54,7 @@ assert "if (ok && updatedInfo.status == NfcFixHelper.NfcStatus.FIXED_100_PERCENT
 assert "if (ok && updatedInfo.status == NfcFixHelper.NfcStatus.FACTORY_STOCK)" in menu
 
 # Version must be consistent across manifest, menu and downloadable APK.
-assert 'android:versionCode="33"' in manifest
-assert 'android:versionName="3.1.1-audit"' in manifest
-assert "LenovoMotorolovichY70 v3.1.1-audit" in layout
+assert 'android:versionCode="34"' in manifest
+assert 'android:versionName="3.1.2-audit"' in manifest
+assert "LenovoMotorolovichY70 v3.1.2-audit" in layout
 print("PASS: v3.1 safety invariants")
