@@ -42,7 +42,8 @@ assert "getVerifiedPackageEnabledState(context, packageName)" in method
 assert "if (current == null)" in method
 assert "if (current.booleanValue())" in method
 assert '"pm enable --user 0 "' in method
-assert "command.success && Boolean.TRUE.equals(after)" in method
+assert "if (!command.success)" in method
+assert "if (Boolean.TRUE.equals(after))" in method
 assert "clearAfterRestore(context, packageName)" in method
 assert "pm unsuspend" not in method
 assert "cmd appops" not in method
@@ -52,3 +53,17 @@ assert "Boolean.FALSE.equals(c.enabled)" in policy
 assert "c.protectedPackage" in policy
 assert "LinkedHashSet" in policy
 print("PASS: bulk-enable confirmation, strict eligibility, per-package verification, progress and refresh")
+
+# Motorola system-server restrictions must be summarized, not displayed as stacks.
+helper = (src / "BulkEnableFailure.java").read_text(encoding="utf-8")
+assert "Shell cannot change component state".lower() in helper.lower() or "shell cannot change component state" in helper
+assert "BulkEnableFailure.explain(command.exitCode, command.detail)" in method
+assert "if (!command.success)" in method
+assert "Ограничение Android:" in helper
+assert "else if (reason.startsWith(\"Ограничение Android:\"))" in activity
+assert "Запрещено прошивкой:" in activity
+assert '.setNeutralButton("Копировать отчёт"' in activity
+assert "blockedPackages.size()" in activity
+assert 'String reason = PackageHelper.getLastOperationError(pkg)' in activity
+assert '"Включение не подтверждено (код: " + command.exitCode' not in method
+print("PASS: Motorola SecurityException handling, concise report and copy action")

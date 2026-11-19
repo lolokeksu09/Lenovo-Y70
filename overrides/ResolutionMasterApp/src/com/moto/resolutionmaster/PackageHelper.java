@@ -291,8 +291,9 @@ public class PackageHelper {
         // If it stayed enabled, remove the pending record. Unknown state keeps
         // the record for recovery after a crash or permission loss.
         if (Boolean.TRUE.equals(after)) clearAfterRestore(context, packageName);
-        error(packageName, "Отключение не подтверждено. pm: " + disable.detail +
-            " (" + disable.exitCode + "), suspend: " + suspend.detail + " (" + suspend.exitCode + ")");
+        error(packageName, "Отключение не подтверждено: " +
+            BulkEnableFailure.explain(disable.exitCode, disable.detail) + "; suspend: " +
+            BulkEnableFailure.explain(suspend.exitCode, suspend.detail));
         return false;
     }
 
@@ -324,9 +325,9 @@ public class PackageHelper {
             clearAfterRestore(context, packageName);
             return true;
         }
-        error(packageName, "Восстановление не подтверждено. pm: " + enabled.detail +
-            " (" + enabled.exitCode + "), unsuspend: " + unsuspended.detail +
-            " (" + unsuspended.exitCode + ")");
+        error(packageName, "Восстановление не подтверждено: " +
+            BulkEnableFailure.explain(enabled.exitCode, enabled.detail) + "; unsuspend: " +
+            BulkEnableFailure.explain(unsuspended.exitCode, unsuspended.detail));
         return false;
     }
 
@@ -363,13 +364,18 @@ public class PackageHelper {
 
         ShellHelper.CommandResult command = ShellHelper.runCommandWithResult(
             context, "pm enable --user 0 " + packageName);
+        if (!command.success) {
+            // A protected system component on the Motorola ROM can produce
+            // hundreds of lines of stack trace. Summarize the root cause.
+            error(packageName, BulkEnableFailure.explain(command.exitCode, command.detail));
+            return false; // No extra shell readback for an already rejected write.
+        }
         Boolean after = getVerifiedPackageEnabledState(context, packageName);
-        if (command.success && Boolean.TRUE.equals(after)) {
+        if (Boolean.TRUE.equals(after)) {
             clearAfterRestore(context, packageName);
             return true;
         }
-        error(packageName, "Включение не подтверждено (код: " + command.exitCode +
-            "). " + command.detail);
+        error(packageName, BulkEnableFailure.explain(command.exitCode, command.detail));
         return false;
     }
 
