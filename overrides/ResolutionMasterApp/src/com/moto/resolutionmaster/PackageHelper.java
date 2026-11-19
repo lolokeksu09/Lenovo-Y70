@@ -336,6 +336,19 @@ public class PackageHelper {
      * unsuspend applications or reset their AppOps settings. Restore ONLY a
      * package that is still confirmed disabled for Android user 0.
      */
+    /**
+     * Read package enabled setting for user 0 via the current PackageManager.
+     * The value is a routing hint, not proof of successful restoration.
+     */
+    public static int readApplicationEnabledSetting(Context context, String packageName) {
+        try {
+            return context.getPackageManager().getApplicationEnabledSetting(packageName);
+        } catch (Throwable error) {
+            Log.w(TAG, "Cannot read enabled setting for " + packageName, error);
+            return -1;
+        }
+    }
+
     public static boolean enableConfirmedDisabledPackage(Context context, String packageName) {
         if (packageName == null ||
                 !packageName.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")) {
@@ -359,6 +372,17 @@ public class PackageHelper {
         }
         if (current.booleanValue()) {
             error(packageName, "Пропуск: приложение уже включено");
+            return false;
+        }
+
+        RestoreRoute.Mode route = RestoreRoute.choose(current,
+            readApplicationEnabledSetting(context, packageName));
+        if (route == RestoreRoute.Mode.SETTINGS) {
+            error(packageName, "Ограничение Android: требуется включить через системные настройки");
+            return false;
+        }
+        if (route != RestoreRoute.Mode.SHELL) {
+            error(packageName, "Пропуск: состояние пакета противоречиво; команда отменена");
             return false;
         }
 
