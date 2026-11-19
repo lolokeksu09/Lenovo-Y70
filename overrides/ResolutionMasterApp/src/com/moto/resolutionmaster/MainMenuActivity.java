@@ -200,7 +200,7 @@ public class MainMenuActivity extends Activity {
                         new AlertDialog.Builder(MainMenuActivity.this)
                             .setTitle("Требуется Shizuku или Root")
                             .setMessage("Для активации фикса NFC выберите удобный вариант:\n\n" +
-                                "1. Shizuku (без ПК) — активируйте Shizuku через «Беспроводную отладку», и фикс применится в 1 клик прямо на телефоне.\n\n" +
+                                "1. Shizuku — требуется доступ через «Беспроводную отладку». Поддержка маршрутизации проверяется до применения.\n\n" +
                                 "2. Root — предоставьте Root-доступ приложению.\n\n" +
                                 "3. Либо нажмите «📦 Экспорт ZIP» и прошейте архив через Magisk / KernelSU.")
                             .setPositiveButton("Открыть Shizuku", new DialogInterface.OnClickListener() {
@@ -234,10 +234,10 @@ public class MainMenuActivity extends Activity {
                                 @Override
                                 public void run() {
                                     applyNfcInfoToViews(updatedInfo);
-                                    if (ok || updatedInfo.status == NfcFixHelper.NfcStatus.FIXED_100_PERCENT) {
+                                    if (ok && updatedInfo.status == NfcFixHelper.NfcStatus.FIXED_100_PERCENT) {
                                         new AlertDialog.Builder(MainMenuActivity.this)
-                                            .setTitle("Фикс NFC успешно применён! ⚡")
-                                            .setMessage("Таблица маршрутизации контроллера перенаправлена на Host Android (DH, DH, DH):\n\n" +
+                                            .setTitle("Маршрутизация NFC подтверждена")
+                                            .setMessage("Прочитаны маршруты NFC после применения (DH, DH, DH):\n\n" +
                                                 "• Empty AID ➔ 0x00 (DH)\n" +
                                                 "• PROTOCOL ISO-DEP ➔ 0x00 (DH)\n" +
                                                 "• TECHNOLOGY A & B ➔ 0x00 (DH)\n\n" +
@@ -1625,10 +1625,10 @@ public class MainMenuActivity extends Activity {
                                 @Override
                                 public void run() {
                                     applyNfcInfoToViews(updatedInfo);
-                                    if (ok || updatedInfo.status == NfcFixHelper.NfcStatus.FACTORY_STOCK) {
+                                    if (ok && updatedInfo.status == NfcFixHelper.NfcStatus.FACTORY_STOCK) {
                                         new AlertDialog.Builder(MainMenuActivity.this)
-                                            .setTitle("NFC возвращен к стоку! 🔄")
-                                            .setMessage("Маршруты контроллера успешно переведены в заводской режим (eSE1, eSE1, eSE1). Перезагрузка не требуется.")
+                                            .setTitle("Откат маршрутов подтверждён")
+                                            .setMessage("Прочитаны маршруты NFC после отката (eSE1, eSE1, eSE1). Совместимость оплаты проверяется отдельно.")
                                             .setPositiveButton("Понятно", null)
                                             .show();
                                     } else {
