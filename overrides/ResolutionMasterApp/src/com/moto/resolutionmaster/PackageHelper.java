@@ -124,7 +124,7 @@ public class PackageHelper {
             if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
                     state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
                 // A contradictory firmware report is UNKNOWN until verified by shell.
-                return new LocalState(ai.enabled ? null : Boolean.FALSE, true);
+                return new LocalState(ai.enabled ? null : Boolean.FALSE, !ai.enabled);
             }
             if (state == PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED) {
                 // Android distinguishes "disabled until used" from user-disabled.
