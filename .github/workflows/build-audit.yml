@@ -109,6 +109,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify Motorola crash recovery and clipboard logs
         run: python tests/check_game_crash_recovery.py
+      - name: Verify MAXE thermal read-only integration
+        run: python tests/check_maxe_thermal.py
+      - name: Run MAXE thermal parser JVM regression
+        shell: pwsh
+        run: |
+          $out = Join-Path $PWD 'tests/thermal-classes'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          & javac -encoding UTF-8 -d $out 'overrides/ResolutionMasterApp/src/com/moto/resolutionmaster/MotorolaThermalState.java' 'tests/MotorolaThermalStateTest.java'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & java -cp $out com.moto.resolutionmaster.MotorolaThermalStateTest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Prepare Android SDK standalone build tools
         shell: pwsh
         run: |
