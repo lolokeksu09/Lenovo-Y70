@@ -120,6 +120,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & java -cp $out com.moto.resolutionmaster.MotorolaThermalStateTest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Motorola Binder recovery invariants
+        run: python tests/check_moto_binder_recovery.py
+      - name: Run Motorola Binder failure JVM regression
+        shell: pwsh
+        run: |
+          $out = Join-Path $PWD 'tests/binder-classes'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          & javac -encoding UTF-8 -d $out 'overrides/ResolutionMasterApp/src/com/moto/resolutionmaster/MotorolaBinderFailurePolicy.java' 'tests/android/os/DeadObjectException.java' 'tests/MotorolaBinderFailurePolicyTest.java'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & java -cp $out com.moto.resolutionmaster.MotorolaBinderFailurePolicyTest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Prepare Android SDK standalone build tools
         shell: pwsh
         run: |
