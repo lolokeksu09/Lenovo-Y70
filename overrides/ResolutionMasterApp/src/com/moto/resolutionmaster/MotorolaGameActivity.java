@@ -38,6 +38,7 @@ public final class MotorolaGameActivity extends Activity {
     private Button btnTouchSet;
     private Button btnCaptureStart;
     private Button btnCaptureStop;
+    private Button btnCaptureCopy;
     private TextView tvControlFeedback;
     private MotorolaGameStateParser.Snapshot lastSnapshot;
     private volatile boolean controlBusy = false;
@@ -68,11 +69,15 @@ public final class MotorolaGameActivity extends Activity {
         tvCaptureStatus = findViewById(R.id.tv_game_capture_status);
         btnCaptureStart = findViewById(R.id.btn_game_capture_start);
         btnCaptureStop = findViewById(R.id.btn_game_capture_stop);
+        btnCaptureCopy = findViewById(R.id.btn_game_capture_copy);
         btnCaptureStart.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { startGameCapture(); }
         });
         btnCaptureStop.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { stopGameCapture(); }
+        });
+        btnCaptureCopy.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { copyGameCapture(); }
         });
         tvObserved = findViewById(R.id.tv_game_observed);
         btnRefresh = findViewById(R.id.btn_game_refresh);
@@ -537,6 +542,17 @@ public final class MotorolaGameActivity extends Activity {
             tvCaptureStatus.setText("Не удалось остановить запись: " +
                 e.getClass().getSimpleName());
         }
+    }
+
+    private void copyGameCapture() {
+        String report = MotorolaCaptureStore.report(this);
+        if (report == null || report.trim().isEmpty()) {
+            notifyAction("Запись ещё не собрана: запусти тест игрового сеанса.");
+            return;
+        }
+        ShellHelper.copyToClipboard(this, report, "Legion Y70 game capture");
+        Toast.makeText(this, "Запись игрового сеанса скопирована",
+            Toast.LENGTH_SHORT).show();
     }
 
     private static boolean verified(MotorolaGameStateParser.Snapshot state,
