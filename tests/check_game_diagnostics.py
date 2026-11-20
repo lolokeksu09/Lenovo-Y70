@@ -69,8 +69,8 @@ assert 'android:id="@+id/btn_open_motorola_game"' in layout
 assert "MotorolaGameActivity.class" in main
 assert 'R.id.btn_open_motorola_game' in main
 assert "btnOpenMotorolaGame.setEnabled(false)" not in main
-assert '"3.2.0-game"' in manifest
-assert '"LenovoMotorolovichY70 v3.2.0-game"' in layout
+assert '"3.2.1-game"' in manifest
+assert '"LenovoMotorolovichY70 v3.2.1-game"' in layout
 xml = ET.fromstring(manifest)
 screen = [a for a in xml.findall(".//activity")
           if a.attrib.get(ns + "name") == ".MotorolaGameActivity"]
@@ -80,8 +80,28 @@ for id in ("tv_game_access", "tv_game_dps", "tv_game_dps_request",
            "tv_game_touch", "tv_game_mode", "tv_game_support",
            "tv_game_observed", "btn_game_refresh", "btn_game_gametime", "btn_game_shizuku"):
     assert '@+id/' + id in game_layout
-for id in ("btn_game_dps_set", "btn_game_touch_set", "tv_game_control_feedback"):
+for id in ("btn_game_dps_set", "btn_game_touch_set", "tv_game_control_feedback",
+           "btn_game_copy_report"):
     assert '@+id/' + id in game_layout
 assert '<uses-library android:name="moto-core_services" android:required="false"' in manifest
 assert 'com.motorola.permission.SET_DIRECT_POWER_SUPPLY_STATUS' in manifest
+
+# Regression: previously, denied permission/failed readback disabled clickable
+# controls completely, and status refresh overwrote the last action error.
+assert "btnDpsSet.setEnabled(true);" in activity
+assert "btnTouchSet.setEnabled(true);" in activity
+assert "btnDpsSet.setEnabled(hardwareKnown && hasDpsPermission())" not in activity
+assert "btnTouchSet.setEnabled(s.readable && s.touchServiceConnected)" not in activity
+update_controls = activity.split("private void updateControls(", 1)[1].split(
+    "private void notifyAction(", 1)[0]
+assert "tvControlFeedback.setText(" not in update_controls
+assert "private void notifyAction(String message)" in activity
+assert "Toast.makeText(this, message, Toast.LENGTH_LONG).show();" in activity
+assert 'notifyAction("Bypass заблокирован Android:' in activity
+assert 'notifyAction("Touch Boost: нет данных' in activity
+assert "notifyAction(feedback);" in activity
+assert "private void copyDiagnosticReport()" in activity
+assert "ShellHelper.copyToClipboard(this, report" in activity
+assert "btnCopyReport.setOnClickListener(" in activity
+
 print("PASS: direct Motorola calls gated, verified status and no raw privileged workarounds")

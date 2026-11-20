@@ -62,6 +62,18 @@
                 android:textSize="12sp"
                 android:lineSpacingExtra="2dp" />
 
+            <Button
+                android:id="@+id/btn_game_copy_report"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="44dp"
+                android:background="@drawable/btn_chip"
+                android:text="Скопировать диагностику"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp" />
+
             <TextView
                 android:id="@+id/tv_game_observed"
                 android:layout_width="match_parent"
