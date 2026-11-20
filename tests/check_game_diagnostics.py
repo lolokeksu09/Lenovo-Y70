@@ -34,7 +34,22 @@ assert 'context.checkSelfPermission(DPS_PERMISSION)' in controller
 assert 'PackageManager.PERMISSION_GRANTED' in controller
 assert 'options.putInt("touch_enhance_enable", enable ? 1 : 0)' in controller
 assert 'options.putString("game_package_name", gamePackage)' in controller
-assert 'getInstance", Context.class' in controller
+# Reproduce null MotoExtendManagerCore, not an unavailable driver.
+assert 'getInstance", Context.class' not in controller
+assert '"com.motorola.misc.MotoExtendManagerCore"' in controller
+assert '"com.motorola.misc.IMotoExtendService$Stub"' in controller
+assert 'getMethod("asInterface", IBinder.class)' in controller
+assert 'getConstructor(interfaceClass, Context.class)' in controller
+assert '"moto_extend_service"' in controller
+assert '"android.os.ServiceManager"' in controller
+assert 'getDeclaredMethod("getService", String.class)' in controller
+assert 'manager.getClass().getMethod(' not in controller
+assert 'core(context)' in controller
+assert 'new Binder()' in controller
+assert 'setDirectPowerSupplyStatus", int.class, IBinder.class' in controller
+assert 'setGameModeState", boolean.class, Bundle.class' in controller
+assert 'IllegalStateException("Сервис moto_extend_service не найден")' in controller
+assert '"Команда отправлена, но её результат не подтверждён' in activity
 assert 'MotoGameController.requestBypass(' in activity
 assert 'MotoGameController.requestTouch(' in activity
 assert '"dumpsys moto_extend_service"' in activity
