@@ -1,11 +1,10 @@
 package com.moto.resolutionmaster;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.net.Uri;
-import android.content.pm.PackageManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -15,9 +14,9 @@ import java.text.DateFormat;
 import java.util.Date;
 
 /**
- * Read-only GameTime hardware diagnostics for the Lenovo Y70 Motorola ROM.
- * Commands run under the user's existing Shizuku authorization, on a worker.
- * No raw Binder writes, no sysfs edits, no signature permission impersonation.
+ * Direct Motorola GameTime API controls with independently verified readback.
+ * Cannot silently obtain Motorola signature|privileged DPS permission.
+ * No sysfs edits, raw Binder codes or fake success on void API calls.
  */
 public final class MotorolaGameActivity extends Activity {
     private TextView tvAccess;
@@ -30,6 +29,11 @@ public final class MotorolaGameActivity extends Activity {
     private Button btnRefresh;
     private Button btnGameTime;
     private Button btnShizuku;
+    private Button btnDpsSet;
+    private Button btnTouchSet;
+    private TextView tvControlFeedback;
+    private MotorolaGameStateParser.Snapshot lastSnapshot;
+    private volatile boolean controlBusy = false;
     private volatile boolean destroyed = false;
     private int requestSerial = 0;
 
@@ -48,6 +52,17 @@ public final class MotorolaGameActivity extends Activity {
         btnRefresh = findViewById(R.id.btn_game_refresh);
         btnGameTime = findViewById(R.id.btn_game_gametime);
         btnShizuku = findViewById(R.id.btn_game_shizuku);
+        btnDpsSet = findViewById(R.id.btn_game_dps_set);
+        btnTouchSet = findViewById(R.id.btn_game_touch_set);
+        tvControlFeedback = findViewById(R.id.tv_game_control_feedback);
+        btnDpsSet.setEnabled(false);
+        btnTouchSet.setEnabled(false);
+        btnDpsSet.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { requestBypassFromUi(); }
+        });
+        btnTouchSet.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { requestTouchFromUi(); }
+        });
 
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { refresh(); }
@@ -81,6 +96,7 @@ public final class MotorolaGameActivity extends Activity {
     }
 
     private void refresh() {
+        if (controlBusy) return;
         final int request = ++requestSerial;
         btnRefresh.setEnabled(false);
         btnRefresh.setText("Считывание...");
@@ -129,6 +145,7 @@ public final class MotorolaGameActivity extends Activity {
     }
 
     private void showState(MotorolaGameStateParser.Snapshot s, String access) {
+        lastSnapshot = s;
         tvAccess.setText(access);
         tvObserved.setText("Последняя проверка: " +
             DateFormat.getTimeInstance(DateFormat.MEDIUM).format(new Date()));
@@ -141,6 +158,7 @@ public final class MotorolaGameActivity extends Activity {
             tvDpsRequests.setText("Запросы питания: неизвестно");
             tvMode.setText("Активная игра: неизвестно");
             tvCapabilities.setText("Для диагностики необходим доступ к moto_extend_service.");
+            updateControls(s);
             return;
         }
         if (Boolean.FALSE.equals(s.dpsSupported)) {
@@ -167,7 +185,10 @@ public final class MotorolaGameActivity extends Activity {
             tvTouch.setText("Touch Boost: нет активного запроса GameTime");
         }
         tvMode.setText("Игровой режим: " + truth(s.gameModeActive) +
-            "\nИгра: " + (s.gamePackage == null ? "не определена" : s.gamePackage));
+            "\nИгра GameTime: " + (s.gamePackage == null ? "не определена" : s.gamePackage) +
+            "\nЗапрос Lenovo Y70: " +
+            (s.ownTouchRequested == null ? "не отправлен" :
+                Boolean.TRUE.equals(s.ownTouchRequested) ? "включить" : "выключить"));
         tvCapabilities.setText(
             "Интерфейс Goodix/Motorola: " +
                 (s.touchServiceConnected ? "подключён" : "не подтверждён") +
@@ -176,6 +197,149 @@ public final class MotorolaGameActivity extends Activity {
             "\nЧувствительность нажатий: " + truth(s.tapSensitivitySupported) +
             "\nОтзывчивость свайпов: " + truth(s.swipeResponsivenessSupported) +
             "\nПоддержка API не означает измеренную частоту или задержку.");
+        updateControls(s);
+    }
+
+    private boolean hasDpsPermission() {
+        return checkSelfPermission(MotoGameController.DPS_PERMISSION)
+            == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void updateControls(MotorolaGameStateParser.Snapshot s) {
+        if (controlBusy) {
+            btnDpsSet.setEnabled(false);
+            btnTouchSet.setEnabled(false);
+            return;
+        }
+        boolean hardwareKnown = s.readable && Boolean.TRUE.equals(s.dpsSupported) &&
+            (Integer.valueOf(0).equals(s.hardwareDpsStatus) ||
+             Integer.valueOf(1).equals(s.hardwareDpsStatus));
+        btnDpsSet.setEnabled(hardwareKnown && hasDpsPermission());
+        if (!hardwareKnown) {
+            btnDpsSet.setText("Bypass: аппаратный статус недоступен");
+        } else if (!hasDpsPermission()) {
+            btnDpsSet.setText("Bypass: требуются права Motorola");
+            tvControlFeedback.setText(
+                "Bypass нельзя включить с обычной подписью APK: " +
+                "signature|privileged. Shizuku без Root это разрешение не выдаёт.");
+        } else {
+            btnDpsSet.setText(Integer.valueOf(1).equals(s.hardwareDpsStatus)
+                ? "Выключить Bypass" : "Включить Bypass");
+        }
+        btnTouchSet.setEnabled(s.readable && s.touchServiceConnected);
+        btnTouchSet.setText(Boolean.TRUE.equals(s.ownTouchRequested)
+            ? "Выключить наш Touch Boost" : "Включить Touch Boost");
+    }
+
+    private void requestBypassFromUi() {
+        final MotorolaGameStateParser.Snapshot s = lastSnapshot;
+        if (s == null || !s.readable || !Boolean.TRUE.equals(s.dpsSupported) ||
+                s.hardwareDpsStatus == null || !hasDpsPermission()) {
+            tvControlFeedback.setText("Bypass недоступен из этого APK: нет аппаратного статуса или привилегий.");
+            return;
+        }
+        final boolean enable = s.hardwareDpsStatus.intValue() == 0;
+        if (enable && !PowerHelper.getBatteryInfo(this).isPlugged) {
+            tvControlFeedback.setText("Для прямого питания сначала подключи зарядное устройство.");
+            return;
+        }
+        if (enable) {
+            new AlertDialog.Builder(this)
+                .setTitle("Включить прямое питание?")
+                .setMessage("Передадим команду штатному Motorola API. " +
+                    "Успех покажем только после подтверждения аппаратного " +
+                    "статуса контроллера. Отключить можно здесь или в GameTime.")
+                .setPositiveButton("Включить", (d, which) -> runControl(true, true, null))
+                .setNegativeButton("Отмена", null)
+                .show();
+        } else {
+            runControl(true, false, null);
+        }
+    }
+
+    private void requestTouchFromUi() {
+        final MotorolaGameStateParser.Snapshot s = lastSnapshot;
+        if (s == null || !s.readable || !s.touchServiceConnected) {
+            tvControlFeedback.setText("Не доступен интерфейс сенсора Motorola.");
+            return;
+        }
+        String game = s.ownGamePackage != null ? s.ownGamePackage
+            : s.gamePackage != null ? s.gamePackage
+            : "com.riotgames.league.wildrift";
+        boolean enable = !Boolean.TRUE.equals(s.ownTouchRequested);
+        runControl(false, enable, game);
+    }
+
+    private void runControl(final boolean bypass, final boolean enable,
+                            final String gamePackage) {
+        if (controlBusy || destroyed) return;
+        controlBusy = true;
+        final int request = ++requestSerial;
+        btnDpsSet.setEnabled(false);
+        btnTouchSet.setEnabled(false);
+        btnRefresh.setEnabled(false);
+        tvControlFeedback.setText("Передача команды Motorola и проверка результата...");
+        new Thread(new Runnable() {
+            @Override public void run() {
+                MotoGameController.Result call = bypass
+                    ? MotoGameController.requestBypass(MotorolaGameActivity.this, enable)
+                    : MotoGameController.requestTouch(
+                        MotorolaGameActivity.this, enable, gamePackage);
+                MotorolaGameStateParser.Snapshot observed = null;
+                if (ShellHelper.isShizukuPermissionGranted() || ShellHelper.isRootAvailable()) {
+                    // Reconcile from the system state, not a void method return.
+                    for (int attempt = 0; attempt < (call.sent ? 3 : 1); attempt++) {
+                        if (attempt > 0) {
+                            try { Thread.sleep(450); }
+                            catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                        }
+                        ShellHelper.CommandResult data = ShellHelper.runCommandWithResult(
+                            MotorolaGameActivity.this, "dumpsys moto_extend_service");
+                        observed = data.success
+                            ? MotorolaGameStateParser.parse(data.detail)
+                            : MotorolaGameStateParser.unavailable("Нет доступа к системной проверке");
+                        if (verified(observed, bypass, enable, gamePackage)) break;
+                    }
+                }
+                final MotorolaGameStateParser.Snapshot finalObserved = observed;
+                final boolean verified = call.sent &&
+                    verified(observed, bypass, enable, gamePackage);
+                final String feedback = !call.sent
+                    ? call.reason
+                    : verified
+                        ? (bypass
+                            ? "Bypass: аппаратное состояние подтверждено"
+                            : "Touch Boost: подтверждён запрос Lenovo Y70 в Motorola; " +
+                              "частота опроса не измерялась")
+                        : "Команда отправлена, но её результат не подтверждён " +
+                          "системным сервисом. Состояние не изменено в интерфейсе.";
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (destroyed || isFinishing() || request != requestSerial) return;
+                        controlBusy = false;
+                        btnRefresh.setEnabled(true);
+                        tvControlFeedback.setText(feedback);
+                        if (finalObserved != null && finalObserved.readable) {
+                            showState(finalObserved, "Состояние перечитано из Motorola");
+                        } else if (lastSnapshot != null) {
+                            updateControls(lastSnapshot);
+                        }
+                    }
+                });
+            }
+        }, "MotoGameControl").start();
+    }
+
+    private static boolean verified(MotorolaGameStateParser.Snapshot state,
+                                    boolean bypass, boolean enable, String gamePackage) {
+        if (state == null || !state.readable) return false;
+        if (bypass) return (enable ? Integer.valueOf(1) : Integer.valueOf(0))
+            .equals(state.hardwareDpsStatus);
+        return (enable ? Boolean.TRUE : Boolean.FALSE).equals(state.ownTouchRequested) &&
+            gamePackage != null && gamePackage.equals(state.ownGamePackage);
     }
 
     private static String truth(Boolean state) {

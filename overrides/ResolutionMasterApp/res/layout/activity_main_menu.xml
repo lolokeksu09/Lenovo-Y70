@@ -1724,7 +1724,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LenovoMotorolovichY70 v3.1.9-game"
+                android:text="LenovoMotorolovichY70 v3.2.0-game"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
