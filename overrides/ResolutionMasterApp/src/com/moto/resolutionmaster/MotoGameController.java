@@ -33,6 +33,11 @@ public final class MotoGameController {
     private static final IBinder DPS_TOKEN = new Binder();
     private static final Object CORE_LOCK = new Object();
     private static volatile Object coreInstance;
+    // Cache an actual live Binder, not just the Java Core wrapper. Motorola
+    // services may restart independently while this app remains alive.
+    private static IBinder coreServiceBinder;
+    private static IBinder.DeathRecipient coreDeathRecipient;
+    private static volatile boolean preferRegisteredCore;
     public static final String DPS_PERMISSION =
         "com.motorola.permission.SET_DIRECT_POWER_SUPPLY_STATUS";
 
@@ -81,6 +86,12 @@ public final class MotoGameController {
             }
             return Result.accepted();
         } catch (Throwable t) {
+            if (isDeadBinderFailure(t)) {
+                invalidateCachedCore();
+                return Result.refused(
+                    "Motorola Binder перезапустился. Соединение сброшено; " +
+                    "проверь состояние и нажми ещё раз. Команда автоматически не повторяется.");
+            }
             return Result.refused(explain(t));
         }
     }
@@ -122,6 +133,12 @@ public final class MotoGameController {
                 .invoke(manager, true, options);
             return Result.accepted();
         } catch (Throwable t) {
+            if (isDeadBinderFailure(t)) {
+                invalidateCachedCore();
+                return Result.refused(
+                    "Motorola Binder перезапустился. Соединение сброшено; " +
+                    "сначала проверь состояние Touch Boost, затем повтори запрос.");
+            }
             return Result.refused(explain(t));
         }
     }
@@ -140,6 +157,7 @@ public final class MotoGameController {
      * not change identity or permissions; the service checks our own UID.
      */
     private static Object manager(Context context) throws Exception {
+        if (preferRegisteredCore) return coreFromRegisteredService(context);
         try {
             Class<?> klass = Class.forName(MANAGER);
             Object instance = klass.getMethod("getInstance", Context.class)
@@ -160,14 +178,16 @@ public final class MotoGameController {
     }
 
     private static Object coreFromRegisteredService(Context context) throws Exception {
-        Object cached = coreInstance;
-        if (cached != null) return cached;
         synchronized (CORE_LOCK) {
-            if (coreInstance != null) return coreInstance;
+            // A previously cached Core with a dead Binder cannot be reused.
+            if (coreInstance != null && coreServiceBinder != null &&
+                    coreServiceBinder.isBinderAlive() && coreServiceBinder.pingBinder()) {
+                return coreInstance;
+            }
+            clearCachedCoreLocked();
 
-            // android.os.ServiceManager is a hidden framework class.
-            // Reflection may itself be blocked on some Android builds; in that
-            // case the caller reports a failure, never a fake "enabled" state.
+            // android.os.ServiceManager is a hidden framework class. Reflection
+            // can be denied on a normal APK; report that failure, never spoof UID.
             Class<?> serviceManager = Class.forName("android.os.ServiceManager");
             Method getService = serviceManager.getDeclaredMethod(
                 "getService", String.class);
@@ -177,10 +197,15 @@ public final class MotoGameController {
                 throw new IllegalStateException(
                     "Сервис moto_extend_service не предоставил Binder нашему APK");
             }
+            final IBinder binder = (IBinder) rawBinder;
+            if (!binder.isBinderAlive() || !binder.pingBinder()) {
+                throw new IllegalStateException(
+                    "Motorola Binder недоступен или перезапускается");
+            }
 
             Class<?> stubClass = Class.forName(SERVICE_INTERFACE + "$Stub");
             Method asInterface = stubClass.getMethod("asInterface", IBinder.class);
-            Object service = asInterface.invoke(null, (IBinder) rawBinder);
+            Object service = asInterface.invoke(null, binder);
             if (service == null) {
                 throw new IllegalStateException(
                     "Motorola IMotoExtendService.Stub.asInterface вернул null");
@@ -195,9 +220,58 @@ public final class MotoGameController {
                 throw new IllegalStateException(
                     "Конструктор Motorola Core вернул null");
             }
+
+            // Keep the death callback bound to this exact connection so an old
+            // callback cannot erase a newer Core created after a restart.
+            IBinder.DeathRecipient recipient = new IBinder.DeathRecipient() {
+                @Override public void binderDied() {
+                    synchronized (CORE_LOCK) {
+                        if (coreServiceBinder == binder) {
+                            clearCachedCoreLocked();
+                            preferRegisteredCore = true;
+                        }
+                    }
+                }
+            };
+            binder.linkToDeath(recipient, 0);
+            coreServiceBinder = binder;
+            coreDeathRecipient = recipient;
             coreInstance = result;
+            preferRegisteredCore = true;
             return result;
         }
+    }
+
+    private static void clearCachedCoreLocked() {
+        if (coreServiceBinder != null && coreDeathRecipient != null) {
+            coreServiceBinder.unlinkToDeath(coreDeathRecipient, 0);
+        }
+        coreInstance = null;
+        coreServiceBinder = null;
+        coreDeathRecipient = null;
+    }
+
+    private static void invalidateCachedCore() {
+        synchronized (CORE_LOCK) {
+            preferRegisteredCore = true;
+            clearCachedCoreLocked();
+        }
+    }
+
+    private static boolean isDeadBinderFailure(Throwable t) {
+        Throwable cause = t;
+        for (int i = 0; cause != null && i < 8; i++) {
+            // Only transport death justifies invalidating the connection.
+            // No retry is safe for an OEM mutation whose outcome is unknown.
+            if ("android.os.DeadObjectException".equals(
+                    cause.getClass().getName())) return true;
+            Throwable next = cause instanceof InvocationTargetException
+                ? ((InvocationTargetException) cause).getTargetException()
+                : cause.getCause();
+            if (next == cause) break;
+            cause = next;
+        }
+        return false;
     }
 
     private static String explain(Throwable t) {
