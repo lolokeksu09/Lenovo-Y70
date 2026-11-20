@@ -55,8 +55,10 @@ public final class MotorolaGameActivity extends Activity {
         btnDpsSet = findViewById(R.id.btn_game_dps_set);
         btnTouchSet = findViewById(R.id.btn_game_touch_set);
         tvControlFeedback = findViewById(R.id.tv_game_control_feedback);
-        btnDpsSet.setEnabled(false);
-        btnTouchSet.setEnabled(false);
+        // These are actions, not status lamps: even a denied operation must
+        // give a visible reason when the user taps it.
+        btnDpsSet.setEnabled(true);
+        btnTouchSet.setEnabled(true);
         btnDpsSet.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { requestBypassFromUi(); }
         });
@@ -211,36 +213,64 @@ public final class MotorolaGameActivity extends Activity {
             btnTouchSet.setEnabled(false);
             return;
         }
+        // Never disable due to missing permission/readback: user must be
+        // able to tap and receive a specific denial or recovery instruction.
+        btnDpsSet.setEnabled(true);
+        btnTouchSet.setEnabled(true);
         boolean hardwareKnown = s.readable && Boolean.TRUE.equals(s.dpsSupported) &&
             (Integer.valueOf(0).equals(s.hardwareDpsStatus) ||
              Integer.valueOf(1).equals(s.hardwareDpsStatus));
-        btnDpsSet.setEnabled(hardwareKnown && hasDpsPermission());
-        if (!hardwareKnown) {
-            btnDpsSet.setText("Bypass: аппаратный статус недоступен");
-        } else if (!hasDpsPermission()) {
-            btnDpsSet.setText("Bypass: требуются права Motorola");
-            tvControlFeedback.setText(
-                "Bypass нельзя включить с обычной подписью APK: " +
-                "signature|privileged. Shizuku без Root это разрешение не выдаёт.");
+        if (!hasDpsPermission()) {
+            btnDpsSet.setText("Bypass: почему недоступен?");
+        } else if (!hardwareKnown) {
+            btnDpsSet.setText("Bypass: проверить доступ к контроллеру");
         } else {
             btnDpsSet.setText(Integer.valueOf(1).equals(s.hardwareDpsStatus)
                 ? "Выключить Bypass" : "Включить Bypass");
         }
-        btnTouchSet.setEnabled(s.readable && s.touchServiceConnected);
-        btnTouchSet.setText(Boolean.TRUE.equals(s.ownTouchRequested)
-            ? "Выключить наш Touch Boost" : "Включить Touch Boost");
+        btnTouchSet.setText(s.readable && s.touchServiceConnected
+            ? (Boolean.TRUE.equals(s.ownTouchRequested)
+                ? "Выключить наш Touch Boost" : "Включить Touch Boost")
+            : "Touch Boost: проверить доступ");
+        // Do not overwrite tvControlFeedback here: it belongs to the last
+        // user action, not the async status refresh.
+    }
+
+    private void notifyAction(String message) {
+        tvControlFeedback.setText(message);
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private void requestBypassFromUi() {
+        if (controlBusy) {
+            notifyAction("Операция Motorola уже выполняется.");
+            return;
+        }
+        if (!hasDpsPermission()) {
+            notifyAction("Bypass заблокирован Android: этому APK не выдано " +
+                "разрешение Motorola signature|privileged. Shizuku без Root " +
+                "не может выдать его обычному приложению.");
+            return;
+        }
         final MotorolaGameStateParser.Snapshot s = lastSnapshot;
-        if (s == null || !s.readable || !Boolean.TRUE.equals(s.dpsSupported) ||
-                s.hardwareDpsStatus == null || !hasDpsPermission()) {
-            tvControlFeedback.setText("Bypass недоступен из этого APK: нет аппаратного статуса или привилегий.");
+        if (s == null || !s.readable) {
+            notifyAction("Bypass: системное состояние ещё не прочитано. " +
+                "Проверь доступ Shizuku и нажми «Обновить состояние».");
+            return;
+        }
+        if (!Boolean.TRUE.equals(s.dpsSupported)) {
+            notifyAction("Motorola не подтверждает поддержку прямого питания.");
+            return;
+        }
+        if (!Integer.valueOf(0).equals(s.hardwareDpsStatus) &&
+                !Integer.valueOf(1).equals(s.hardwareDpsStatus)) {
+            notifyAction("Неизвестный аппаратный статус Bypass. " +
+                "Изменение питания отменено.");
             return;
         }
         final boolean enable = s.hardwareDpsStatus.intValue() == 0;
         if (enable && !PowerHelper.getBatteryInfo(this).isPlugged) {
-            tvControlFeedback.setText("Для прямого питания сначала подключи зарядное устройство.");
+            notifyAction("Для прямого питания сначала подключи зарядное устройство.");
             return;
         }
         if (enable) {
@@ -258,9 +288,18 @@ public final class MotorolaGameActivity extends Activity {
     }
 
     private void requestTouchFromUi() {
+        if (controlBusy) {
+            notifyAction("Операция Motorola уже выполняется.");
+            return;
+        }
         final MotorolaGameStateParser.Snapshot s = lastSnapshot;
-        if (s == null || !s.readable || !s.touchServiceConnected) {
-            tvControlFeedback.setText("Не доступен интерфейс сенсора Motorola.");
+        if (s == null || !s.readable) {
+            notifyAction("Touch Boost: нет данных от moto_extend_service. " +
+                "Дай доступ Shizuku и нажми «Обновить состояние».");
+            return;
+        }
+        if (!s.touchServiceConnected) {
+            notifyAction("Touch Boost: сервис сенсора Motorola не подключён.");
             return;
         }
         String game = s.ownGamePackage != null ? s.ownGamePackage
@@ -321,12 +360,14 @@ public final class MotorolaGameActivity extends Activity {
                         if (destroyed || isFinishing() || request != requestSerial) return;
                         controlBusy = false;
                         btnRefresh.setEnabled(true);
-                        tvControlFeedback.setText(feedback);
                         if (finalObserved != null && finalObserved.readable) {
                             showState(finalObserved, "Состояние перечитано из Motorola");
                         } else if (lastSnapshot != null) {
                             updateControls(lastSnapshot);
                         }
+                        // Status refresh must not replace this result with an
+                        // unrelated warning about the other control.
+                        notifyAction(feedback);
                     }
                 });
             }
