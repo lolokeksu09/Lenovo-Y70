@@ -3,6 +3,11 @@ package com.moto.resolutionmaster;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Binder;
+import android.os.IBinder;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -20,6 +25,14 @@ import java.lang.reflect.Method;
 public final class MotoGameController {
     private static final String MANAGER =
         "motorola.core_services.misc.MotoExtendManager";
+    private static final String CORE = "com.motorola.misc.MotoExtendManagerCore";
+    private static final String SERVICE_INTERFACE = "com.motorola.misc.IMotoExtendService";
+    private static final String SERVICE_NAME = "moto_extend_service";
+    // Use a persistent Binder token for the lifetime of the app process.
+    // This is a normal client token, NOT a privileged UID or raw transaction.
+    private static final IBinder DPS_TOKEN = new Binder();
+    private static final Object CORE_LOCK = new Object();
+    private static volatile Object coreInstance;
     public static final String DPS_PERMISSION =
         "com.motorola.permission.SET_DIRECT_POWER_SUPPLY_STATUS";
 
@@ -57,8 +70,15 @@ public final class MotoGameController {
             if (!Boolean.TRUE.equals(supported.invoke(manager))) {
                 return Result.refused("Контроллер Motorola не поддерживает Direct Power Supply");
             }
-            manager.getClass().getMethod("setDirectPowerSupplyStatus", int.class)
-                .invoke(manager, enable ? 1 : 0);
+            if (isCore(manager)) {
+                // Core exposes the typed AIDL call with a client Binder token.
+                manager.getClass().getMethod(
+                        "setDirectPowerSupplyStatus", int.class, IBinder.class)
+                    .invoke(manager, enable ? 1 : 0, DPS_TOKEN);
+            } else {
+                manager.getClass().getMethod("setDirectPowerSupplyStatus", int.class)
+                    .invoke(manager, enable ? 1 : 0);
+            }
             return Result.accepted();
         } catch (Throwable t) {
             return Result.refused(explain(t));
@@ -101,14 +121,78 @@ public final class MotoGameController {
         }
     }
 
+    /**
+     * On Lenovo Y70 with Motorola firmware, a normal application gets null
+     * from Context.getSystemService("moto_extend_service") even though the
+     * service is registered and accessible to dumpsys.
+     *
+     * MotoExtendManager.getInstance(Context) wraps that null manager, so
+     * calling isTouchEnhanceSupported() used to fail with an NPE.
+     *
+     * Prefer the normal wrapper when correctly initialized. Otherwise obtain
+     * the binder by its verified service name and construct the *official*
+     * framework MotoExtendManagerCore(IMotoExtendService, Context). This does
+     * not change identity or permissions; the service checks our own UID.
+     */
     private static Object manager(Context context) throws Exception {
-        Class<?> klass = Class.forName(MANAGER);
-        Object instance = klass.getMethod("getInstance", Context.class)
-            .invoke(null, context.getApplicationContext());
-        if (instance == null) {
-            throw new IllegalStateException("MotoExtendManager вернул null");
+        try {
+            Class<?> klass = Class.forName(MANAGER);
+            Object instance = klass.getMethod("getInstance", Context.class)
+                .invoke(null, context.getApplicationContext());
+            if (instance != null) {
+                Field coreField = klass.getDeclaredField("mMotoExtendManagerCore");
+                coreField.setAccessible(true);
+                if (coreField.get(instance) != null) return instance;
+            }
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            // Missing or restricted wrapper; try official framework Core below.
         }
-        return instance;
+        return coreFromRegisteredService(context);
+    }
+
+    private static boolean isCore(Object manager) {
+        return CORE.equals(manager.getClass().getName());
+    }
+
+    private static Object coreFromRegisteredService(Context context) throws Exception {
+        Object cached = coreInstance;
+        if (cached != null) return cached;
+        synchronized (CORE_LOCK) {
+            if (coreInstance != null) return coreInstance;
+
+            // android.os.ServiceManager is a hidden framework class.
+            // Reflection may itself be blocked on some Android builds; in that
+            // case the caller reports a failure, never a fake "enabled" state.
+            Class<?> serviceManager = Class.forName("android.os.ServiceManager");
+            Method getService = serviceManager.getDeclaredMethod(
+                "getService", String.class);
+            getService.setAccessible(true);
+            Object rawBinder = getService.invoke(null, SERVICE_NAME);
+            if (!(rawBinder instanceof IBinder)) {
+                throw new IllegalStateException(
+                    "Сервис moto_extend_service не предоставил Binder нашему APK");
+            }
+
+            Class<?> stubClass = Class.forName(SERVICE_INTERFACE + "$Stub");
+            Method asInterface = stubClass.getMethod("asInterface", IBinder.class);
+            Object service = asInterface.invoke(null, (IBinder) rawBinder);
+            if (service == null) {
+                throw new IllegalStateException(
+                    "Motorola IMotoExtendService.Stub.asInterface вернул null");
+            }
+
+            Class<?> interfaceClass = Class.forName(SERVICE_INTERFACE);
+            Class<?> coreClass = Class.forName(CORE);
+            Constructor<?> ctor = coreClass.getConstructor(
+                interfaceClass, Context.class);
+            Object result = ctor.newInstance(service, context.getApplicationContext());
+            if (result == null) {
+                throw new IllegalStateException(
+                    "Конструктор Motorola Core вернул null");
+            }
+            coreInstance = result;
+            return result;
+        }
     }
 
     private static String explain(Throwable t) {
@@ -126,7 +210,18 @@ public final class MotoGameController {
             return "Системная библиотека moto-core_services недоступна этому APK";
         }
         if (cause instanceof NoSuchMethodException) {
-            return "Версия MotoExtendManager не содержит нужного метода";
+            return "Версия Motorola framework не содержит нужного API";
+        }
+        if (cause instanceof IllegalAccessException ||
+                cause instanceof java.lang.reflect.InaccessibleObjectException) {
+            return "Android ограничил доступ к Motorola framework: " +
+                safe(cause.getMessage());
+        }
+        if (cause instanceof IllegalStateException) {
+            return "Подключение Motorola Core: " + safe(cause.getMessage());
+        }
+        if (cause instanceof NullPointerException) {
+            return "Motorola Core не инициализирован: " + safe(cause.getMessage());
         }
         return "Вызов Motorola API не выполнен: " +
             cause.getClass().getSimpleName() + " " + safe(cause.getMessage());
