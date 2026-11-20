@@ -400,16 +400,16 @@ public final class MotorolaGameActivity extends Activity {
     private void copyDiagnosticReport() {
         // Share concise, live UI readbacks; do not include raw Binder tokens
         // or the unredacted output of dumpsys.
-        String report = "LenovoMotorolovichY70 · Motorola control diagnostics\\n" +
-            "App: " + getPackageName() + "\\n" +
-            "Shizuku: " + ShellHelper.isShizukuPermissionGranted() + "\\n" +
-            "Motorola DPS permission: " + hasDpsPermission() + "\\n" +
-            "Service: " + tvAccess.getText() + "\\n" +
-            "Last action: " + tvControlFeedback.getText() + "\\n" +
-            "DPS: " + tvDps.getText() + "\\n" +
-            "Requests: " + tvDpsRequests.getText() + "\\n" +
-            "Touch: " + tvTouch.getText() + "\\n" +
-            "Mode: " + tvMode.getText() + "\\n" +
+        String report = "LenovoMotorolovichY70 · Motorola control diagnostics\n" +
+            "App: " + getPackageName() + "\n" +
+            "Shizuku: " + ShellHelper.isShizukuPermissionGranted() + "\n" +
+            "Motorola DPS permission: " + hasDpsPermission() + "\n" +
+            "Service: " + tvAccess.getText() + "\n" +
+            "Last action: " + tvControlFeedback.getText() + "\n" +
+            "DPS: " + tvDps.getText() + "\n" +
+            "Requests: " + tvDpsRequests.getText() + "\n" +
+            "Touch: " + tvTouch.getText() + "\n" +
+            "Mode: " + tvMode.getText() + "\n" +
             "Capabilities: " + tvCapabilities.getText();
         ShellHelper.copyToClipboard(this, report, "Motorola diagnostics");
         Toast.makeText(this, "Диагностика скопирована. Вставь её в чат.",
