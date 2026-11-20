@@ -61,6 +61,29 @@ public final class MotorolaGameStateParserTest {
                 "game_mode_op_package_name=com.another.app"));
         check(foreign.touchRequested == null, "cannot attribute other app's touch state to GameTime");
 
+        String ownRequest = state(true, 0, "{}") +
+            "    token=android.os.BinderProxy@ABC bundle=Bundle[{" +
+            "touch_enhance_enable=1, game_mode_op_package_name=com.moto.resolutionmaster, " +
+            "game_package_name=com.riotgames.league.wildrift}]\\n";
+        MotorolaGameStateParser.Snapshot ours = MotorolaGameStateParser.parse(ownRequest);
+        check(Boolean.TRUE.equals(ours.ownTouchRequested),
+            "Own request must be attributed to Lenovo Y70, not GameTime");
+        check("com.riotgames.league.wildrift".equals(ours.ownGamePackage),
+            "Own request must identify exact target game");
+        check(Boolean.TRUE.equals(ours.touchRequested),
+            "GameTime request must remain distinct from our request");
+
+        String ownOff = state(true, 0, "{}") +
+            "    token=android.os.BinderProxy@DEF bundle=Bundle[{" +
+            "touch_enhance_enable=0, game_mode_op_package_name=com.moto.resolutionmaster, " +
+            "game_package_name=com.riotgames.league.wildrift}]\\n";
+        MotorolaGameStateParser.Snapshot offOurs = MotorolaGameStateParser.parse(ownOff);
+        check(Boolean.FALSE.equals(offOurs.ownTouchRequested),
+            "Own off request must not be confused with GameTime on");
+
+        check(foreign.ownTouchRequested == null,
+            "Unknown actor cannot impersonate our own touch request");
+
         MotorolaGameStateParser.Snapshot denied =
             MotorolaGameStateParser.parse("Permission Denial: can't dump moto_extend_service");
         check(!denied.readable && denied.touchRequested == null &&
