@@ -20,6 +20,9 @@ assert "copyGameCapture()" in activity
 assert 'ShellHelper.copyToClipboard(this, report, "Legion Y70 game capture")' in activity
 assert "tv_game_capture_status" in activity and "@+id/tv_game_capture_status" in layout
 assert "startForegroundService(" in activity and "startActivity(game);" in activity
+assert 'catch (RuntimeException e)' in activity
+assert 'getLaunchIntentForPackage(' in activity
+assert 'elapsed < -60000L' in store
 assert "MotorolaCaptureStore.report(this)" in activity
 assert "MotorolaCaptureStore.isActive(this)" in activity
 assert 'MotorolaGameCaptureService.ACTION_START' in activity
