@@ -29,6 +29,7 @@ public final class MotorolaGameActivity extends Activity {
     private Button btnRefresh;
     private Button btnGameTime;
     private Button btnShizuku;
+    private Button btnCopyReport;
     private Button btnDpsSet;
     private Button btnTouchSet;
     private TextView tvControlFeedback;
@@ -52,6 +53,10 @@ public final class MotorolaGameActivity extends Activity {
         btnRefresh = findViewById(R.id.btn_game_refresh);
         btnGameTime = findViewById(R.id.btn_game_gametime);
         btnShizuku = findViewById(R.id.btn_game_shizuku);
+        btnCopyReport = findViewById(R.id.btn_game_copy_report);
+        btnCopyReport.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { copyDiagnosticReport(); }
+        });
         btnDpsSet = findViewById(R.id.btn_game_dps_set);
         btnTouchSet = findViewById(R.id.btn_game_touch_set);
         tvControlFeedback = findViewById(R.id.tv_game_control_feedback);
@@ -390,6 +395,25 @@ public final class MotorolaGameActivity extends Activity {
     private static String shortText(String input, int limit) {
         String compact = input.replace('\n', ' ').replace('\r', ' ').trim();
         return compact.length() > limit ? compact.substring(0, limit) + "…" : compact;
+    }
+
+    private void copyDiagnosticReport() {
+        // Share concise, live UI readbacks; do not include raw Binder tokens
+        // or the unredacted output of dumpsys.
+        String report = "LenovoMotorolovichY70 · Motorola control diagnostics\\n" +
+            "App: " + getPackageName() + "\\n" +
+            "Shizuku: " + ShellHelper.isShizukuPermissionGranted() + "\\n" +
+            "Motorola DPS permission: " + hasDpsPermission() + "\\n" +
+            "Service: " + tvAccess.getText() + "\\n" +
+            "Last action: " + tvControlFeedback.getText() + "\\n" +
+            "DPS: " + tvDps.getText() + "\\n" +
+            "Requests: " + tvDpsRequests.getText() + "\\n" +
+            "Touch: " + tvTouch.getText() + "\\n" +
+            "Mode: " + tvMode.getText() + "\\n" +
+            "Capabilities: " + tvCapabilities.getText();
+        ShellHelper.copyToClipboard(this, report, "Motorola diagnostics");
+        Toast.makeText(this, "Диагностика скопирована. Вставь её в чат.",
+            Toast.LENGTH_LONG).show();
     }
 
     private void openGameTime() {
