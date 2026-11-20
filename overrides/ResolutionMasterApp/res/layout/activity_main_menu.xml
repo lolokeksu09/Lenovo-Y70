@@ -1218,7 +1218,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Bypass: не подтверждён"
+                    android:text="GameTime · Direct Power"
                     android:textColor="@color/accent_green"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1228,7 +1228,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Bypass не подтверждён аппаратно для этой сборки. Недостоверный переключатель отключён."
+                android:text="Контроллер Motorola подтверждает поддержку Bypass. Ниже можно проверить аппаратное состояние питания и запрос Touch Boost через Shizuku."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:lineSpacingExtra="3dp" />
@@ -1254,7 +1254,7 @@
 
             <!-- Bypass Charging Toggle Button -->
             <Button
-                android:id="@+id/btn_toggle_bypass_charging"
+                android:id="@+id/btn_open_motorola_game"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                     android:minHeight="48dp"
@@ -1265,7 +1265,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/btn_primary"
-                android:text="Bypass: недоступен без аппаратной проверки"
+                android:text="Проверить Bypass и Touch Boost"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
@@ -1724,7 +1724,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LenovoMotorolovichY70 v3.1.8-audit"
+                android:text="LenovoMotorolovichY70 v3.1.9-game"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />

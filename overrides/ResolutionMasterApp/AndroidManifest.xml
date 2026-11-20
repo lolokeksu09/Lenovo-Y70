@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.moto.resolutionmaster"
-    android:versionCode="40"
-    android:versionName="3.1.8-audit">
+    android:versionCode="41"
+    android:versionName="3.1.9-game">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -50,6 +50,12 @@
         <activity
             android:name=".DebloatActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout" />
+
+        <!-- Read-only Motorola GameTime / hardware state diagnostics -->
+        <activity
+            android:name=".MotorolaGameActivity"
+            android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout" />
 
         <!-- Shizuku Provider and Client V3 Support -->

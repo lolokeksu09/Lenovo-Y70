@@ -7,7 +7,8 @@ touch = (src/"TouchSpeedHelper.java").read_text(encoding="utf-8")
 menu = (src/"MainMenuActivity.java").read_text(encoding="utf-8")
 assert "dumpsys battery unplug" not in power
 assert "echo 0 > /sys/class/power_supply/battery/charging_enabled" not in power
-assert "btnToggleBypassCharging.setEnabled(false)" in menu
+assert "btnOpenMotorolaGame.setEnabled(true)" in menu
+assert "startActivity(new Intent(MainMenuActivity.this, MotorolaGameActivity.class))" in menu
 assert '"pointer_speed"' in touch and "Settings.System.getInt" in touch
 assert "return hz && animations;" in touch
 assert "setPointerSpeed(context, 7)" not in touch
@@ -20,10 +21,10 @@ nfc = (src/"NfcFixHelper.java").read_text(encoding="utf-8")
 layout = (r/"res/layout/activity_main_menu.xml").read_text(encoding="utf-8")
 manifest = ET.parse(r/"AndroidManifest.xml").getroot()
 android_ns = "{http://schemas.android.com/apk/res/android}"
-assert manifest.attrib[android_ns + "versionCode"] == "40"
-assert manifest.attrib[android_ns + "versionName"] == "3.1.8-audit"
+assert manifest.attrib[android_ns + "versionCode"] == "41"
+assert manifest.attrib[android_ns + "versionName"] == "3.1.9-game"
 assert 'android:text="Экспериментально"' in layout
-assert 'android:text="LenovoMotorolovichY70 v3.1.8-audit"' in layout
+assert 'android:text="LenovoMotorolovichY70 v3.1.9-game"' in layout
 assert "100% терминалов" not in nfc and "100% терминалов" not in layout
 assert "100% Russian POS" not in nfc
 assert "Маршрутизация DH обнаружена (оплата не проверена)" in nfc
