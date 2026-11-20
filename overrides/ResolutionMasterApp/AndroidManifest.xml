@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.moto.resolutionmaster"
-    android:versionCode="41"
-    android:versionName="3.1.9-game">
+    android:versionCode="42"
+    android:versionName="3.2.0-game">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -20,6 +20,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="moe.shizuku.manager.permission.API" />
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- Motorola signature|privileged; never granted to normal installed APK. -->
+    <uses-permission android:name="com.motorola.permission.SET_DIRECT_POWER_SUPPLY_STATUS" />
 
     <application
         android:label="@string/app_name"
@@ -27,6 +29,9 @@
         android:theme="@style/AppTheme"
         android:supportsRtl="true"
         android:requestLegacyExternalStorage="true">
+
+        <!-- Optional OEM SDK; reflection degrades safely on other ROMs. -->
+        <uses-library android:name="moto-core_services" android:required="false" />
 
         <!-- Launcher Activity: Main Hub -->
         <activity
@@ -52,7 +57,7 @@
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout" />
 
-        <!-- Read-only Motorola GameTime / hardware state diagnostics -->
+        <!-- Motorola GameTime diagnostics and permission-gated direct controls -->
         <activity
             android:name=".MotorolaGameActivity"
             android:exported="false"
