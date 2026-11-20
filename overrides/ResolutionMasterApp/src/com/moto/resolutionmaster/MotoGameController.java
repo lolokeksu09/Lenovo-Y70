@@ -3,6 +3,8 @@ package com.moto.resolutionmaster;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Binder;
+import android.os.IBinder;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -18,8 +20,14 @@ import java.lang.reflect.Method;
  * verify its observable effect using a fresh moto_extend_service readback.
  */
 public final class MotoGameController {
-    private static final String MANAGER =
-        "motorola.core_services.misc.MotoExtendManager";
+    private static final String CORE = "com.motorola.misc.MotoExtendManagerCore";
+    private static final String OEM_SERVICE = "com.motorola.misc.IMotoExtendService";
+    private static final String OEM_STUB = "com.motorola.misc.IMotoExtendService$Stub";
+    private static final String SERVICE_NAME = "moto_extend_service";
+    private static volatile Object cachedCore;
+    // Binder token must be stable across toggles: the Motorola service tracks
+    // Direct Power Supply requests by client token, not just a boolean.
+    private static final IBinder DPS_TOKEN = new Binder();
     public static final String DPS_PERMISSION =
         "com.motorola.permission.SET_DIRECT_POWER_SUPPLY_STATUS";
 
@@ -52,13 +60,13 @@ public final class MotoGameController {
                 "signature|privileged. Shizuku не выдаёт это разрешение стороннему APK.");
         }
         try {
-            Object manager = manager(context);
-            Method supported = manager.getClass().getMethod("isDirectPowerSupplySupported");
-            if (!Boolean.TRUE.equals(supported.invoke(manager))) {
+            Object core = core(context);
+            Method supported = core.getClass().getMethod("isDirectPowerSupplySupported");
+            if (!Boolean.TRUE.equals(supported.invoke(core))) {
                 return Result.refused("Контроллер Motorola не поддерживает Direct Power Supply");
             }
-            manager.getClass().getMethod("setDirectPowerSupplyStatus", int.class)
-                .invoke(manager, enable ? 1 : 0);
+            core.getClass().getMethod("setDirectPowerSupplyStatus", int.class, IBinder.class)
+                .invoke(core, enable ? 1 : 0, DPS_TOKEN);
             return Result.accepted();
         } catch (Throwable t) {
             return Result.refused(explain(t));
@@ -83,32 +91,72 @@ public final class MotoGameController {
             return Result.refused("Выбранная игра не установлена: " + gamePackage);
         }
         try {
-            Object manager = manager(context);
-            Method supported = manager.getClass().getMethod("isTouchEnhanceSupported");
-            if (!Boolean.TRUE.equals(supported.invoke(manager))) {
+            Object core = core(context);
+            Method supported = core.getClass().getMethod("isTouchEnhanceSupported");
+            if (!Boolean.TRUE.equals(supported.invoke(core))) {
                 return Result.refused("Motorola не разрешает Touch Boost для этого приложения");
             }
             Bundle options = new Bundle();
             options.putInt("touch_enhance_enable", enable ? 1 : 0);
             options.putString("game_package_name", gamePackage);
             options.putInt("display", 0);
-            // Motorola core fills game_mode_op_package_name itself from Context.
-            manager.getClass().getMethod("setGameModeState", boolean.class, Bundle.class)
-                .invoke(manager, true, options);
+            // Motorola core fills game_mode_op_package_name from real Context.
+            // No forged identity and no raw Binder transaction numbers.
+            core.getClass().getMethod("setGameModeState", boolean.class, Bundle.class)
+                .invoke(core, true, options);
             return Result.accepted();
         } catch (Throwable t) {
             return Result.refused(explain(t));
         }
     }
 
-    private static Object manager(Context context) throws Exception {
-        Class<?> klass = Class.forName(MANAGER);
-        Object instance = klass.getMethod("getInstance", Context.class)
-            .invoke(null, context.getApplicationContext());
-        if (instance == null) {
-            throw new IllegalStateException("MotoExtendManager вернул null");
+    /**
+     * The normal MotoExtendManager.getInstance(Context) obtains its core via
+     * Context.getSystemService("moto_extend_service"). On this phone, that
+     * Context lookup returns null to the third-party APK, even though the
+     * Binder service exists (shown by "service list" and "dumpsys").
+     *
+     * The firmware's actual MotoExtendManagerCore has a PUBLIC constructor
+     * (IMotoExtendService, Context), while IMotoExtendService.Stub has
+     * asInterface(IBinder). Bind directly with the caller's real Context
+     * rather than dereferencing the null OEM wrapper field.
+     *
+     * Android may still deny ServiceManager lookup or Motorola's permission
+     * checks. We surface that denial; we never claim success without dumpsys.
+     */
+    private static Object core(Context context) throws Exception {
+        Object ready = cachedCore;
+        if (ready != null) return ready;
+        synchronized (MotoGameController.class) {
+            if (cachedCore != null) return cachedCore;
+            Context app = context.getApplicationContext();
+            Class<?> coreClass = Class.forName(CORE);
+
+            Object registered = app.getSystemService(SERVICE_NAME);
+            if (coreClass.isInstance(registered)) {
+                cachedCore = registered;
+                return registered;
+            }
+
+            Class<?> serviceManager = Class.forName("android.os.ServiceManager");
+            Method getService = serviceManager.getDeclaredMethod("getService", String.class);
+            Object raw = getService.invoke(null, SERVICE_NAME);
+            if (!(raw instanceof IBinder)) {
+                throw new IllegalStateException("Сервис moto_extend_service не найден");
+            }
+            IBinder binder = (IBinder) raw;
+            Class<?> interfaceClass = Class.forName(OEM_SERVICE);
+            Class<?> stubClass = Class.forName(OEM_STUB);
+            Object service = stubClass.getMethod("asInterface", IBinder.class)
+                .invoke(null, binder);
+            if (service == null || !interfaceClass.isInstance(service)) {
+                throw new IllegalStateException("Интерфейс MotoExtendService недоступен");
+            }
+            Object actual = coreClass.getConstructor(interfaceClass, Context.class)
+                .newInstance(service, app);
+            cachedCore = actual;
+            return actual;
         }
-        return instance;
     }
 
     private static String explain(Throwable t) {
@@ -123,10 +171,18 @@ public final class MotoGameController {
                 safe(cause.getMessage());
         }
         if (cause instanceof ClassNotFoundException || cause instanceof NoClassDefFoundError) {
-            return "Системная библиотека moto-core_services недоступна этому APK";
+            return "Не найдены системные классы Motorola на этой прошивке";
         }
-        if (cause instanceof NoSuchMethodException) {
-            return "Версия MotoExtendManager не содержит нужного метода";
+        if (cause instanceof IllegalAccessException || cause instanceof NoSuchMethodException) {
+            return "Android ограничил доступ к Binder/скрытому API Motorola: " +
+                cause.getClass().getSimpleName();
+        }
+        if (cause instanceof IllegalStateException) {
+            return cause.getMessage() == null ? "Сервис Motorola недоступен" : cause.getMessage();
+        }
+        if (cause instanceof NullPointerException) {
+            return "Не удалось инициализировать клиент Motorola (null core). " +
+                "Проверь доступ к moto_extend_service";
         }
         return "Вызов Motorola API не выполнен: " +
             cause.getClass().getSimpleName() + " " + safe(cause.getMessage());
