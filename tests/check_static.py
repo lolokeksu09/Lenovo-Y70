@@ -21,10 +21,10 @@ nfc = (src/"NfcFixHelper.java").read_text(encoding="utf-8")
 layout = (r/"res/layout/activity_main_menu.xml").read_text(encoding="utf-8")
 manifest = ET.parse(r/"AndroidManifest.xml").getroot()
 android_ns = "{http://schemas.android.com/apk/res/android}"
-assert manifest.attrib[android_ns + "versionCode"] == "45"
-assert manifest.attrib[android_ns + "versionName"] == "3.2.3-game"
+assert manifest.attrib[android_ns + "versionCode"] == "46"
+assert manifest.attrib[android_ns + "versionName"] == "3.3.0-game"
 assert 'android:text="Экспериментально"' in layout
-assert 'android:text="LenovoMotorolovichY70 v3.2.3-game"' in layout
+assert 'android:text="LenovoMotorolovichY70 v3.3.0-game"' in layout
 assert "100% терминалов" not in nfc and "100% терминалов" not in layout
 assert "100% Russian POS" not in nfc
 assert "Маршрутизация DH обнаружена (оплата не проверена)" in nfc
