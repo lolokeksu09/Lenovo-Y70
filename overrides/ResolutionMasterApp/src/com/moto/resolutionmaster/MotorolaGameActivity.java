@@ -506,8 +506,15 @@ public final class MotorolaGameActivity extends Activity {
                 "Выдай его на этом экране и попробуй снова.");
             return;
         }
-        Intent game = getPackageManager().getLaunchIntentForPackage(
-            MotorolaCaptureFormat.GAME_PACKAGE);
+        final Intent game;
+        try {
+            game = getPackageManager().getLaunchIntentForPackage(
+                MotorolaCaptureFormat.GAME_PACKAGE);
+        } catch (RuntimeException e) {
+            notifyAction("Не удалось проверить запуск Wild Rift: " +
+                e.getClass().getSimpleName());
+            return;
+        }
         if (game == null) {
             notifyAction("Wild Rift не найден или не разрешён к запуску.");
             return;
