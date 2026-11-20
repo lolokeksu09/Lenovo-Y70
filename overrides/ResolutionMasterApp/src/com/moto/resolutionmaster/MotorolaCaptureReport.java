@@ -30,7 +30,7 @@ public final class MotorolaCaptureReport {
             "Сеанс: " + status + "\n" +
             "Сэмплов: " + count + ", ошибок чтения: " + failures + "\n" +
             "Интервал: 8 секунд; до 12 сэмплов.\n" +
-            "Фактические частоты GPU, сенсора и активный thermal-конфиг НЕ измерялись.\n" +
+            "Фактические частоты GPU, сенсора и активный thermal-конфиг не измерялись.\n" +
             entries.toString();
     }
 
