@@ -1,6 +1,18 @@
-# LenovoMotorolovichY70 — v3.2.1-game (видимая обратная связь игровых кнопок)
+# LenovoMotorolovichY70 — v3.2.2-game (инициализация Motorola Core без NPE)
 
 Исправляем приложение Lenovo Y70 / Moto Edge 70 Max на основе исходников [f1rzen-n/LenovoMotorolovichY70](https://github.com/f1rzen-n/LenovoMotorolovichY70), фиксированный коммит `10ffc78b9c97326467dc457513d6182581416991`. Права и сведения об авторах upstream сохранены.
+
+## Исправление v3.2.2 — MotoExtendManagerCore = null
+
+**Диагностика устройства:** Shizuku=true, интерфейс `IMotTouch` доступен, `mCurrentHardwareDpsStatus=0`, но попытка Touch Boost завершалась `NullPointerException: MotoExtendManagerCore.isTouchEnhanceSupported() on a null object`. Разрешение `SET_DIRECT_POWER_SUPPLY_STATUS` отсутствует.
+
+**Причина:** установленный `moto-core_services.jar` получает `MotoExtendManagerCore` из `Context.getSystemService("moto_extend_service")`. В контексте стороннего APK этот Java-сервис не зарегистрирован. В реальном `framework.jar` найден публичный конструктор `MotoExtendManagerCore(IMotoExtendService, Context)` и `IMotoExtendService.Stub.asInterface(IBinder)`.
+
+**Исправление:** `MotoGameController` больше не вызывает `MotoExtendManager.getInstance()`; он сначала проверяет зарегистрированный Context-сервис, затем пытается получить настоящий Binder `moto_extend_service` через `ServiceManager`, собрать его `IMotoExtendService`-интерфейс и создать `MotoExtendManagerCore`. Экземпляр кэшируется, чтобы не терять токен. Bypass-привилегия проверяется **до обращения к сервису**, для DPS сохранён стабильный `Binder`-токен. Ни сырых номеров Binder-транзакций, ни подмены UID.
+
+**Пределы:** метод `ServiceManager.getService` скрыт в Android, поэтому система может отвергнуть рефлексию или доступ к сервису по SELinux. При отказе приложение выдаст конкретную ошибку; это не доказательство отсутствия поддержки оборудования. Проверка реального состояния `mGameModeStates` после команды остаётся обязательной. На физическом Lenovo Y70 новый механизм ещё **не проверен**.
+
+CI дополнен регрессией против старого пути `MotoExtendManager.getInstance`, версия `3.2.2-game` (`versionCode=44`).
 
 ## Исправление v3.2.1 — нажатие не реагировало
 
