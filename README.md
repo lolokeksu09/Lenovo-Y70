@@ -1,6 +1,17 @@
-# LenovoMotorolovichY70 — v3.1.9-game (Motorola GameTime: аппаратная диагностика)
+# LenovoMotorolovichY70 — v3.2.0-game (нативное управление Motorola)
 
 Исправляем приложение Lenovo Y70 / Moto Edge 70 Max на основе исходников [f1rzen-n/LenovoMotorolovichY70](https://github.com/f1rzen-n/LenovoMotorolovichY70), фиксированный коммит `10ffc78b9c97326467dc457513d6182581416991`. Права и сведения об авторах upstream сохранены.
+
+## Новое в v3.2.0 — управление внутри приложения
+
+- На экране **«Игровые функции Motorola»** добавлены кнопки **«Включить/выключить Touch Boost»** и **«Включить/выключить Bypass»**. Управление не имитируется через Android `pointer_speed` или `charging_enabled`: приложение вызывает настоящие методы `MotoExtendManager.setGameModeState(...)` и `MotoExtendManager.setDirectPowerSupplyStatus(...)` через установленную системную библиотеку `moto-core_services`.
+- После каждой команды выполняется `dumpsys moto_extend_service` с повторным чтением через Shizuku/Root. **Bypass** считается подтверждённым исключительно по `mCurrentHardwareDpsStatus=0/1`; **Touch Boost** — только по отдельному запросу от `com.moto.resolutionmaster` в `mGameModeStates`. Второе доказывает регистрацию запроса, а не частоту опроса сенсора.
+- **Ограничение Bypass:** разрешение `com.motorola.permission.SET_DIRECT_POWER_SUPPLY_STATUS` имеет уровень `signature|privileged`. Обычному APK его не выдают; Shizuku без Root не меняет этот факт. Кнопка недоступна при отказе прав. Запрос разрешён только при реальном `PERMISSION_GRANTED`, а включение требует подключённой зарядки и отдельного согласия. Наше приложение не выдаёт себе разрешения, не подменяет UID и не исполняет сырые Binder-транзакции.
+- **Ограничение Touch Boost:** вызов от UID нашего APK ещё не проверен на физическом Lenovo Y70. Если сервер отвергнет его или запрос не появится в сервисе, приложение сообщает об отказе/отсутствии подтверждения. Состояние GameTime и состояние нашего клиента показываются раздельно. Для демонстрации используется установленный Wild Rift, если GameTime не сообщает другую активную игру.
+- Никаких изменений системного раздела и дополнительных скрытых привилегий. Поддержка OEM-библиотеки подключена опционально (`uses-library required=false`), на других ROM должен отображаться понятный отказ.
+- Версия APK `3.2.0-game`, `versionCode=42`. CI: компиляция Android, JVM-тесты парсера и статические проверки ограничений полномочий.
+
+**Проверено:** структура API по пользовательским `moto-core_services.jar`, `framework.jar`, дампам `moto_extend_service`; сборка и регрессии GitHub Actions. **На устройстве не проверено:** успешное изменение режима от имени стороннего `com.moto.resolutionmaster`. Ни одна кнопка не обещает обход `signature|privileged`.
 
 ## Новое в v3.1.9 — игровые функции Motorola
 
