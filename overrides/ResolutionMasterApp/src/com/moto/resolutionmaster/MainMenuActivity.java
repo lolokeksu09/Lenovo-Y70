@@ -81,7 +81,7 @@ public class MainMenuActivity extends Activity {
 
     // Power & Bypass Controls
     private TextView tvBatteryStatus;
-    private Button btnToggleBypassCharging;
+    private Button btnOpenMotorolaGame;
     private Button btnTogglePowerSaver;
     private Button btnOpenBatteryCare;
 
@@ -1225,13 +1225,16 @@ public class MainMenuActivity extends Activity {
     // ==================== Power & Bypass Section ====================
     private void setupPowerControls() {
         tvBatteryStatus = findViewById(R.id.tv_battery_status);
-        btnToggleBypassCharging = findViewById(R.id.btn_toggle_bypass_charging);
+        btnOpenMotorolaGame = findViewById(R.id.btn_open_motorola_game);
         btnTogglePowerSaver = findViewById(R.id.btn_toggle_power_saver);
         btnOpenBatteryCare = findViewById(R.id.btn_open_battery_care);
 
-        if (btnToggleBypassCharging != null) {
-            btnToggleBypassCharging.setEnabled(false);
-            btnToggleBypassCharging.setText("Bypass: аппаратная поддержка не подтверждена");
+        if (btnOpenMotorolaGame != null) {
+            btnOpenMotorolaGame.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    startActivity(new Intent(MainMenuActivity.this, MotorolaGameActivity.class));
+                }
+            });
         }
 
         if (btnTogglePowerSaver != null) {
@@ -1280,10 +1283,10 @@ public class MainMenuActivity extends Activity {
             }
         }
 
-        if (btnToggleBypassCharging != null) {
-            btnToggleBypassCharging.setEnabled(false);
-            btnToggleBypassCharging.setText("Bypass недоступен — нет проверки PMIC");
-            btnToggleBypassCharging.setBackgroundResource(R.drawable.btn_chip);
+        if (btnOpenMotorolaGame != null) {
+            btnOpenMotorolaGame.setEnabled(true);
+            btnOpenMotorolaGame.setText("Проверить Bypass и Touch Boost");
+            btnOpenMotorolaGame.setBackgroundResource(R.drawable.btn_primary);
         }
 
         boolean powerSave = PowerHelper.isPowerSaveMode(this);
