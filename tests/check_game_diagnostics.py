@@ -35,6 +35,26 @@ assert 'PackageManager.PERMISSION_GRANTED' in controller
 assert 'options.putInt("touch_enhance_enable", enable ? 1 : 0)' in controller
 assert 'options.putString("game_package_name", gamePackage)' in controller
 assert 'getInstance", Context.class' in controller
+# The 3.2.1 failure path was a non-null SDK manager with a NULL Core.
+# Require a genuine typed AIDL/Core fallback before any call.
+assert 'klass.getDeclaredField("mMotoExtendManagerCore")' in controller
+assert 'if (coreField.get(instance) != null) return instance;' in controller
+assert "return coreFromRegisteredService(context);" in controller
+assert '"android.os.ServiceManager"' in controller
+assert '"getService", String.class' in controller
+assert 'getService.invoke(null, SERVICE_NAME)' in controller
+assert '"com.motorola.misc.IMotoExtendService"' in controller
+assert '"com.motorola.misc.MotoExtendManagerCore"' in controller
+assert 'stubClass.getMethod("asInterface", IBinder.class)' in controller
+assert 'coreClass.getConstructor(' in controller
+assert 'interfaceClass, Context.class' in controller
+assert 'context.getApplicationContext()' in controller
+assert 'private static volatile Object coreInstance;' in controller
+assert 'synchronized (CORE_LOCK)' in controller
+assert 'coreClass.getMethod(' not in controller
+assert 'manager.getClass().getMethod("isTouchEnhanceSupported")' in controller
+assert 'manager.getClass().getMethod("setGameModeState", boolean.class, Bundle.class)' in controller
+assert 'context.checkSelfPermission(DPS_PERMISSION)' in controller
 assert 'MotoGameController.requestBypass(' in activity
 assert 'MotoGameController.requestTouch(' in activity
 assert '"dumpsys moto_extend_service"' in activity
@@ -69,7 +89,7 @@ assert 'android:id="@+id/btn_open_motorola_game"' in layout
 assert "MotorolaGameActivity.class" in main
 assert 'R.id.btn_open_motorola_game' in main
 assert "btnOpenMotorolaGame.setEnabled(false)" not in main
-assert '"3.2.1-game"' in manifest
+assert '"3.2.2-game"' in manifest
 assert '"LenovoMotorolovichY70 v3.2.1-game"' in layout
 xml = ET.fromstring(manifest)
 screen = [a for a in xml.findall(".//activity")
