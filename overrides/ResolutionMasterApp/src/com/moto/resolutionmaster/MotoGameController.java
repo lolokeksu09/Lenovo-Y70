@@ -86,7 +86,7 @@ public final class MotoGameController {
             }
             return Result.accepted();
         } catch (Throwable t) {
-            if (isDeadBinderFailure(t)) {
+            if (MotorolaBinderFailurePolicy.isDeadBinderFailure(t)) {
                 invalidateCachedCore();
                 return Result.refused(
                     "Motorola Binder перезапустился. Соединение сброшено; " +
@@ -133,7 +133,7 @@ public final class MotoGameController {
                 .invoke(manager, true, options);
             return Result.accepted();
         } catch (Throwable t) {
-            if (isDeadBinderFailure(t)) {
+            if (MotorolaBinderFailurePolicy.isDeadBinderFailure(t)) {
                 invalidateCachedCore();
                 return Result.refused(
                     "Motorola Binder перезапустился. Соединение сброшено; " +
@@ -256,22 +256,6 @@ public final class MotoGameController {
             preferRegisteredCore = true;
             clearCachedCoreLocked();
         }
-    }
-
-    private static boolean isDeadBinderFailure(Throwable t) {
-        Throwable cause = t;
-        for (int i = 0; cause != null && i < 8; i++) {
-            // Only transport death justifies invalidating the connection.
-            // No retry is safe for an OEM mutation whose outcome is unknown.
-            if ("android.os.DeadObjectException".equals(
-                    cause.getClass().getName())) return true;
-            Throwable next = cause instanceof InvocationTargetException
-                ? ((InvocationTargetException) cause).getTargetException()
-                : cause.getCause();
-            if (next == cause) break;
-            cause = next;
-        }
-        return false;
     }
 
     private static String explain(Throwable t) {
