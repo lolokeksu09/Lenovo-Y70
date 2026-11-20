@@ -440,9 +440,10 @@ public final class MotorolaGameActivity extends Activity {
     }
 
     private void copyDiagnosticReport() {
-        // Share concise, live UI readbacks; do not include raw Binder tokens
-        // or the unredacted output of dumpsys.
-        String report = "LenovoMotorolovichY70 · Motorola control diagnostics\n" +
+        // Never block the main thread with logcat. The user explicitly copies
+        // the report, and no crash data is uploaded by the app.
+        final String status =
+            "LenovoMotorolovichY70 · Motorola control diagnostics\n" +
             "App: " + getPackageName() + "\n" +
             "Shizuku: " + ShellHelper.isShizukuPermissionGranted() + "\n" +
             "Motorola DPS permission: " + hasDpsPermission() + "\n" +
@@ -455,9 +456,62 @@ public final class MotorolaGameActivity extends Activity {
             "Touch: " + tvTouch.getText() + "\n" +
             "Mode: " + tvMode.getText() + "\n" +
             "Capabilities: " + tvCapabilities.getText();
-        ShellHelper.copyToClipboard(this, report, "Motorola diagnostics");
-        Toast.makeText(this, "Диагностика скопирована. Вставь её в чат.",
-            Toast.LENGTH_LONG).show();
+        btnCopyReport.setEnabled(false);
+        btnCopyReport.setText("Сбор отчёта...");
+        new Thread(new Runnable() {
+            @Override public void run() {
+                String excerpt = "Журнал недоступен";
+                try {
+                    if (ShellHelper.isShizukuPermissionGranted() ||
+                            ShellHelper.isRootAvailable()) {
+                        String raw = ShellHelper.runCommandWithOutput(
+                            MotorolaGameActivity.this,
+                            "logcat -d -b crash -v threadtime -t 600");
+                        excerpt = relevantCrashExcerpt(raw);
+                    }
+                } catch (Throwable e) {
+                    excerpt = "Не удалось прочитать журнал: " +
+                        e.getClass().getSimpleName();
+                }
+                final String report = status + "\n\nLast relevant crash:\n" + excerpt;
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (destroyed || isFinishing()) return;
+                        btnCopyReport.setEnabled(true);
+                        btnCopyReport.setText("Скопировать диагностику");
+                        ShellHelper.copyToClipboard(
+                            MotorolaGameActivity.this, report, "Motorola diagnostics");
+                        Toast.makeText(MotorolaGameActivity.this,
+                            "Отчёт и последняя авария скопированы. Вставь текст в чат.",
+                            Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        }, "MotoGameCrashReport").start();
+    }
+
+    private static String relevantCrashExcerpt(String raw) {
+        if (raw == null || raw.isEmpty()) return "Журнал аварий пуст";
+        String[] lines = raw.split("\\r?\\n");
+        int match = -1;
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].contains("Process: com.moto.resolutionmaster") ||
+                lines[i].contains("Cmdline: com.moto.resolutionmaster") ||
+                lines[i].contains(">>> com.moto.resolutionmaster <<<")) {
+                match = i;
+            }
+        }
+        if (match < 0) return "В журнале нет аварии com.moto.resolutionmaster";
+        StringBuilder out = new StringBuilder();
+        // Emit only the segment identified as our own app's crash.
+        for (int i = Math.max(0, match - 2);
+                 i < Math.min(lines.length, match + 32) &&
+                 out.length() < 4500; i++) {
+            String line = lines[i];
+            if (line.length() > 240) line = line.substring(0, 240);
+            out.append(line).append('\n');
+        }
+        return out.toString();
     }
 
     private void openGameTime() {
