@@ -27,7 +27,7 @@ assert "com.riotgames.league.wildrift" in activity
 
 # The only writes are official Motorola APIs from our own UID; no
 # signature bypass, binder transaction tricks or undocumented sysfs writes.
-assert '"motorola.core_services.misc.MotoExtendManager"' in controller
+assert '"com.motorola.misc.MotoExtendManagerCore"' in controller
 assert '"setDirectPowerSupplyStatus", int.class' in controller
 assert '"setGameModeState", boolean.class, Bundle.class' in controller
 assert 'context.checkSelfPermission(DPS_PERMISSION)' in controller
