@@ -23,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
-            android:text="Аппаратные данные · Только чтение"
+            android:text="Команды Motorola · Проверка результата через системный сервис"
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
 
@@ -51,6 +51,16 @@
                 android:text="Ожидание проверки"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_game_control_feedback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Управление доступно только при разрешении системного сервиса"
+                android:textColor="@color/accent_blue"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
 
             <TextView
                 android:id="@+id/tv_game_observed"
@@ -122,6 +132,19 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 
+            <Button
+                android:id="@+id/btn_game_dps_set"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:background="@drawable/btn_primary"
+                android:text="Управление Bypass: проверка прав"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -156,6 +179,19 @@
                 android:text="Нет данных"
                 android:textColor="@color/accent_blue"
                 android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_game_touch_set"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:background="@drawable/btn_primary"
+                android:text="Включить Touch Boost"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -223,7 +259,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="20dp"
-            android:text="Управление Bypass защищено разрешением Motorola signature|privileged. Приложение только читает состояния и не отправляет команды изменения питания или тача."
+            android:text="Команды отправляются через штатный MotoExtendManager от имени нашего APK. Bypass требует Motorola signature|privileged, которое Shizuku без Root не выдаёт. Состояние меняется в интерфейсе только после повторной проверки сервиса. Touch Boost — запрос режима, не измерение задержки."
             android:textColor="@color/text_muted"
             android:textSize="12sp"
             android:lineSpacingExtra="2dp" />
