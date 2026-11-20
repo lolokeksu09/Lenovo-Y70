@@ -93,6 +93,17 @@ public final class MotorolaGameActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (!controlBusy) {
+            String pending = MotorolaControlTrace.pending(this);
+            if (pending != null) {
+                tvControlFeedback.setText(
+                    "Предыдущая операция «" + pending + "» прервалась до ответа. " +
+                    "Причина завершения процесса неизвестна; нужен системный журнал.");
+            } else {
+                String outcome = MotorolaControlTrace.lastCompleted(this);
+                if (outcome != null) tvControlFeedback.setText(outcome);
+            }
+        }
         refresh();
     }
 
@@ -317,6 +328,15 @@ public final class MotorolaGameActivity extends Activity {
     private void runControl(final boolean bypass, final boolean enable,
                             final String gamePackage) {
         if (controlBusy || destroyed) return;
+        // Synchronously persist an operation marker BEFORE calling any OEM
+        // code. Native signals/process kills cannot be caught by Java.
+        final String operation = (bypass ? "Bypass" : "Touch Boost") +
+            (enable ? " ВКЛ" : " ВЫКЛ");
+        if (!MotorolaControlTrace.begin(this, operation)) {
+            notifyAction("Не удалось сохранить диагностику операции. " +
+                "Для безопасности запрос Motorola отменён.");
+            return;
+        }
         controlBusy = true;
         final int request = ++requestSerial;
         btnDpsSet.setEnabled(false);
@@ -325,56 +345,78 @@ public final class MotorolaGameActivity extends Activity {
         tvControlFeedback.setText("Передача команды Motorola и проверка результата...");
         new Thread(new Runnable() {
             @Override public void run() {
-                MotoGameController.Result call = bypass
-                    ? MotoGameController.requestBypass(MotorolaGameActivity.this, enable)
-                    : MotoGameController.requestTouch(
-                        MotorolaGameActivity.this, enable, gamePackage);
-                MotorolaGameStateParser.Snapshot observed = null;
-                if (ShellHelper.isShizukuPermissionGranted() || ShellHelper.isRootAvailable()) {
-                    // Reconcile from the system state, not a void method return.
-                    for (int attempt = 0; attempt < (call.sent ? 3 : 1); attempt++) {
-                        if (attempt > 0) {
-                            try { Thread.sleep(450); }
-                            catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                break;
+                try {
+                    MotoGameController.Result call = bypass
+                        ? MotoGameController.requestBypass(MotorolaGameActivity.this, enable)
+                        : MotoGameController.requestTouch(
+                            MotorolaGameActivity.this, enable, gamePackage);
+                    MotorolaGameStateParser.Snapshot observed = null;
+                    if (ShellHelper.isShizukuPermissionGranted() ||
+                            ShellHelper.isRootAvailable()) {
+                        for (int attempt = 0; attempt < (call.sent ? 3 : 1); attempt++) {
+                            if (attempt > 0) {
+                                try { Thread.sleep(450); }
+                                catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
                             }
+                            ShellHelper.CommandResult data =
+                                ShellHelper.runCommandWithResult(
+                                    MotorolaGameActivity.this, "dumpsys moto_extend_service");
+                            observed = data.success
+                                ? MotorolaGameStateParser.parse(data.detail)
+                                : MotorolaGameStateParser.unavailable(
+                                    "Нет доступа к системной проверке");
+                            if (verified(observed, bypass, enable, gamePackage)) break;
                         }
-                        ShellHelper.CommandResult data = ShellHelper.runCommandWithResult(
-                            MotorolaGameActivity.this, "dumpsys moto_extend_service");
-                        observed = data.success
-                            ? MotorolaGameStateParser.parse(data.detail)
-                            : MotorolaGameStateParser.unavailable("Нет доступа к системной проверке");
-                        if (verified(observed, bypass, enable, gamePackage)) break;
                     }
+                    final MotorolaGameStateParser.Snapshot finalObserved = observed;
+                    final boolean confirmed = call.sent &&
+                        verified(observed, bypass, enable, gamePackage);
+                    final String feedback = !call.sent
+                        ? call.reason
+                        : confirmed
+                            ? (bypass
+                                ? "Bypass: аппаратное состояние подтверждено"
+                                : "Touch Boost: подтверждён запрос Lenovo Y70 " +
+                                  "в Motorola; частота опроса не измерялась")
+                            : "Команда отправлена, но результат не подтверждён " +
+                              "системным сервисом. Фактическое состояние неизвестно.";
+                    MotorolaControlTrace.finish(MotorolaGameActivity.this, feedback);
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            if (destroyed || isFinishing() ||
+                                    request != requestSerial) return;
+                            controlBusy = false;
+                            btnRefresh.setEnabled(true);
+                            if (finalObserved != null && finalObserved.readable) {
+                                showState(finalObserved, "Состояние перечитано из Motorola");
+                            } else if (lastSnapshot != null) {
+                                updateControls(lastSnapshot);
+                            }
+                            notifyAction(feedback);
+                        }
+                    });
+                } catch (Throwable t) {
+                    android.util.Log.e("MotoGameControl", "Motorola operation interrupted", t);
+                    final String feedback =
+                        "Вызов Motorola/проверка состояния прерваны: " +
+                        t.getClass().getSimpleName() + ". " +
+                        (t.getMessage() == null ? "" : shortText(t.getMessage(), 140)) +
+                        " Фактический результат не подтверждён.";
+                    MotorolaControlTrace.finish(MotorolaGameActivity.this, feedback);
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            if (destroyed || isFinishing() ||
+                                    request != requestSerial) return;
+                            controlBusy = false;
+                            btnRefresh.setEnabled(true);
+                            if (lastSnapshot != null) updateControls(lastSnapshot);
+                            notifyAction(feedback);
+                        }
+                    });
                 }
-                final MotorolaGameStateParser.Snapshot finalObserved = observed;
-                final boolean verified = call.sent &&
-                    verified(observed, bypass, enable, gamePackage);
-                final String feedback = !call.sent
-                    ? call.reason
-                    : verified
-                        ? (bypass
-                            ? "Bypass: аппаратное состояние подтверждено"
-                            : "Touch Boost: подтверждён запрос Lenovo Y70 в Motorola; " +
-                              "частота опроса не измерялась")
-                        : "Команда отправлена, но её результат не подтверждён " +
-                          "системным сервисом. Состояние не изменено в интерфейсе.";
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        if (destroyed || isFinishing() || request != requestSerial) return;
-                        controlBusy = false;
-                        btnRefresh.setEnabled(true);
-                        if (finalObserved != null && finalObserved.readable) {
-                            showState(finalObserved, "Состояние перечитано из Motorola");
-                        } else if (lastSnapshot != null) {
-                            updateControls(lastSnapshot);
-                        }
-                        // Status refresh must not replace this result with an
-                        // unrelated warning about the other control.
-                        notifyAction(feedback);
-                    }
-                });
             }
         }, "MotoGameControl").start();
     }
@@ -398,22 +440,78 @@ public final class MotorolaGameActivity extends Activity {
     }
 
     private void copyDiagnosticReport() {
-        // Share concise, live UI readbacks; do not include raw Binder tokens
-        // or the unredacted output of dumpsys.
-        String report = "LenovoMotorolovichY70 · Motorola control diagnostics\n" +
+        // Never block the main thread with logcat. The user explicitly copies
+        // the report, and no crash data is uploaded by the app.
+        final String status =
+            "LenovoMotorolovichY70 · Motorola control diagnostics\n" +
             "App: " + getPackageName() + "\n" +
             "Shizuku: " + ShellHelper.isShizukuPermissionGranted() + "\n" +
             "Motorola DPS permission: " + hasDpsPermission() + "\n" +
             "Service: " + tvAccess.getText() + "\n" +
             "Last action: " + tvControlFeedback.getText() + "\n" +
+            "Pending OEM operation: " + MotorolaControlTrace.pending(this) + "\n" +
+            "Last completed: " + MotorolaControlTrace.lastCompleted(this) + "\n" +
             "DPS: " + tvDps.getText() + "\n" +
             "Requests: " + tvDpsRequests.getText() + "\n" +
             "Touch: " + tvTouch.getText() + "\n" +
             "Mode: " + tvMode.getText() + "\n" +
             "Capabilities: " + tvCapabilities.getText();
-        ShellHelper.copyToClipboard(this, report, "Motorola diagnostics");
-        Toast.makeText(this, "Диагностика скопирована. Вставь её в чат.",
-            Toast.LENGTH_LONG).show();
+        btnCopyReport.setEnabled(false);
+        btnCopyReport.setText("Сбор отчёта...");
+        new Thread(new Runnable() {
+            @Override public void run() {
+                String excerpt = "Журнал недоступен";
+                try {
+                    if (ShellHelper.isShizukuPermissionGranted() ||
+                            ShellHelper.isRootAvailable()) {
+                        String raw = ShellHelper.runCommandWithOutput(
+                            MotorolaGameActivity.this,
+                            "logcat -d -b crash -v threadtime -t 600");
+                        excerpt = relevantCrashExcerpt(raw);
+                    }
+                } catch (Throwable e) {
+                    excerpt = "Не удалось прочитать журнал: " +
+                        e.getClass().getSimpleName();
+                }
+                final String report = status + "\n\nLast relevant crash:\n" + excerpt;
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (destroyed || isFinishing()) return;
+                        btnCopyReport.setEnabled(true);
+                        btnCopyReport.setText("Скопировать диагностику");
+                        ShellHelper.copyToClipboard(
+                            MotorolaGameActivity.this, report, "Motorola diagnostics");
+                        Toast.makeText(MotorolaGameActivity.this,
+                            "Отчёт и последняя авария скопированы. Вставь текст в чат.",
+                            Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        }, "MotoGameCrashReport").start();
+    }
+
+    private static String relevantCrashExcerpt(String raw) {
+        if (raw == null || raw.isEmpty()) return "Журнал аварий пуст";
+        String[] lines = raw.split("\\r?\\n");
+        int match = -1;
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].contains("Process: com.moto.resolutionmaster") ||
+                lines[i].contains("Cmdline: com.moto.resolutionmaster") ||
+                lines[i].contains(">>> com.moto.resolutionmaster <<<")) {
+                match = i;
+            }
+        }
+        if (match < 0) return "В журнале нет аварии com.moto.resolutionmaster";
+        StringBuilder out = new StringBuilder();
+        // Emit only the segment identified as our own app's crash.
+        for (int i = Math.max(0, match - 2);
+                 i < Math.min(lines.length, match + 32) &&
+                 out.length() < 4500; i++) {
+            String line = lines[i];
+            if (line.length() > 240) line = line.substring(0, 240);
+            out.append(line).append('\n');
+        }
+        return out.toString();
     }
 
     private void openGameTime() {

@@ -58,7 +58,7 @@ assert 'context.checkSelfPermission(DPS_PERMISSION)' in controller
 assert 'MotoGameController.requestBypass(' in activity
 assert 'MotoGameController.requestTouch(' in activity
 assert '"dumpsys moto_extend_service"' in activity
-assert 'final boolean verified = call.sent &&' in activity
+assert 'final boolean confirmed = call.sent &&' in activity
 assert 'private static boolean verified(' in activity
 assert 'Integer.valueOf(1) : Integer.valueOf(0)' in activity
 assert 'state.ownTouchRequested' in activity
@@ -89,8 +89,8 @@ assert 'android:id="@+id/btn_open_motorola_game"' in layout
 assert "MotorolaGameActivity.class" in main
 assert 'R.id.btn_open_motorola_game' in main
 assert "btnOpenMotorolaGame.setEnabled(false)" not in main
-assert '"3.2.2-game"' in manifest
-assert '"LenovoMotorolovichY70 v3.2.2-game"' in layout
+assert '"3.2.3-game"' in manifest
+assert '"LenovoMotorolovichY70 v3.2.3-game"' in layout
 xml = ET.fromstring(manifest)
 screen = [a for a in xml.findall(".//activity")
           if a.attrib.get(ns + "name") == ".MotorolaGameActivity"]
@@ -121,7 +121,9 @@ assert 'notifyAction("Bypass заблокирован Android:' in activity
 assert 'notifyAction("Touch Boost: нет данных' in activity
 assert "notifyAction(feedback);" in activity
 assert "private void copyDiagnosticReport()" in activity
-assert "ShellHelper.copyToClipboard(this, report" in activity
+assert "ShellHelper.copyToClipboard(" in activity
+assert '"Motorola diagnostics");' in activity
+assert '"logcat -d -b crash -v threadtime -t 600"' in activity
 assert "btnCopyReport.setOnClickListener(" in activity
 
 print("PASS: direct Motorola calls gated, verified status and no raw privileged workarounds")
