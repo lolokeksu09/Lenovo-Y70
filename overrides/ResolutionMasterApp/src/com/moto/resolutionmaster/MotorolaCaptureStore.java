@@ -63,7 +63,7 @@ public final class MotorolaCaptureStore {
         if (!p.getBoolean(KEY_ACTIVE, false)) return;
         long started = p.getLong(KEY_STARTED, 0L);
         long elapsed = System.currentTimeMillis() - started;
-        if (started > 0 && elapsed > EXPIRY_MS) {
+        if (started > 0 && (elapsed > EXPIRY_MS || elapsed < -60000L)) {
             p.edit().putBoolean(KEY_ACTIVE, false)
                 .putString(KEY_STATUS,
                     "Сеанс прервался: приложение или служба были остановлены")
