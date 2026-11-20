@@ -1,6 +1,21 @@
-# LenovoMotorolovichY70 — v3.2.1-game (видимая обратная связь игровых кнопок)
+# LenovoMotorolovichY70 — v3.2.2-game (Motorola Core initialization)
 
 Исправляем приложение Lenovo Y70 / Moto Edge 70 Max на основе исходников [f1rzen-n/LenovoMotorolovichY70](https://github.com/f1rzen-n/LenovoMotorolovichY70), фиксированный коммит `10ffc78b9c97326467dc457513d6182581416991`. Права и сведения об авторах upstream сохранены.
+
+## Исправление v3.2.2 — NullPointerException в Motorola SDK
+
+С пользовательского Lenovo Y70 в версии 3.2.1 получен фактический отчёт:
+`Shizuku: true`, `Motorola DPS permission: false`, `isTouchEnhanceSupported(): NullPointerException` при вызове `MotoExtendManagerCore`; `moto_extend_service` читается, AIDL `IMotTouch` подключён.
+
+В предоставленном `moto-core_services.jar` конструктор `MotoExtendManager(Context)` берёт `mMotoExtendManagerCore` посредством `Context.getSystemService("moto_extend_service")`. В контексте стороннего APK это дало `null`, поэтому `isTouchEnhanceSupported()` не достигал системы. В предоставленном `framework.jar` подтверждён публичный конструктор `MotoExtendManagerCore(IMotoExtendService, Context)`, интерфейс `IMotoExtendService.Stub.asInterface(IBinder)` и методы `setGameModeState(boolean, Bundle)`, `isTouchEnhanceSupported()`.
+
+Теперь контроллер:
+- проверяет поле `mMotoExtendManagerCore` у SDK wrapper; при `null` обращается к зарегистрированному `ServiceManager.getService("moto_extend_service")` и создаёт **штатный** Motorola `MotoExtendManagerCore` (типизированный AIDL без ручных transaction-кодов);
+- использует `Context.getOpPackageName()` настоящего приложения и не подменяет UID; жизненный цикл токена остаётся у официального Core;
+- при отказе hidden API, Binder или системного разрешения сообщает причину; после запроса Touch Boost выполняется существующая проверка `mGameModeStates` из `dumpsys`;
+- не обходит `signature|privileged` для Bypass и не меняет состояние питания без подтверждения аппаратного статуса и разрешения.
+
+**Ограничения:** доступность `ServiceManager.getService` и разрешение сервера Motorola для стороннего `com.moto.resolutionmaster` необходимо проверить установкой APK на телефон; успешная сборка не доказывает принятие Touch Boost драйвером.
 
 ## Исправление v3.2.1 — нажатие не реагировало
 
