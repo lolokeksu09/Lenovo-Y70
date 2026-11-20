@@ -7,7 +7,8 @@ touch = (src/"TouchSpeedHelper.java").read_text(encoding="utf-8")
 menu = (src/"MainMenuActivity.java").read_text(encoding="utf-8")
 assert "dumpsys battery unplug" not in power
 assert "echo 0 > /sys/class/power_supply/battery/charging_enabled" not in power
-assert "btnToggleBypassCharging.setEnabled(false)" in menu
+assert "btnOpenMotorolaGame.setEnabled(true)" in menu
+assert "startActivity(new Intent(MainMenuActivity.this, MotorolaGameActivity.class))" in menu
 assert '"pointer_speed"' in touch and "Settings.System.getInt" in touch
 assert "return hz && animations;" in touch
 assert "setPointerSpeed(context, 7)" not in touch
