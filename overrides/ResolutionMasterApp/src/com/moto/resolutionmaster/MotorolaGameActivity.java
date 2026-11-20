@@ -25,6 +25,7 @@ public final class MotorolaGameActivity extends Activity {
     private TextView tvTouch;
     private TextView tvMode;
     private TextView tvCapabilities;
+    private TextView tvThermal;
     private TextView tvObserved;
     private Button btnRefresh;
     private Button btnGameTime;
@@ -49,6 +50,7 @@ public final class MotorolaGameActivity extends Activity {
         tvTouch = findViewById(R.id.tv_game_touch);
         tvMode = findViewById(R.id.tv_game_mode);
         tvCapabilities = findViewById(R.id.tv_game_support);
+        tvThermal = findViewById(R.id.tv_game_thermal);
         tvObserved = findViewById(R.id.tv_game_observed);
         btnRefresh = findViewById(R.id.btn_game_refresh);
         btnGameTime = findViewById(R.id.btn_game_gametime);
@@ -148,6 +150,26 @@ public final class MotorolaGameActivity extends Activity {
                         "Не удалось прочитать состояние Motorola");
                     access = snapshot.error;
                 }
+                String thermal;
+                if (!ShellHelper.isShizukuPermissionGranted() &&
+                        !ShellHelper.isRootAvailable()) {
+                    thermal = MotorolaThermalState.unavailable("нужен Shizuku/Root");
+                } else {
+                    try {
+                        ShellHelper.CommandResult result =
+                            ShellHelper.runCommandWithResult(
+                                MotorolaGameActivity.this,
+                                MotorolaThermalState.READ_COMMAND);
+                        thermal = result.success
+                            ? MotorolaThermalState.parse(result.detail)
+                            : MotorolaThermalState.unavailable(
+                                "Shell: код " + result.exitCode);
+                    } catch (Throwable e) {
+                        thermal = MotorolaThermalState.unavailable(
+                            "ошибка чтения " + e.getClass().getSimpleName());
+                    }
+                }
+                final String thermalSummary = thermal;
                 final MotorolaGameStateParser.Snapshot state = snapshot;
                 final String finalAccess = access;
                 runOnUiThread(new Runnable() {
@@ -156,6 +178,7 @@ public final class MotorolaGameActivity extends Activity {
                         btnRefresh.setEnabled(true);
                         btnRefresh.setText("Обновить состояние");
                         showState(state, finalAccess);
+                        tvThermal.setText(thermalSummary);
                     }
                 });
             }
@@ -455,7 +478,8 @@ public final class MotorolaGameActivity extends Activity {
             "Requests: " + tvDpsRequests.getText() + "\n" +
             "Touch: " + tvTouch.getText() + "\n" +
             "Mode: " + tvMode.getText() + "\n" +
-            "Capabilities: " + tvCapabilities.getText();
+            "Capabilities: " + tvCapabilities.getText() +
+            "\nThermal: " + tvThermal.getText();
         btnCopyReport.setEnabled(false);
         btnCopyReport.setText("Сбор отчёта...");
         new Thread(new Runnable() {
