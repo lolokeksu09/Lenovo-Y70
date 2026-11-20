@@ -15,6 +15,9 @@ layout = (app / "res/layout/activity_motorola_game.xml").read_text(encoding="utf
 
 assert "btn_game_capture_start" in activity and "@+id/btn_game_capture_start" in layout
 assert "btn_game_capture_stop" in activity and "@+id/btn_game_capture_stop" in layout
+assert "btn_game_capture_copy" in activity and "@+id/btn_game_capture_copy" in layout
+assert "copyGameCapture()" in activity
+assert 'ShellHelper.copyToClipboard(this, report, "Legion Y70 game capture")' in activity
 assert "tv_game_capture_status" in activity and "@+id/tv_game_capture_status" in layout
 assert "startForegroundService(" in activity and "startActivity(game);" in activity
 assert "MotorolaCaptureStore.report(this)" in activity
