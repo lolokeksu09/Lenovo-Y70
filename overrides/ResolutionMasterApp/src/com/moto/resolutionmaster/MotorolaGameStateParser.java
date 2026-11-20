@@ -24,6 +24,8 @@ public final class MotorolaGameStateParser {
         public final Boolean gameModeActive;
         public final Boolean touchRequested;
         public final String gamePackage;
+        public final Boolean ownTouchRequested;
+        public final String ownGamePackage;
         public final boolean touchServiceConnected;
         public final Boolean reportRateSupported;
         public final Boolean sampleRateSupported;
@@ -33,7 +35,8 @@ public final class MotorolaGameStateParser {
         private Snapshot(boolean readable, String error, Boolean dpsSupported,
                          Integer hardwareDpsStatus, String dpsRequests,
                          Boolean gameModeActive, Boolean touchRequested,
-                         String gamePackage, boolean touchServiceConnected,
+                         String gamePackage, Boolean ownTouchRequested,
+                         String ownGamePackage, boolean touchServiceConnected,
                          Boolean reportRateSupported, Boolean sampleRateSupported,
                          Boolean tapSensitivitySupported, Boolean swipeResponsivenessSupported) {
             this.readable = readable;
@@ -44,6 +47,8 @@ public final class MotorolaGameStateParser {
             this.gameModeActive = gameModeActive;
             this.touchRequested = touchRequested;
             this.gamePackage = gamePackage;
+            this.ownTouchRequested = ownTouchRequested;
+            this.ownGamePackage = ownGamePackage;
             this.touchServiceConnected = touchServiceConnected;
             this.reportRateSupported = reportRateSupported;
             this.sampleRateSupported = sampleRateSupported;
@@ -72,22 +77,28 @@ public final class MotorolaGameStateParser {
 
         Boolean touch = null;
         String game = null;
+        Boolean ownTouch = null;
+        String ownGame = null;
         for (String line : dump.split("\\r?\\n")) {
-            if (!line.contains("token=") || !line.contains("bundle=Bundle[") ||
-                    !line.contains("game_mode_op_package_name=com.motorola.gamemode")) {
+            if (!line.contains("token=") || !line.contains("bundle=Bundle[")) {
                 continue;
             }
+            String actor = inlineValue(line, "game_mode_op_package_name");
             String raw = inlineValue(line, "touch_enhance_enable");
-            if ("0".equals(raw) || "1".equals(raw)) {
+            if (!"0".equals(raw) && !"1".equals(raw)) continue;
+            if ("com.motorola.gamemode".equals(actor)) {
                 touch = "1".equals(raw);
                 game = inlineValue(line, "game_package_name");
+            } else if ("com.moto.resolutionmaster".equals(actor)) {
+                ownTouch = "1".equals(raw);
+                ownGame = inlineValue(line, "game_package_name");
             }
         }
 
         return new Snapshot(
             true, null, bool(supportedRaw), integer(hardwareRaw),
             value(dump, "mDpsRequests"), bool(value(dump, "isGameModeActive")),
-            touch, game, value(dump, "mAidlService") != null &&
+            touch, game, ownTouch, ownGame, value(dump, "mAidlService") != null &&
                 value(dump, "mAidlService").contains("IMotTouch"),
             bool(value(dump, "mReportRateSupported_aidl")),
             bool(value(dump, "mSampleRateSupported_aidl")),
@@ -97,7 +108,7 @@ public final class MotorolaGameStateParser {
 
     public static Snapshot unavailable(String error) {
         return new Snapshot(false, error, null, null, null, null, null,
-            null, false, null, null, null, null);
+            null, null, null, false, null, null, null, null);
     }
 
     private static String value(String dump, String key) {
