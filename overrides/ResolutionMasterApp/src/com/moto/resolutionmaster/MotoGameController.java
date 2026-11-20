@@ -101,6 +101,11 @@ public final class MotoGameController {
             context.getPackageManager().getPackageInfo(gamePackage, 0);
         } catch (PackageManager.NameNotFoundException e) {
             return Result.refused("Выбранная игра не установлена: " + gamePackage);
+        } catch (SecurityException e) {
+            return Result.refused("Android запретил проверку выбранной игры: " + safe(e.getMessage()));
+        } catch (RuntimeException e) {
+            return Result.refused("Сбой PackageManager при проверке игры: " +
+                e.getClass().getSimpleName() + " " + safe(e.getMessage()));
         }
         try {
             Object manager = manager(context);
