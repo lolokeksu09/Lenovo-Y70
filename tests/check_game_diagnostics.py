@@ -121,7 +121,9 @@ assert 'notifyAction("Bypass заблокирован Android:' in activity
 assert 'notifyAction("Touch Boost: нет данных' in activity
 assert "notifyAction(feedback);" in activity
 assert "private void copyDiagnosticReport()" in activity
-assert "ShellHelper.copyToClipboard(this, report" in activity
+assert "ShellHelper.copyToClipboard(" in activity
+assert '"Motorola diagnostics");' in activity
+assert '"logcat -d -b crash -v threadtime -t 600"' in activity
 assert "btnCopyReport.setOnClickListener(" in activity
 
 print("PASS: direct Motorola calls gated, verified status and no raw privileged workarounds")
