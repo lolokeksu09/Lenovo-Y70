@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -26,6 +28,7 @@ public final class MotorolaGameActivity extends Activity {
     private TextView tvMode;
     private TextView tvCapabilities;
     private TextView tvThermal;
+    private TextView tvCaptureStatus;
     private TextView tvObserved;
     private Button btnRefresh;
     private Button btnGameTime;
@@ -33,11 +36,23 @@ public final class MotorolaGameActivity extends Activity {
     private Button btnCopyReport;
     private Button btnDpsSet;
     private Button btnTouchSet;
+    private Button btnCaptureStart;
+    private Button btnCaptureStop;
+    private Button btnCaptureCopy;
     private TextView tvControlFeedback;
     private MotorolaGameStateParser.Snapshot lastSnapshot;
     private volatile boolean controlBusy = false;
     private volatile boolean destroyed = false;
     private int requestSerial = 0;
+    private final Handler captureHandler = new Handler(Looper.getMainLooper());
+    private boolean captureUiVisible;
+    private final Runnable captureStatusPoll = new Runnable() {
+        @Override public void run() {
+            if (!captureUiVisible || destroyed) return;
+            updateCaptureStatus();
+            captureHandler.postDelayed(this, 2000L);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle state) {
@@ -51,6 +66,19 @@ public final class MotorolaGameActivity extends Activity {
         tvMode = findViewById(R.id.tv_game_mode);
         tvCapabilities = findViewById(R.id.tv_game_support);
         tvThermal = findViewById(R.id.tv_game_thermal);
+        tvCaptureStatus = findViewById(R.id.tv_game_capture_status);
+        btnCaptureStart = findViewById(R.id.btn_game_capture_start);
+        btnCaptureStop = findViewById(R.id.btn_game_capture_stop);
+        btnCaptureCopy = findViewById(R.id.btn_game_capture_copy);
+        btnCaptureStart.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { startGameCapture(); }
+        });
+        btnCaptureStop.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { stopGameCapture(); }
+        });
+        btnCaptureCopy.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { copyGameCapture(); }
+        });
         tvObserved = findViewById(R.id.tv_game_observed);
         btnRefresh = findViewById(R.id.btn_game_refresh);
         btnGameTime = findViewById(R.id.btn_game_gametime);
@@ -106,11 +134,22 @@ public final class MotorolaGameActivity extends Activity {
                 if (outcome != null) tvControlFeedback.setText(outcome);
             }
         }
+        captureUiVisible = true;
+        captureHandler.removeCallbacks(captureStatusPoll);
+        captureHandler.post(captureStatusPoll);
         refresh();
+    }
+
+    @Override protected void onPause() {
+        captureUiVisible = false;
+        captureHandler.removeCallbacks(captureStatusPoll);
+        super.onPause();
     }
 
     @Override protected void onDestroy() {
         destroyed = true;
+        captureUiVisible = false;
+        captureHandler.removeCallbacks(captureStatusPoll);
         requestSerial++;
         super.onDestroy();
     }
@@ -444,6 +483,85 @@ public final class MotorolaGameActivity extends Activity {
         }, "MotoGameControl").start();
     }
 
+    private void updateCaptureStatus() {
+        boolean active = MotorolaCaptureStore.isActive(this);
+        btnCaptureStart.setEnabled(!active);
+        btnCaptureStop.setEnabled(active);
+        tvCaptureStatus.setText(MotorolaCaptureStore.status(this) +
+            "\nСеанс сохраняется локально; добавляется в «Скопировать диагностику».");
+    }
+
+    private void startGameCapture() {
+        if (controlBusy) {
+            notifyAction("Дождись завершения текущего запроса Motorola.");
+            return;
+        }
+        if (MotorolaCaptureStore.isActive(this)) {
+            notifyAction("Запись игрового сеанса уже запущена.");
+            return;
+        }
+        if (!ShellHelper.isShizukuPermissionGranted() &&
+                !ShellHelper.isRootAvailable()) {
+            notifyAction("Автодиагностика требует разрешение Shizuku. " +
+                "Выдай его на этом экране и попробуй снова.");
+            return;
+        }
+        final Intent game;
+        try {
+            game = getPackageManager().getLaunchIntentForPackage(
+                MotorolaCaptureFormat.GAME_PACKAGE);
+        } catch (RuntimeException e) {
+            notifyAction("Не удалось проверить запуск Wild Rift: " +
+                e.getClass().getSimpleName());
+            return;
+        }
+        if (game == null) {
+            notifyAction("Wild Rift не найден или не разрешён к запуску.");
+            return;
+        }
+        try {
+            Intent record = new Intent(this, MotorolaGameCaptureService.class)
+                .setAction(MotorolaGameCaptureService.ACTION_START);
+            startForegroundService(record);
+            // Foreground recording starts before the game comes to the front.
+            startActivity(game);
+            updateCaptureStatus();
+        } catch (RuntimeException e) {
+            try {
+                startService(new Intent(this, MotorolaGameCaptureService.class)
+                    .setAction(MotorolaGameCaptureService.ACTION_STOP));
+            } catch (RuntimeException ignored) { }
+            notifyAction("Не удалось запустить запись/игру: " +
+                e.getClass().getSimpleName());
+        }
+    }
+
+    private void stopGameCapture() {
+        if (!MotorolaCaptureStore.isActive(this)) {
+            updateCaptureStatus();
+            return;
+        }
+        try {
+            startService(new Intent(this, MotorolaGameCaptureService.class)
+                .setAction(MotorolaGameCaptureService.ACTION_STOP));
+            tvCaptureStatus.setText("Остановка записи запрошена...");
+        } catch (RuntimeException e) {
+            tvCaptureStatus.setText("Не удалось остановить запись: " +
+                e.getClass().getSimpleName());
+        }
+    }
+
+    private void copyGameCapture() {
+        String report = MotorolaCaptureStore.report(this);
+        if (report == null || report.trim().isEmpty()) {
+            notifyAction("Запись ещё не собрана: запусти тест игрового сеанса.");
+            return;
+        }
+        ShellHelper.copyToClipboard(this, report, "Legion Y70 game capture");
+        Toast.makeText(this, "Запись игрового сеанса скопирована",
+            Toast.LENGTH_SHORT).show();
+    }
+
     private static boolean verified(MotorolaGameStateParser.Snapshot state,
                                     boolean bypass, boolean enable, String gamePackage) {
         if (state == null || !state.readable) return false;
@@ -479,7 +597,8 @@ public final class MotorolaGameActivity extends Activity {
             "Touch: " + tvTouch.getText() + "\n" +
             "Mode: " + tvMode.getText() + "\n" +
             "Capabilities: " + tvCapabilities.getText() +
-            "\nThermal: " + tvThermal.getText();
+            "\nThermal: " + tvThermal.getText() +
+            "\n\nGame session:\n" + MotorolaCaptureStore.report(this);
         btnCopyReport.setEnabled(false);
         btnCopyReport.setText("Сбор отчёта...");
         new Thread(new Runnable() {

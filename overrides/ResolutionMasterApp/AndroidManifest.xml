@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.moto.resolutionmaster"
-    android:versionCode="45"
-    android:versionName="3.2.3-game">
+    android:versionCode="46"
+    android:versionName="3.3.0-game">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -62,6 +62,16 @@
             android:name=".MotorolaGameActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout" />
+
+        <!-- 90-second user-started game mode recording. No privileged writes. -->
+        <service
+            android:name=".MotorolaGameCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="motorola_game_capture_user_initiated_diagnostics" />
+        </service>
 
         <!-- Shizuku Provider and Client V3 Support -->
         <provider
