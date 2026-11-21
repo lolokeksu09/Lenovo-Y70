@@ -2,400 +2,84 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_dark"
-    android:fillViewport="true">
-
+    android:fillViewport="true"
+    android:background="@color/legion_black"
+    android:overScrollMode="never">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Игровые функции Motorola"
-            android:textColor="@color/text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="Команды Motorola · Проверка результата через системный сервис"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="СИСТЕМНОЕ ПОДКЛЮЧЕНИЕ"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_game_access"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Ожидание проверки"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tv_game_control_feedback"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Управление доступно только при разрешении системного сервиса"
-                android:textColor="@color/accent_blue"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-
-            <Button
-                android:id="@+id/btn_game_copy_report"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="44dp"
-                android:background="@drawable/btn_chip"
-                android:text="Скопировать диагностику"
-                android:textAllCaps="false"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/tv_game_observed"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:text="Последняя проверка: —"
-                android:textColor="@color/text_muted"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btn_game_refresh"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:minHeight="48dp"
-                android:background="@drawable/btn_primary"
-                android:text="Обновить состояние"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_game_shizuku"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="48dp"
-                android:background="@drawable/btn_chip"
-                android:text="Предоставить доступ Shizuku"
-                android:textAllCaps="false"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="DIRECT POWER SUPPLY"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_game_dps"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Проверка Bypass..."
-                android:textColor="@color/accent_green"
-                android:textSize="19sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_game_dps_request"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Запросы GameTime: —"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btn_game_dps_set"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:minHeight="48dp"
-                android:background="@drawable/btn_primary"
-                android:text="Управление Bypass: проверка прав"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Отображается аппаратный статус контроллера, а не состояние кнопки или зарядки Android."
-                android:textColor="@color/text_muted"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="TOUCH BOOST"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_game_touch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Нет данных"
-                android:textColor="@color/accent_blue"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_game_touch_set"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:minHeight="48dp"
-                android:background="@drawable/btn_primary"
-                android:text="Включить Touch Boost"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_game_direct_retry"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="44dp"
-                android:background="@drawable/btn_chip"
-                android:text="Сбросить блокировку прямого API"
-                android:textAllCaps="false"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:visibility="gone" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="7dp"
-                android:text="Если нашему APK недоступен Binder Motorola, Touch Boost работает через штатный GameTime. Shizuku позволяет читать статус, но не выдаёт разрешение на прямой вызов."
-                android:textColor="@color/text_muted"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-
-            <TextView
-                android:id="@+id/tv_game_mode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Активная игра: неизвестно"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Здесь показан запрос игрового помощника. Реальная задержка сенсора не измеряется."
-                android:textColor="@color/text_muted"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="ВОЗМОЖНОСТИ ДРАЙВЕРА"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_game_support"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:text="Ожидание данных..."
-                android:textColor="@color/text_primary"
-                android:textSize="13sp"
-                android:lineSpacingExtra="5dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="MAXE / THERMAL ENGINE"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_game_thermal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:text="Ожидание проверки..."
-                android:textColor="@color/text_primary"
-                android:textSize="13sp"
-                android:lineSpacingExtra="5dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="ЗАПИСЬ ИГРОВОГО СЕАНСА"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Один запуск: откроем Wild Rift и 90 секунд будем читать GameTime и MAXE. Никаких настроек не меняем."
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
-
-            <Button
-                android:id="@+id/btn_game_capture_start"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:minHeight="48dp"
-                android:background="@drawable/btn_primary"
-                android:text="Записать Wild Rift · 90 сек"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_game_capture_stop"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="44dp"
-                android:background="@drawable/btn_chip"
-                android:text="Остановить запись"
-                android:textAllCaps="false"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp" />
-
-            <Button
-                android:id="@+id/btn_game_capture_copy"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="44dp"
-                android:background="@drawable/btn_chip"
-                android:text="Скопировать запись"
-                android:textAllCaps="false"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/tv_game_capture_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Запись ещё не запускалась"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btn_game_gametime"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:minHeight="48dp"
-            android:background="@drawable/btn_chip"
-            android:text="Открыть игру / штатный GameTime"
-            android:textAllCaps="false"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="20dp"
-            android:text="Команды отправляются через штатный MotoExtendManager от имени нашего APK. Bypass требует Motorola signature|privileged, которое Shizuku без Root не выдаёт. Состояние меняется в интерфейсе только после повторной проверки сервиса. Touch Boost — запрос режима, не измерение задержки."
-            android:textColor="@color/text_muted"
-            android:textSize="12sp"
-            android:lineSpacingExtra="2dp" />
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="27dp"
+        android:paddingBottom="28dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LENOVO  /  LEGION  /  MOTOROLA" android:textColor="@color/legion_subtle" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.12"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Игровой режим" android:textColor="@color/legion_foreground" android:textSize="27sp" android:textStyle="bold"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Настройка через GameTime и диагностика Wild Rift" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="21dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Подключение" android:textColor="@color/legion_foreground" android:textSize="15sp" android:textStyle="bold"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Отдельно проверяются чтение через Shizuku и прямой доступ к Motorola API." android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+<TextView android:id="@+id/tv_game_access" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:text="Проверка соединения…" android:textColor="@color/legion_foreground" android:textSize="13sp" android:lineSpacingExtra="3dp"/>
+<TextView android:id="@+id/tv_game_control_feedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Ожидание команды" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="15dp" android:baselineAligned="false">
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginEnd="6dp">
+<Button android:id="@+id/btn_game_refresh" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:background="@drawable/legion_action_secondary" android:text="Обновить" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+<Button android:id="@+id/btn_game_shizuku" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:background="@drawable/legion_action_secondary" android:text="Shizuku" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="СЕАНС" android:textColor="@color/legion_subtle" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.12"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Wild Rift" android:textColor="@color/legion_foreground" android:textSize="22sp" android:textStyle="bold"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Запись до 12 контрольных точек: GameTime, MAXE и активное окно игры. Системные настройки не меняются." android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+<Button android:id="@+id/btn_game_capture_start" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="17dp" android:minHeight="54dp" android:background="@drawable/btn_primary" android:text="Записать сеанс · 90 сек" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp" android:textStyle="bold"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:baselineAligned="false">
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginEnd="6dp">
+<Button android:id="@+id/btn_game_capture_stop" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:background="@drawable/legion_action_secondary" android:text="Остановить" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+<Button android:id="@+id/btn_game_capture_copy" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:background="@drawable/legion_action_secondary" android:text="Копировать запись" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+</LinearLayout>
+</LinearLayout>
+<TextView android:id="@+id/tv_game_capture_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:text="Запись ещё не запускалась" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="УПРАВЛЕНИЕ" android:textColor="@color/legion_subtle" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.12"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Touch Boost" android:textColor="@color/legion_foreground" android:textSize="20sp" android:textStyle="bold"/>
+<TextView android:id="@+id/tv_game_touch" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="11dp" android:text="Нет данных" android:textColor="@color/legion_foreground" android:textSize="16sp" android:textStyle="bold" android:lineSpacingExtra="3dp"/>
+<TextView android:id="@+id/tv_game_mode" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Режим GameTime пока не определён" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="3dp"/>
+<Button android:id="@+id/btn_game_touch_set" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:minHeight="52dp" android:background="@drawable/legion_action_secondary" android:text="Открыть штатный GameTime" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+<Button android:id="@+id/btn_game_gametime" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:minHeight="48dp" android:background="@drawable/legion_action_secondary" android:text="Открыть GameTime отдельно" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+<Button android:id="@+id/btn_game_direct_retry" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:minHeight="48dp" android:background="@drawable/legion_action_secondary" android:text="Повторить проверку прямого API" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_muted" android:textSize="13sp" android:visibility="gone"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:text="Поддержка драйвера — не измерение фактической задержки сенсора." android:textColor="@color/legion_subtle" android:textSize="11sp" android:lineSpacingExtra="1dp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ПИТАНИЕ" android:textColor="@color/legion_subtle" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.12"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Direct Power Supply" android:textColor="@color/legion_foreground" android:textSize="20sp" android:textStyle="bold"/>
+<TextView android:id="@+id/tv_game_dps" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:text="Проверка Bypass…" android:textColor="@color/legion_foreground" android:textSize="16sp" android:textStyle="bold" android:lineSpacingExtra="2dp"/>
+<TextView android:id="@+id/tv_game_dps_request" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Запросы GameTime: —" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="3dp"/>
+<Button android:id="@+id/btn_game_dps_set" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:minHeight="52dp" android:background="@drawable/legion_action_secondary" android:text="Bypass: проверка прав" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="11dp" android:text="Bypass требует разрешений Motorola. Shizuku сам по себе их не выдаёт." android:textColor="@color/legion_subtle" android:textSize="11sp" android:lineSpacingExtra="2dp"/>
+</LinearLayout>
+<Button android:id="@+id/btn_game_details" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:minHeight="52dp" android:background="@drawable/legion_action_secondary" android:text="Показать технические данные" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+<LinearLayout android:id="@+id/layout_game_technical" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Возможности сенсора" android:textColor="@color/legion_foreground" android:textSize="15sp" android:textStyle="bold"/>
+<TextView android:id="@+id/tv_game_support" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Ожидание данных…" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="4dp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MAXE / Thermal Engine" android:textColor="@color/legion_foreground" android:textSize="15sp" android:textStyle="bold"/>
+<TextView android:id="@+id/tv_game_thermal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Ожидание проверки…" android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="4dp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:background="@drawable/legion_panel" android:padding="18dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Отчёт о состоянии" android:textColor="@color/legion_foreground" android:textSize="15sp" android:textStyle="bold"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Получить системные свойства, результаты запросов и последний журнал аварии приложения." android:textColor="@color/legion_muted" android:textSize="12sp" android:lineSpacingExtra="2dp"/>
+<Button android:id="@+id/btn_game_copy_report" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="13dp" android:minHeight="52dp" android:background="@drawable/legion_action_secondary" android:text="Скопировать диагностику" android:textAllCaps="false" android:gravity="center" android:textColor="@color/legion_foreground" android:textSize="13sp"/>
+<TextView android:id="@+id/tv_game_observed" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="11dp" android:text="Последняя проверка: —" android:textColor="@color/legion_subtle" android:textSize="11sp"/>
+</LinearLayout>
+</LinearLayout>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="LEGION Y70  /  READ-ONLY DIAGNOSTICS" android:textColor="@color/legion_subtle" android:textSize="10sp" android:letterSpacing="0.08" android:layout_marginBottom="16dp"/>
     </LinearLayout>
 </ScrollView>
