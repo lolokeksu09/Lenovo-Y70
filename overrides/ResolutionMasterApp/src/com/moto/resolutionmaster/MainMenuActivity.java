@@ -4,6 +4,13 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.res.ColorStateList;
+import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import java.util.List;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -83,6 +90,7 @@ public class MainMenuActivity extends Activity {
     private View[] bottomPages;
     private Button[] bottomButtons;
     private int activeBottomTab = 0;
+    private int gameLibraryGeneration = 0;
     private Button btnTogglePowerSaver;
     private Button btnOpenBatteryCare;
 
@@ -363,6 +371,12 @@ public class MainMenuActivity extends Activity {
         final Button gameLaunch = findViewById(R.id.btn_game_launch_wildrift);
         final Button touchDetails = findViewById(R.id.btn_main_game_touch_details);
         final Button capture = findViewById(R.id.btn_main_game_capture);
+        final Button status = findViewById(R.id.btn_game_diag_status);
+        final Button log = findViewById(R.id.btn_game_diag_log);
+        final Button time = findViewById(R.id.btn_game_quick_gametime);
+        final Button screen = findViewById(R.id.btn_game_quick_screen);
+        final Button power = findViewById(R.id.btn_game_quick_power);
+        final Button tools = findViewById(R.id.btn_game_quick_tools);
 
         if (display != null) display.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -415,6 +429,28 @@ public class MainMenuActivity extends Activity {
             @Override public void onClick(View v) { openGameModule(); }
         });
         if (capture != null) capture.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGameCapture(); }
+        });
+        if (status != null) status.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGameModule(); }
+        });
+        if (log != null) log.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { copyLastGameSession(); }
+        });
+        if (time != null) time.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openOfficialGameTime(); }
+        });
+        if (screen != null) screen.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainMenuActivity.this, MainActivity.class));
+            }
+        });
+        if (power != null) power.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                PowerHelper.launchBatteryCare(MainMenuActivity.this);
+            }
+        });
+        if (tools != null) tools.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openGameModule(); }
         });
         updateMainGameAccess();
@@ -433,6 +469,140 @@ public class MainMenuActivity extends Activity {
             : "Прямой API: доступ ещё не подтверждён");
         access.setTextColor(getColor(unavailable
             ? R.color.accent_yellow : R.color.accent_purple));
+    }
+
+    private void openGameCapture() {
+        Intent intent = new Intent(this, MotorolaGameActivity.class);
+        intent.putExtra(MotorolaGameActivity.EXTRA_START_CAPTURE, true);
+        startActivity(intent);
+    }
+
+    private void copyLastGameSession() {
+        String report = MotorolaCaptureStore.report(this);
+        if (report == null || report.trim().isEmpty() ||
+                report.equals("Нет записанного сеанса")) {
+            Toast.makeText(this, "Записанного сеанса пока нет",
+                Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ShellHelper.copyToClipboard(this, report, "Legion Y70 game session");
+        Toast.makeText(this, "Журнал сеанса скопирован",
+            Toast.LENGTH_SHORT).show();
+    }
+
+    private void openOfficialGameTime() {
+        // OEM UI may exist only as an overlay while a game is running.
+        Intent target = getPackageManager().getLaunchIntentForPackage(
+            "com.motorola.gamemode");
+        if (target == null) {
+            target = getPackageManager().getLaunchIntentForPackage(
+                MotorolaCaptureFormat.GAME_PACKAGE);
+            if (target != null) {
+                Toast.makeText(this, "GameTime доступен во время игры",
+                    Toast.LENGTH_LONG).show();
+            }
+        }
+        if (target == null) {
+            Toast.makeText(this, "Штатный GameTime не найден",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            startActivity(target);
+        } catch (RuntimeException error) {
+            Toast.makeText(this, "Не удалось открыть GameTime",
+                Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private int dp(int value) {
+        return (int) (getResources().getDisplayMetrics().density * value + 0.5f);
+    }
+
+    private void refreshInstalledGames() {
+        final int request = ++gameLibraryGeneration;
+        new Thread(new Runnable() {
+            @Override public void run() {
+                List<GameLibrary.Game> installed;
+                try {
+                    installed = GameLibrary.installedGames(MainMenuActivity.this);
+                } catch (RuntimeException error) {
+                    installed = java.util.Collections.emptyList();
+                }
+                final List<GameLibrary.Game> games = installed;
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (isFinishing() || isDestroyed() ||
+                                request != gameLibraryGeneration) return;
+                        renderInstalledGames(games);
+                    }
+                });
+            }
+        }, "LegionGameLibrary").start();
+    }
+
+    private void renderInstalledGames(List<GameLibrary.Game> games) {
+        View section = findViewById(R.id.card_my_games);
+        LinearLayout container = findViewById(R.id.layout_game_cards);
+        TextView title = findViewById(R.id.tv_my_games_title);
+        if (section == null || container == null || title == null) return;
+        container.removeAllViews();
+        if (games == null || games.isEmpty()) {
+            section.setVisibility(View.GONE);
+            return;
+        }
+        title.setText("Мои игры (" + games.size() + ")");
+        PackageManager pm = getPackageManager();
+        for (final GameLibrary.Game game : games) {
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setGravity(Gravity.CENTER);
+            card.setPadding(dp(10), dp(10), dp(10), dp(10));
+            card.setMinimumHeight(dp(112));
+            card.setBackgroundResource(R.drawable.legion_surface_neutral);
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                dp(120), LinearLayout.LayoutParams.WRAP_CONTENT);
+            p.setMargins(0, 0, dp(9), 0);
+            ImageView icon = new ImageView(this);
+            icon.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(40)));
+            try {
+                icon.setImageDrawable(pm.getApplicationIcon(game.packageName));
+            } catch (PackageManager.NameNotFoundException ignored) {
+                icon.setImageResource(R.drawable.nav_icon_games);
+            }
+            icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            card.addView(icon);
+            TextView name = new TextView(this);
+            name.setText(game.label);
+            name.setMaxLines(2);
+            name.setGravity(Gravity.CENTER);
+            name.setTextColor(getColor(R.color.legion_foreground));
+            name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            name.setPadding(0, dp(7), 0, 0);
+            card.addView(name);
+            card.setClickable(true);
+            card.setFocusable(true);
+            card.setContentDescription(game.label + ": запустить");
+            card.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    try {
+                        Intent launch = getPackageManager().getLaunchIntentForPackage(
+                            game.packageName);
+                        if (launch == null) {
+                            Toast.makeText(MainMenuActivity.this,
+                                "Запуск игры недоступен", Toast.LENGTH_SHORT).show();
+                        } else {
+                            startActivity(launch);
+                        }
+                    } catch (RuntimeException error) {
+                        Toast.makeText(MainMenuActivity.this,
+                            "Не удалось запустить игру", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            container.addView(card, p);
+        }
+        section.setVisibility(View.VISIBLE);
     }
 
     private int mLastDensityDpi = -1;
@@ -482,7 +652,10 @@ public class MainMenuActivity extends Activity {
                 bottomButtons[i].getText().toString() +
                 (active ? ", выбрана" : ", перейти"));
         }
-        if (selected == 2) updateMainGameAccess();
+        if (selected == 2) {
+            updateMainGameAccess();
+            refreshInstalledGames();
+        }
     }
 
     @Override
@@ -520,6 +693,10 @@ public class MainMenuActivity extends Activity {
         super.onResume();
         autoGrantIfPossible();
         updateStatus();
+        if (activeBottomTab == 2) {
+            updateMainGameAccess();
+            refreshInstalledGames();
+        }
     }
 
     private void autoGrantIfPossible() {
@@ -1328,7 +1505,8 @@ public class MainMenuActivity extends Activity {
     private void updatePowerUI() {
         PowerHelper.BatteryInfo info = PowerHelper.getBatteryInfo(this);
         if (tvBatteryStatus != null) {
-            String text = String.format("🔋 Батарея: %d%% • %.1f°C • %s", info.level, info.temperature, info.statusText);
+            String text = String.format(java.util.Locale.getDefault(),
+                "%d%% • %.1f°C\n%s", info.level, info.temperature, info.statusText);
             tvBatteryStatus.setText(text);
             if (info.isBypassActive) {
                 tvBatteryStatus.setTextColor(0xFF8B5CF6);
@@ -1348,10 +1526,10 @@ public class MainMenuActivity extends Activity {
         boolean powerSave = PowerHelper.isPowerSaveMode(this);
         if (btnTogglePowerSaver != null) {
             if (powerSave) {
-                btnTogglePowerSaver.setText("🔋 Энергосбережение: Вкл ✓");
+                btnTogglePowerSaver.setText("Эко: Вкл");
                 btnTogglePowerSaver.setTextColor(0xFF10B981);
             } else {
-                btnTogglePowerSaver.setText("🔋 Энергосбережение: Выкл");
+                btnTogglePowerSaver.setText("Эко: Выкл");
                 btnTogglePowerSaver.setTextColor(0xFFF3F4F6);
             }
         }
