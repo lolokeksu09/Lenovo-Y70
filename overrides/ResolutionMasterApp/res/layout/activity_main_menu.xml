@@ -24,7 +24,7 @@
 </LinearLayout>
 </LinearLayout><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/legion_surface_hero" android:padding="14dp" android:layout_marginTop="12dp">
 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="УСТРОЙСТВО" android:textColor="@color/legion_muted" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14"/>
-<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Lenovo Legion Y70" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" android:layout_marginTop="5dp"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Текущие параметры" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" android:layout_marginTop="5dp"/>
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:baselineAligned="false">
 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginEnd="5dp">
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
@@ -1207,7 +1207,7 @@
                     android:minHeight="50dp"
                     android:layout_marginEnd="5dp"
                     android:background="@drawable/legion_action_secondary"
-                    android:text="Touch Boost"
+                    android:text="Проверить Touch"
                     android:textSize="13sp"
                     android:textAllCaps="false"
                     android:textColor="@color/legion_foreground"/>
@@ -1218,7 +1218,7 @@
                     android:minHeight="50dp"
                     android:layout_marginStart="5dp"
                     android:background="@drawable/legion_action_secondary"
-                    android:text="Запись сеанса"
+                    android:text="Перейти к записи"
                     android:textSize="13sp"
                     android:textAllCaps="false"
                     android:textColor="@color/legion_foreground"/>
