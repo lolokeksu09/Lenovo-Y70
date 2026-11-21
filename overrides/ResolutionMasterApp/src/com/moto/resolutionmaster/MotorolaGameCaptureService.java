@@ -103,13 +103,19 @@ public final class MotorolaGameCaptureService extends Service {
                         : "system=ошибка Shell " + read.exitCode;
                     if (!read.success || light.contains("неполный ответ")) error = true;
 
-                    // Only four potentially heavier dumpsys reads per session.
+                    // Four checkpoints. A running PID can outlive the actual
+                    // resumed Activity, so record both foreground and GameTime.
                     if (i == 0 || i == 4 || i == 8 || i == 11) {
+                        ShellHelper.CommandResult fg = ShellHelper.runCommandWithResult(
+                            this, MotorolaForegroundState.READ_COMMAND);
+                        String foreground = fg.success
+                            ? MotorolaForegroundState.parse(fg.detail) : "unknown";
                         ShellHelper.CommandResult dump = ShellHelper.runCommandWithResult(
                             this, "dumpsys moto_extend_service");
-                        motorola = dump.success
+                        motorola = (dump.success
                             ? MotorolaCaptureFormat.motorola(dump.detail)
-                            : "Motorola=Shell error " + dump.exitCode;
+                            : "Motorola=Shell error " + dump.exitCode) +
+                            " foreground=" + foreground;
                         if (!dump.success ||
                                 motorola.contains("нет подтверждённых данных")) {
                             error = true;
