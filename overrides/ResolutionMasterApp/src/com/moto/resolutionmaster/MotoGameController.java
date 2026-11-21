@@ -104,6 +104,11 @@ public final class MotoGameController {
      */
     public static Result requestTouch(Context context, boolean enable, String gamePackage) {
         if (context == null) return Result.refused("Нет Context");
+        if (MotorolaDirectAccessGate.isBlocked(context)) {
+            return Result.refused(
+                "Прямой доступ к moto_extend_service ранее не предоставил Binder " +
+                "нашему APK. Используй штатный GameTime или явно сбрось блокировку.");
+        }
         if (gamePackage == null ||
                 !gamePackage.matches("[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)+")) {
             return Result.refused("Не определена установленная игра для Touch Boost");
@@ -165,7 +170,10 @@ public final class MotoGameController {
             if (instance != null) {
                 Field coreField = klass.getDeclaredField("mMotoExtendManagerCore");
                 coreField.setAccessible(true);
-                if (coreField.get(instance) != null) return instance;
+                if (coreField.get(instance) != null) {
+                    MotorolaDirectAccessGate.reset(context);
+                    return instance;
+                }
             }
         } catch (ReflectiveOperationException | SecurityException ignored) {
             // Missing or restricted wrapper; try official framework Core below.
@@ -194,6 +202,9 @@ public final class MotoGameController {
             getService.setAccessible(true);
             Object rawBinder = getService.invoke(null, SERVICE_NAME);
             if (!(rawBinder instanceof IBinder)) {
+                // Shizuku shell may still read dumpsys, but it does not grant
+                // this application's UID a handle to the OEM Binder service.
+                MotorolaDirectAccessGate.recordMissingBinder(context);
                 throw new IllegalStateException(
                     "Сервис moto_extend_service не предоставил Binder нашему APK");
             }
@@ -238,6 +249,7 @@ public final class MotoGameController {
             coreDeathRecipient = recipient;
             coreInstance = result;
             preferRegisteredCore = true;
+            MotorolaDirectAccessGate.reset(context);
             return result;
         }
     }
