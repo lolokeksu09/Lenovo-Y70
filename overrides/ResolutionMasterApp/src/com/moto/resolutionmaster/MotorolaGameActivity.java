@@ -21,6 +21,8 @@ import java.util.Date;
  * No sysfs edits, raw Binder codes or fake success on void API calls.
  */
 public final class MotorolaGameActivity extends Activity {
+    /** User-initiated home-tab action; same permission checks as the Start button. */
+    public static final String EXTRA_START_CAPTURE = "motorola.game.start_capture";
     private TextView tvAccess;
     private TextView tvDps;
     private TextView tvDpsRequests;
@@ -138,6 +140,16 @@ public final class MotorolaGameActivity extends Activity {
                 }
             }
         });
+        if (state == null && getIntent().getBooleanExtra(EXTRA_START_CAPTURE, false)) {
+            getIntent().removeExtra(EXTRA_START_CAPTURE);
+            // Explicit button tap from Games tab. Reuse the SAME precondition
+            // checks and bounded foreground capture behavior as this screen.
+            btnCaptureStart.post(new Runnable() {
+                @Override public void run() {
+                    if (!destroyed && !isFinishing()) startGameCapture();
+                }
+            });
+        }
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
