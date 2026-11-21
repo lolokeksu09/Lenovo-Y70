@@ -38,7 +38,9 @@ assert 'getInstance", Context.class' in controller
 # The 3.2.1 failure path was a non-null SDK manager with a NULL Core.
 # Require a genuine typed AIDL/Core fallback before any call.
 assert 'klass.getDeclaredField("mMotoExtendManagerCore")' in controller
-assert 'if (coreField.get(instance) != null) return instance;' in controller
+assert 'if (coreField.get(instance) != null) {' in controller
+assert 'MotorolaDirectAccessGate.reset(context);' in controller
+assert 'return instance;' in controller
 assert "return coreFromRegisteredService(context);" in controller
 assert '"android.os.ServiceManager"' in controller
 assert '"getService", String.class' in controller
