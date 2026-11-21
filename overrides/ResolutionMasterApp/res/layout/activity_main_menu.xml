@@ -35,15 +35,15 @@
                     android:id="@+id/tv_app_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="LenovoMotorolovichY70"
+                    android:text="LEGION Y70"
                     android:textColor="@color/text_primary"
-                    android:textSize="20sp"
+                    android:textSize="23sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Legion Y70 &amp; Moto Edge 70 Max Master"
+                    android:text="MOTOROLA BUILD  ·  DEVICE CONTROL"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -62,7 +62,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ТЕКУЩЕЕ СОСТОЯНИЕ СИСТЕМЫ"
+                android:text="Устройство сейчас"
                 android:textColor="@color/text_muted"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -156,12 +156,69 @@
         </LinearLayout>
 
 
+
+        <!-- Featured primary navigation, same original control ID and listener. -->
+        <LinearLayout
+            android:id="@+id/card_featured_game"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/legion_panel"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="GAME CONTROL"
+                android:letterSpacing="0.12"
+                android:textColor="@color/legion_red"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:text="Wild Rift и GameTime"
+                android:textColor="@color/legion_foreground"
+                android:textSize="21sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Touch Boost, Bypass и запись игрового сеанса — в одном месте."
+                android:lineSpacingExtra="2dp"
+                android:textColor="@color/legion_muted"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_open_motorola_game"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                    android:minHeight="54dp"
+                    android:gravity="center"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/btn_primary"
+                android:text="Открыть игровые функции"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
         <!-- Menu Section Header -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="РАЗДЕЛЫ НАСТРОЕК"
+            android:text="Инструменты"
             android:textColor="@color/text_muted"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -1252,24 +1309,6 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Bypass Charging Toggle Button -->
-            <Button
-                android:id="@+id/btn_open_motorola_game"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:gravity="center"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/btn_primary"
-                android:text="Проверить Bypass и Touch Boost"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -1724,7 +1763,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LenovoMotorolovichY70 v3.3.3-game"
+                android:text="LenovoMotorolovichY70 v3.4.0-game"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
