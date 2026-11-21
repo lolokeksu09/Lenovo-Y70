@@ -82,6 +82,12 @@ public class MainMenuActivity extends Activity {
     // Power & Bypass Controls
     private TextView tvBatteryStatus;
     private Button btnOpenMotorolaGame;
+
+    // Four persistent bottom tabs. Each page keeps its scroll position while
+    // hidden, and every existing setting retains its original view ID.
+    private View[] bottomPages;
+    private Button[] bottomButtons;
+    private int activeBottomTab = 0;
     private Button btnTogglePowerSaver;
     private Button btnOpenBatteryCare;
 
@@ -129,6 +135,7 @@ public class MainMenuActivity extends Activity {
         } catch (Throwable ignored) {}
         DisplayManagerHelper.bypassHiddenApi(this);
         setContentView(R.layout.activity_main_menu);
+        initBottomNavigation(savedInstanceState);
 
         tvMenuRes = findViewById(R.id.tv_menu_res);
         tvMenuDpi = findViewById(R.id.tv_menu_dpi);
@@ -352,6 +359,64 @@ public class MainMenuActivity extends Activity {
     }
 
     private int mLastDensityDpi = -1;
+
+    private void initBottomNavigation(Bundle state) {
+        bottomPages = new View[] {
+            findViewById(R.id.page_tab_overview),
+            findViewById(R.id.page_tab_display),
+            findViewById(R.id.page_tab_games),
+            findViewById(R.id.page_tab_system)
+        };
+        bottomButtons = new Button[] {
+            findViewById(R.id.btn_nav_overview),
+            findViewById(R.id.btn_nav_display),
+            findViewById(R.id.btn_nav_games),
+            findViewById(R.id.btn_nav_system)
+        };
+        for (int i = 0; i < bottomButtons.length; i++) {
+            final int tab = i;
+            bottomButtons[i].setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) {
+                    showBottomTab(tab);
+                }
+            });
+        }
+        int restored = state == null ? 0 : state.getInt("main.bottom_tab", 0);
+        showBottomTab(restored);
+    }
+
+    private void showBottomTab(int tab) {
+        if (bottomPages == null || bottomButtons == null) return;
+        int selected = tab >= 0 && tab < bottomPages.length ? tab : 0;
+        activeBottomTab = selected;
+        for (int i = 0; i < bottomPages.length; i++) {
+            boolean active = i == selected;
+            bottomPages[i].setVisibility(active ? View.VISIBLE : View.GONE);
+            bottomButtons[i].setSelected(active);
+            bottomButtons[i].setBackgroundResource(active
+                ? R.drawable.nav_tab_active : R.drawable.nav_tab_idle);
+            bottomButtons[i].setTextColor(getColor(active
+                ? R.color.legion_foreground : R.color.legion_muted));
+            bottomButtons[i].setContentDescription(
+                bottomButtons[i].getText().toString() +
+                (active ? ", выбрана" : ", перейти"));
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putInt("main.bottom_tab", activeBottomTab);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (activeBottomTab != 0) {
+            showBottomTab(0);
+        } else {
+            super.onBackPressed();
+        }
+    }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {

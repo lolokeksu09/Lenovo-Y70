@@ -48,7 +48,9 @@ featured = m["card_featured_game"]
 assert any(x.attrib.get(ns+"id") == "@+id/btn_open_motorola_game"
            for x in featured.iter()), "Existing GameTime button must move, not duplicate"
 ids_order = list(m.keys())
-assert ids_order.index("btn_open_motorola_game") < ids_order.index("card_nav_display")
+assert "page_tab_games" in m and "page_tab_display" in m
+assert "bottom_navigation" in m and "page_tab_overview" in m
+assert ids_order.count("btn_open_motorola_game") == 1
 assert "layout_footer_author" in m, "Upstream credits must be preserved"
 
 activity = (src / "MotorolaGameActivity.java").read_text(encoding="utf-8")
