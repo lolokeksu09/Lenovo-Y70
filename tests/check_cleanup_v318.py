@@ -54,5 +54,5 @@ assert "if (installed && Boolean.FALSE.equals(enabledState))" in activity
 # Prevent bulk success count from treating missing/unknown preset packages as disabled.
 assert "if (!enabled) {\n                disabledCount++;" not in activity
 assert "Отключено: " in activity
-assert 'android:versionName="3.3.2-game"' in manifest
+assert 'android:versionName="3.3.3-game"' in manifest
 print("PASS: removed unverified assistant and fake freeze, preserved Disabled filter and manual restore")
