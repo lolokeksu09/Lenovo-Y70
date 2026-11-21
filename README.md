@@ -1,4 +1,13 @@
-# LenovoMotorolovichY70 — v3.3.0-game (автозапись GameTime / MAXE)
+# LenovoMotorolovichY70 — v3.3.1-game (Android reflection crash hotfix)
+
+## Исправление v3.3.1 — Touch Boost NoClassDefFoundError
+
+- По пользовательскому AndroidRuntime выявлен конкретный сбой: `MotoGameController.explain()` ссылался на `java.lang.reflect.InaccessibleObjectException`, отсутствующий в среде выполнения Lenovo Y70, и падал при обработке исходной ошибки Motorola.
+- Прямая ссылка на этот Java 9 тип исключена из Android bytecode. Проверка проводится по имени класса без жёсткого связывания с отсутствующим типом; `IllegalAccessException` по-прежнему определяется через стандартный тип Android.
+- В копируемом crash-отчёте оставлены только записи PID приложения `com.moto.resolutionmaster`; события Android Settings и других процессов больше не присоединяются к чужому стеку.
+- Новые JVM и статические регрессии, версия `3.3.1-game` (`versionCode=47`).
+- **Не подтверждено:** успешное включение Touch Boost сторонним APK. После исправления обработчика будет видна первоначальная ошибка доступа/вызова Motorola, если она сохраняется.
+
 Исправляем приложение Lenovo Y70 / Moto Edge 70 Max на основе исходников [f1rzen-n/LenovoMotorolovichY70](https://github.com/f1rzen-n/LenovoMotorolovichY70), фиксированный коммит `10ffc78b9c97326467dc457513d6182581416991`. Права и сведения об авторах upstream сохранены.
 
 ## Новое в v3.3.0 — запись игрового сеанса без Termux
