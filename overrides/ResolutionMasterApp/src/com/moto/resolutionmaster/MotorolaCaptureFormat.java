@@ -25,7 +25,7 @@ public final class MotorolaCaptureFormat {
         if (mode == null || thermal == null || engine == null || pid == null) {
             return "system=неполный ответ";
         }
-        return "game=" + (pid.isEmpty() ? "not-running" : "running") +
+        return "game-process=" + (pid.isEmpty() ? "not-running" : "running") +
             " MAXE=" + safe(mode) +
             " thermal-property=" + safe(thermal) +
             " thermal-engine=" + safe(engine);
