@@ -80,6 +80,6 @@
 <TextView android:id="@+id/tv_game_observed" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="11dp" android:text="Последняя проверка: —" android:textColor="@color/legion_subtle" android:textSize="11sp"/>
 </LinearLayout>
 </LinearLayout>
-<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="LEGION Y70  /  READ-ONLY DIAGNOSTICS" android:textColor="@color/legion_subtle" android:textSize="10sp" android:letterSpacing="0.08" android:layout_marginBottom="16dp"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="SHIZUKU / МОНИТОРИНГ   ·   MOTOROLA / УПРАВЛЕНИЕ" android:textColor="@color/legion_subtle" android:textSize="10sp" android:letterSpacing="0.08" android:layout_marginBottom="16dp"/>
     </LinearLayout>
 </ScrollView>
