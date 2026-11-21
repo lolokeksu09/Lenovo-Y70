@@ -36,6 +36,7 @@ public final class MotorolaGameActivity extends Activity {
     private Button btnCopyReport;
     private Button btnDpsSet;
     private Button btnTouchSet;
+    private Button btnDirectRetry;
     private Button btnCaptureStart;
     private Button btnCaptureStop;
     private Button btnCaptureCopy;
@@ -89,6 +90,10 @@ public final class MotorolaGameActivity extends Activity {
         });
         btnDpsSet = findViewById(R.id.btn_game_dps_set);
         btnTouchSet = findViewById(R.id.btn_game_touch_set);
+        btnDirectRetry = findViewById(R.id.btn_game_direct_retry);
+        btnDirectRetry.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { resetDirectAccessGate(); }
+        });
         tvControlFeedback = findViewById(R.id.tv_game_control_feedback);
         // These are actions, not status lamps: even a denied operation must
         // give a visible reason when the user taps it.
@@ -226,7 +231,9 @@ public final class MotorolaGameActivity extends Activity {
 
     private void showState(MotorolaGameStateParser.Snapshot s, String access) {
         lastSnapshot = s;
-        tvAccess.setText(access);
+        tvAccess.setText(access + "\n" +
+            MotorolaTouchRoute.accessSummary(
+                MotorolaDirectAccessGate.isBlocked(this)));
         tvObserved.setText("Последняя проверка: " +
             DateFormat.getTimeInstance(DateFormat.MEDIUM).format(new Date()));
         btnShizuku.setVisibility(ShellHelper.isShizukuPermissionGranted()
@@ -306,10 +313,13 @@ public final class MotorolaGameActivity extends Activity {
             btnDpsSet.setText(Integer.valueOf(1).equals(s.hardwareDpsStatus)
                 ? "Выключить Bypass" : "Включить Bypass");
         }
-        btnTouchSet.setText(s.readable && s.touchServiceConnected
-            ? (Boolean.TRUE.equals(s.ownTouchRequested)
-                ? "Выключить наш Touch Boost" : "Включить Touch Boost")
-            : "Touch Boost: проверить доступ");
+        boolean ownBinderMissing = MotorolaDirectAccessGate.isBlocked(this);
+        btnDirectRetry.setVisibility(ownBinderMissing ? View.VISIBLE : View.GONE);
+        btnTouchSet.setText(ownBinderMissing
+            ? MotorolaTouchRoute.actionLabel(true, s.ownTouchRequested)
+            : s.readable && s.touchServiceConnected
+                ? MotorolaTouchRoute.actionLabel(false, s.ownTouchRequested)
+                : "Touch Boost: проверить доступ");
         // Do not overwrite tvControlFeedback here: it belongs to the last
         // user action, not the async status refresh.
     }
@@ -370,6 +380,14 @@ public final class MotorolaGameActivity extends Activity {
             notifyAction("Операция Motorola уже выполняется.");
             return;
         }
+        if (MotorolaTouchRoute.useOfficialGameTime(
+                MotorolaDirectAccessGate.isBlocked(this))) {
+            notifyAction("Shizuku читает GameTime, но прямой Binder недоступен " +
+                "нашему APK. Открываю штатный игровой помощник; включение " +
+                "Touch Boost зависит от его настроек.");
+            openGameTime();
+            return;
+        }
         final MotorolaGameStateParser.Snapshot s = lastSnapshot;
         if (s == null || !s.readable) {
             notifyAction("Touch Boost: нет данных от moto_extend_service. " +
@@ -385,6 +403,16 @@ public final class MotorolaGameActivity extends Activity {
             : "com.riotgames.league.wildrift";
         boolean enable = !Boolean.TRUE.equals(s.ownTouchRequested);
         runControl(false, enable, game);
+    }
+
+    private void resetDirectAccessGate() {
+        MotorolaDirectAccessGate.reset(this);
+        notifyAction("Блокировка прямого API сброшена по твоему запросу. " +
+            "Следующее нажатие Touch Boost снова попробует штатный Motorola API. " +
+            "Это не выдаёт системные разрешения.");
+        updateControls(lastSnapshot != null
+            ? lastSnapshot
+            : MotorolaGameStateParser.unavailable("Нет свежих данных"));
     }
 
     private void runControl(final boolean bypass, final boolean enable,
@@ -588,6 +616,9 @@ public final class MotorolaGameActivity extends Activity {
             "App: " + getPackageName() + "\n" +
             "Shizuku: " + ShellHelper.isShizukuPermissionGranted() + "\n" +
             "Motorola DPS permission: " + hasDpsPermission() + "\n" +
+            "Direct Motorola Binder: " +
+                MotorolaTouchRoute.accessSummary(
+                    MotorolaDirectAccessGate.isBlocked(this)) + "\n" +
             "Service: " + tvAccess.getText() + "\n" +
             "Last action: " + tvControlFeedback.getText() + "\n" +
             "Pending OEM operation: " + MotorolaControlTrace.pending(this) + "\n" +
