@@ -206,6 +206,28 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
+            <Button
+                android:id="@+id/btn_game_direct_retry"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="44dp"
+                android:background="@drawable/btn_chip"
+                android:text="Сбросить блокировку прямого API"
+                android:textAllCaps="false"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:text="Если нашему APK недоступен Binder Motorola, Touch Boost работает через штатный GameTime. Shizuku позволяет читать статус, но не выдаёт разрешение на прямой вызов."
+                android:textColor="@color/text_muted"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
+
             <TextView
                 android:id="@+id/tv_game_mode"
                 android:layout_width="match_parent"
