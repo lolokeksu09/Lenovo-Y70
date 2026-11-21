@@ -128,6 +128,8 @@ public final class MotorolaGameActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        MotorolaDirectAccessGate.migrateLegacyFailure(
+            this, MotorolaControlTrace.lastCompleted(this));
         if (!controlBusy) {
             String pending = MotorolaControlTrace.pending(this);
             if (pending != null) {
