@@ -634,27 +634,7 @@ public final class MotorolaGameActivity extends Activity {
     }
 
     private static String relevantCrashExcerpt(String raw) {
-        if (raw == null || raw.isEmpty()) return "Журнал аварий пуст";
-        String[] lines = raw.split("\\r?\\n");
-        int match = -1;
-        for (int i = 0; i < lines.length; i++) {
-            if (lines[i].contains("Process: com.moto.resolutionmaster") ||
-                lines[i].contains("Cmdline: com.moto.resolutionmaster") ||
-                lines[i].contains(">>> com.moto.resolutionmaster <<<")) {
-                match = i;
-            }
-        }
-        if (match < 0) return "В журнале нет аварии com.moto.resolutionmaster";
-        StringBuilder out = new StringBuilder();
-        // Emit only the segment identified as our own app's crash.
-        for (int i = Math.max(0, match - 2);
-                 i < Math.min(lines.length, match + 32) &&
-                 out.length() < 4500; i++) {
-            String line = lines[i];
-            if (line.length() > 240) line = line.substring(0, 240);
-            out.append(line).append('\n');
-        }
-        return out.toString();
+        return MotorolaCrashLogFilter.relevantCrashExcerpt(raw);
     }
 
     private void openGameTime() {
