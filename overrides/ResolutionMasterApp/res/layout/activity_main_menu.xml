@@ -102,7 +102,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_blue"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -116,7 +116,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🖥️ Настройки дисплея"
+                    android:drawableStart="@drawable/nav_icon_display"
+                    android:drawablePadding="8dp"
+                    android:text="Настройки дисплея"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -129,7 +131,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="144Hz • 2K/FHD+"
+                    android:text="OLED · 2K/FHD+"
                     android:textColor="@color/accent_blue"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -139,10 +141,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Герцовка дисплея не гарантирует частоту опроса сенсора."
+                android:text="Разрешение, плотность пикселей и частота обновления."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_open_display"
@@ -156,7 +158,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/btn_primary"
-                android:text="Открыть настройки дисплея →"
+                android:text="Открыть параметры дисплея"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
@@ -169,7 +171,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_violet"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -183,7 +185,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="⚡ Управление откликом сенсора (Тач)"
+                    android:drawableStart="@drawable/legion_icon_touch"
+                    android:drawablePadding="8dp"
+                    android:text="Настройки отклика"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -196,7 +200,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Герцовка дисплея не гарантирует частоту опроса сенсора."
+                    android:text="Частота экрана не равна частоте опроса сенсора."
                     android:textColor="@color/accent_purple"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -206,10 +210,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Запросить 144 Гц и анимации 0.5x"
+                android:text="Запрос 144 Гц · анимации 0.5×"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <!-- Slider Container -->
             <LinearLayout
@@ -319,10 +323,10 @@
                     android:layout_marginTop="10dp"
                     android:background="#0D1117"
                     android:padding="8dp"
-                    android:text="pointer_speed регулирует мышь и трекпад, а не сенсорный экран."
+                    android:text="Регулятор влияет на мышь и трекпад, не на тачскрин."
                     android:textColor="@color/text_muted"
                     android:textSize="11sp"
-                    android:lineSpacingExtra="3dp" />
+                    android:lineSpacingExtra="2dp" />
             </LinearLayout>
 
             <!-- Master Action Buttons -->
@@ -338,7 +342,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="12dp"
                 android:background="@drawable/btn_purple"
-                android:text="Запросить 144 Гц и анимации 0.5x"
+                android:text="Запрос 144 Гц · анимации 0.5×"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
@@ -398,7 +402,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Ускорение анимаций в 2 раза (0.5x) убирает визуальные задержки системы."
+                    android:text="0.5× сокращает длительность анимаций, не задержку сенсора."
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
 
@@ -454,7 +458,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_blue"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -468,7 +472,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="👁️ Защита глаз и экран (OLED)"
+                    android:drawableStart="@drawable/legion_icon_touch"
+                    android:drawablePadding="8dp"
+                    android:text="OLED · Защита глаз"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -481,7 +487,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="DC Dimming • ШИМ"
+                    android:text="OLED · Яркость"
                     android:textColor="@color/accent_blue"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -491,10 +497,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Аппаратный DC Dimming (Анти-ШИМ): устраняет мерцание OLED-матрицы на низкой яркости, снижает нагрузку на зрение\n• Ночной режим: фильтрация синего спектра для комфорта в темноте\n• Экстра-затемнение: снижение яркости ниже системного порога"
+                android:text="DC Dimming, ночной режим и экстра-затемнение. Доступность зависит от прошивки."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_toggle_dc_dimming"
@@ -1274,7 +1280,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_hero"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1288,7 +1294,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🚫 Отключение APK (Debloater)"
+                    android:drawableStart="@drawable/legion_icon_apps"
+                    android:drawablePadding="8dp"
+                    android:text="Приложения · Debloater"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1301,7 +1309,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Очистка памяти"
+                    android:text="Менеджер APK"
                     android:textColor="@color/accent_green"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1311,10 +1319,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Сценарий очистки (пакетное отключение 27 нежелательных служб)\n• Удаление кредитных трекеров, телеметрии и рекламы\n• Ручной менеджер приложений с описанием служб\n• Полная обратимость — включение обратно в 1 клик"
+                android:text="Проверка и отключение пакетов с возможностью восстановления."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_open_debloat"
@@ -1328,7 +1336,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/btn_secondary"
-                android:text="Управление приложениями (APK) →"
+                android:text="Управление APK"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
@@ -1341,7 +1349,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_violet"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1355,7 +1363,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🔊 Звук и Bluetooth"
+                    android:drawableStart="@drawable/legion_icon_audio"
+                    android:drawablePadding="8dp"
+                    android:text="Звук и Bluetooth"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1368,7 +1378,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Dolby • Multi-Volume"
+                    android:text="Звук · BT"
                     android:textColor="@color/accent_purple"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1378,10 +1388,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Раздельная громкость BT (Disable Absolute Volume): отвязка громкости телефона от наушников/колонок (решает проблему тихого звука)\n• Обход лимита громкости: отключение всплывающего предупреждения и принудительного занижения уровня звука\n• Доступ к расширенному микшеру и эффектам Dolby Atmos"
+                android:text="Громкость Bluetooth, системные ограничения и Dolby Atmos."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -1521,7 +1531,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_blue"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1535,7 +1545,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="📶 Скорость сети в статус-баре"
+                    android:drawableStart="@drawable/legion_icon_network"
+                    android:drawablePadding="8dp"
+                    android:text="Скорость сети"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1548,7 +1560,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Status Bar • Live"
+                    android:text="Статус-бар"
                     android:textColor="@color/accent_cyan"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1558,10 +1570,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Живой индикатор скорости прямо в системном статус-баре (KB/s, MB/s) с автоадаптацией цвета под тему\n• В шторке: раздельно ↓ Загрузка / ↑ Отдача и трафик за сессию (Wi-Fi / Моб.)\n• 0% расхода в режиме ожидания (автопауза при выключении экрана); с Root активирует нативный слот Motorola"
+                android:text="Индикатор трафика в статус-баре и шторке. Настройка отображения и автозапуска."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_toggle_net_speed"
@@ -1711,7 +1723,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_green"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1748,10 +1760,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Маршрутизация NFC не гарантирует оплату. Проверяйте совместимость на устройстве и терминале."
+                android:drawableStart="@drawable/legion_icon_nfc"
+                    android:drawablePadding="8dp"
+                    android:text="Маршрутизация NFC экспериментальна; совместимость оплаты не подтверждена."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <TextView
                 android:id="@+id/tv_nfc_author"
@@ -1888,22 +1902,23 @@
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="56dp"
+        android:minHeight="64dp"
         android:orientation="horizontal"
         android:background="@color/legion_panel"
         android:baselineAligned="false">
         <Button
             android:id="@+id/btn_nav_overview"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_active"
             android:text="Обзор"
             android:textColor="@color/legion_foreground"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
             android:drawableTop="@drawable/nav_icon_home"
             android:drawablePadding="3dp"
             android:gravity="center"
@@ -1911,15 +1926,16 @@
         <Button
             android:id="@+id/btn_nav_display"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_idle"
             android:text="Экран"
             android:textColor="@color/legion_muted"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
             android:drawableTop="@drawable/nav_icon_display"
             android:drawablePadding="3dp"
             android:gravity="center"
@@ -1927,15 +1943,16 @@
         <Button
             android:id="@+id/btn_nav_games"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_idle"
             android:text="Игры"
             android:textColor="@color/legion_muted"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
             android:drawableTop="@drawable/nav_icon_games"
             android:drawablePadding="3dp"
             android:gravity="center"
@@ -1943,15 +1960,16 @@
         <Button
             android:id="@+id/btn_nav_system"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_idle"
             android:text="Система"
             android:textColor="@color/legion_muted"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
             android:drawableTop="@drawable/nav_icon_system"
             android:drawablePadding="3dp"
             android:gravity="center"
