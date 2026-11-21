@@ -1316,7 +1316,7 @@ public class MainMenuActivity extends Activity {
 
         if (btnOpenMotorolaGame != null) {
             btnOpenMotorolaGame.setEnabled(true);
-            btnOpenMotorolaGame.setText("Открыть игровые функции");
+            btnOpenMotorolaGame.setText("Игровые функции");
             btnOpenMotorolaGame.setBackgroundResource(R.drawable.btn_primary);
         }
 
