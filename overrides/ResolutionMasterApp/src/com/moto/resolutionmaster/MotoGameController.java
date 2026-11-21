@@ -275,8 +275,7 @@ public final class MotoGameController {
         if (cause instanceof NoSuchMethodException) {
             return "Версия Motorola framework не содержит нужного API";
         }
-        if (cause instanceof IllegalAccessException ||
-                cause instanceof java.lang.reflect.InaccessibleObjectException) {
+        if (MotorolaReflectionFailurePolicy.isRestrictedAccess(cause)) {
             return "Android ограничил доступ к Motorola framework: " +
                 safe(cause.getMessage());
         }
