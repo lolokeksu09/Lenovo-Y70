@@ -1024,140 +1024,13 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <LinearLayout
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Скорость указателя (мышь/трекпад)"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Герцовка дисплея не гарантирует частоту опроса сенсора."
-                    android:textColor="@color/accent_purple"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="10dp"
-                android:background="#151921"
-                android:padding="10dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Текущее значение:"
-                        android:textColor="@color/text_muted"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tv_main_touch_speed_val"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="50% — Сток (Сглаживание дрожания ⚖️)"
-                        android:textColor="@color/accent_purple"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <SeekBar
-                    android:id="@+id/sb_main_touch_speed"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:max="14"
-                    android:progress="7" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="6dp">
-
-                    <Button
-                        android:id="@+id/btn_main_touch_stock"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                    android:minHeight="30dp"
-                    android:gravity="center"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/btn_chip"
-                        android:text="⚖️ Сток (50%)"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="4dp" />
-
-                    <Button
-                        android:id="@+id/btn_main_touch_game"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                    android:minHeight="30dp"
-                    android:gravity="center"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/btn_chip"
-                        android:text="🎮 Игра (85%)"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="4dp" />
-
-                    <Button
-                        android:id="@+id/btn_main_touch_turbo"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                    android:minHeight="30dp"
-                    android:gravity="center"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingTop="4dp"
-                    android:paddingBottom="4dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/btn_chip"
-                        android:text="⚡ Турбо (100%)"
-                        android:textAllCaps="false"
-                        android:textColor="@color/accent_purple"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <!-- Detailed Explanation of Levels -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:background="#0D1117"
-                    android:padding="8dp"
-                    android:text="pointer_speed регулирует мышь и трекпад, а не сенсорный экран."
-                    android:textColor="@color/text_muted"
-                    android:textSize="11sp"
-                    android:lineSpacingExtra="3dp" />
-            </LinearLayout>
+                android:layout_marginTop="6dp"
+                android:text="Управление частотой дисплея и системными анимациями. Не изменяет сенсорную панель."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
 
             <Button
                 android:id="@+id/btn_main_apply_turbo"
@@ -1189,7 +1062,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="8dp"
                 android:background="@drawable/btn_chip"
-                android:text="🔄 Сбросить к стоку (Авто Гц + указатель 0 + UI 1.0x)"
+                android:text="Сбросить частоту и анимации"
                 android:textAllCaps="false"
                 android:textColor="@color/accent_yellow"
                 android:textSize="12sp"
