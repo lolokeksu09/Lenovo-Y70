@@ -34,7 +34,6 @@ texts = [v.attrib.get(ns+"text","") for v in touch.iter()]
 assert "Отклик" in texts and "Экран ≠ сенсор" in texts
 assert "Настройки отклика" not in texts
 assert not any("Частота экрана не равна частоте опроса сенсора." in t for t in texts)
-assert screen["card_eye_care"].find(".//*[@android:drawableStart]", {}) is None if False else True
 oled = screen["card_eye_care"]
 assert any(v.attrib.get(ns+"drawableStart") == "@drawable/legion_icon_eye"
            for v in oled.iter()), "OLED must not reuse the touch icon"
