@@ -613,6 +613,10 @@ public final class MotorolaGameActivity extends Activity {
     private void copyDiagnosticReport() {
         // Never block the main thread with logcat. The user explicitly copies
         // the report, and no crash data is uploaded by the app.
+        final String accessText = tvAccess.getText().toString();
+        final int accessBreak = accessText.indexOf('\n');
+        final String serviceLabel = accessBreak < 0
+            ? accessText : accessText.substring(0, accessBreak);
         final String status =
             "LenovoMotorolovichY70 · Motorola control diagnostics\n" +
             "App: " + getPackageName() + "\n" +
@@ -621,7 +625,7 @@ public final class MotorolaGameActivity extends Activity {
             "Direct Motorola Binder: " +
                 MotorolaTouchRoute.accessSummary(
                     MotorolaDirectAccessGate.isBlocked(this)) + "\n" +
-            "Service: " + tvAccess.getText() + "\n" +
+            "Service: " + serviceLabel + "\n" +
             "Last action: " + tvControlFeedback.getText() + "\n" +
             "Pending OEM operation: " + MotorolaControlTrace.pending(this) + "\n" +
             "Last completed: " + MotorolaControlTrace.lastCompleted(this) + "\n" +
