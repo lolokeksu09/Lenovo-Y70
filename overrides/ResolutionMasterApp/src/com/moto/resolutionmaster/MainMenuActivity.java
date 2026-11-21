@@ -1285,7 +1285,7 @@ public class MainMenuActivity extends Activity {
 
         if (btnOpenMotorolaGame != null) {
             btnOpenMotorolaGame.setEnabled(true);
-            btnOpenMotorolaGame.setText("Проверить Bypass и Touch Boost");
+            btnOpenMotorolaGame.setText("Открыть игровые функции");
             btnOpenMotorolaGame.setBackgroundResource(R.drawable.btn_primary);
         }
 
