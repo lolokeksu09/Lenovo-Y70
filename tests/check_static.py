@@ -9,7 +9,7 @@ assert "dumpsys battery unplug" not in power
 assert "echo 0 > /sys/class/power_supply/battery/charging_enabled" not in power
 assert "btnOpenMotorolaGame.setEnabled(true)" in menu
 assert "startActivity(new Intent(MainMenuActivity.this, MotorolaGameActivity.class))" in menu
-assert '"pointer_speed"' in touch and "Settings.System.getInt" in touch
+assert "pointer_speed" not in touch and "setPointerSpeed" not in touch
 assert "return hz && animations;" in touch
 assert "setPointerSpeed(context, 7)" not in touch
 assert "100% терминалов РФ" not in menu
@@ -21,10 +21,10 @@ nfc = (src/"NfcFixHelper.java").read_text(encoding="utf-8")
 layout = (r/"res/layout/activity_main_menu.xml").read_text(encoding="utf-8")
 manifest = ET.parse(r/"AndroidManifest.xml").getroot()
 android_ns = "{http://schemas.android.com/apk/res/android}"
-assert manifest.attrib[android_ns + "versionCode"] == "53"
-assert manifest.attrib[android_ns + "versionName"] == "3.6.1-game"
+assert manifest.attrib[android_ns + "versionCode"] == "54"
+assert manifest.attrib[android_ns + "versionName"] == "3.6.2-game"
 assert 'android:text="Экспериментально"' in layout
-assert 'android:text="LenovoMotorolovichY70 v3.6.1-game"' in layout
+assert 'android:text="LenovoMotorolovichY70 v3.6.2-game"' in layout
 assert "100% терминалов" not in nfc and "100% терминалов" not in layout
 assert "100% Russian POS" not in nfc
 assert "Маршрутизация DH обнаружена (оплата не проверена)" in nfc

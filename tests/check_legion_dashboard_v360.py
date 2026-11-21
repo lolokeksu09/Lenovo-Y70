@@ -28,7 +28,7 @@ assert len(pages) == 4
 
 # Preserve actual dynamic sources; never render mock values as true measurements.
 for key in ("tv_app_title", "tv_menu_res", "tv_menu_dpi", "tv_menu_fps",
-            "tv_menu_shizuku", "tv_menu_secure", "tv_menu_touch_status"):
+            "tv_menu_shizuku", "tv_menu_secure"):
     assert key in pages[0], key
 assert "100%" not in ET.tostring(frame[0], encoding="unicode")
 assert "Общий статус: Готов" not in ET.tostring(frame[0], encoding="unicode")

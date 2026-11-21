@@ -39,10 +39,7 @@ public class MainActivity extends Activity {
         new ContentObserver(new Handler(Looper.getMainLooper())) {
             @Override
             public void onChange(boolean selfChange, Uri uri) {
-                TouchSpeedHelper.invalidateCache();
                 updateStatusUI();
-                int curTouch = TouchSpeedHelper.getPointerSpeed(MainActivity.this);
-                updateTouchSpeedDisplay(curTouch);
                 updateAnimSpeedDisplay();
             }
         };
@@ -69,12 +66,7 @@ public class MainActivity extends Activity {
     private SeekBar sbHdDpi;
     private Button btnHd;
 
-    // Touch & Animation Controls
-    private TextView tvMainTouchSpeedVal;
-    private SeekBar sbMainTouchSpeed;
-    private Button btnMainTouchStock;
-    private Button btnMainTouchGame;
-    private Button btnMainTouchTurbo;
+    // Display refresh-rate and Android animation controls
     private Button btnMainApplyTurbo;
     private Button btnMainResetStock;
     private TextView tvMainAnimSpeedVal;
@@ -216,8 +208,6 @@ public class MainActivity extends Activity {
             getContentResolver().registerContentObserver(
                 Settings.System.getUriFor("min_refresh_rate"), false, mSettingsObserver);
             getContentResolver().registerContentObserver(
-                Settings.System.getUriFor("pointer_speed"), false, mSettingsObserver);
-            getContentResolver().registerContentObserver(
                 Settings.Global.getUriFor("display_size_forced"), false, mSettingsObserver);
             getContentResolver().registerContentObserver(
                 Settings.Secure.getUriFor("display_density_forced"), false, mSettingsObserver);
@@ -256,11 +246,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        TouchSpeedHelper.invalidateCache();
         updateStatusUI();
         updateShizukuUI();
-        int curTouch = TouchSpeedHelper.getPointerSpeed(this);
-        updateTouchSpeedDisplay(curTouch);
         updateAnimSpeedDisplay();
     }
 
@@ -742,79 +729,18 @@ public class MainActivity extends Activity {
     }
 
     private void setupTouchControls() {
-        tvMainTouchSpeedVal = findViewById(R.id.tv_main_touch_speed_val);
-        sbMainTouchSpeed = findViewById(R.id.sb_main_touch_speed);
-        btnMainTouchStock = findViewById(R.id.btn_main_touch_stock);
-        btnMainTouchGame = findViewById(R.id.btn_main_touch_game);
-        btnMainTouchTurbo = findViewById(R.id.btn_main_touch_turbo);
         btnMainApplyTurbo = findViewById(R.id.btn_main_apply_turbo);
         tvMainAnimSpeedVal = findViewById(R.id.tv_main_anim_speed_val);
         btnMainAnimBoost = findViewById(R.id.btn_main_anim_boost);
         btnMainAnimStock = findViewById(R.id.btn_main_anim_stock);
 
-        if (sbMainTouchSpeed != null) {
-            sbMainTouchSpeed.setMax(14);
-            int curSpeed = TouchSpeedHelper.getPointerSpeed(this);
-            sbMainTouchSpeed.setProgress(TouchSpeedHelper.speedToProgress(curSpeed));
-            updateTouchSpeedDisplay(curSpeed);
-
-            sbMainTouchSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (fromUser) {
-                        int speed = TouchSpeedHelper.progressToSpeed(progress);
-                        updateTouchSpeedDisplay(speed);
-                    }
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    int speed = TouchSpeedHelper.progressToSpeed(seekBar.getProgress());
-                    applyTouchSpeed(speed, false);
-                }
-            });
-        }
-
         btnMainResetStock = findViewById(R.id.btn_main_reset_stock);
-
-        if (btnMainTouchStock != null) {
-            btnMainTouchStock.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    applyTouchSpeed(0, true);
-                }
-            });
-        }
-
-        if (btnMainTouchGame != null) {
-            btnMainTouchGame.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    applyTouchSpeed(5, true);
-                }
-            });
-        }
-
-        if (btnMainTouchTurbo != null) {
-            btnMainTouchTurbo.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    applyTouchSpeed(7, true);
-                }
-            });
-        }
 
         if (btnMainApplyTurbo != null) {
             btnMainApplyTurbo.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     boolean ok = TouchSpeedHelper.enableFullTurboMode(MainActivity.this);
-                    if (sbMainTouchSpeed != null) {
-                        sbMainTouchSpeed.setProgress(TouchSpeedHelper.speedToProgress(TouchSpeedHelper.getPointerSpeed(MainActivity.this)));
-                    }
                     updateStatusUI();
                     if (ok) {
                         Toast.makeText(MainActivity.this, "Запрошены 144 Гц и анимации 0.5x. Проверьте фактический режим экрана.", Toast.LENGTH_SHORT).show();
@@ -830,9 +756,6 @@ public class MainActivity extends Activity {
                 @Override
                 public void onClick(View v) {
                     boolean ok = TouchSpeedHelper.resetToStock(MainActivity.this);
-                    if (sbMainTouchSpeed != null) {
-                        sbMainTouchSpeed.setProgress(TouchSpeedHelper.speedToProgress(0));
-                    }
                     updateStatusUI();
                     if (ok) {
                         Toast.makeText(MainActivity.this, "🔄 Настройки сброшены к стандартным заводским!", Toast.LENGTH_SHORT).show();
@@ -862,26 +785,6 @@ public class MainActivity extends Activity {
         }
 
         updateAnimSpeedDisplay();
-    }
-
-    private void updateTouchSpeedDisplay(int speed) {
-        String label = TouchSpeedHelper.getSpeedLabel(speed);
-        if (tvMainTouchSpeedVal != null) {
-            tvMainTouchSpeedVal.setText(label);
-        }
-    }
-
-    private void applyTouchSpeed(int speed, boolean updateSeekBar) {
-        boolean ok = TouchSpeedHelper.setPointerSpeed(this, speed);
-        if (updateSeekBar && sbMainTouchSpeed != null) {
-            sbMainTouchSpeed.setProgress(TouchSpeedHelper.speedToProgress(speed));
-        }
-        updateTouchSpeedDisplay(TouchSpeedHelper.getPointerSpeed(this));
-        if (ok) {
-            Toast.makeText(this, "Скорость указателя: " + TouchSpeedHelper.getSpeedLabel(speed), Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Не удалось изменить скорость указателя (проверьте Shizuku/Root)", Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void updateAnimSpeedDisplay() {

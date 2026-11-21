@@ -31,7 +31,7 @@ for key in ("btn_quick_display","btn_quick_games","btn_quick_audio","btn_quick_a
 # Touch heading and status chip must each be short enough to share a row.
 touch = screen["card_touch_control"]
 texts = [v.attrib.get(ns+"text","") for v in touch.iter()]
-assert "Отклик" in texts and "Экран ≠ сенсор" in texts
+assert "Плавность интерфейса" in texts and "Гц и анимации" in texts
 assert "Настройки отклика" not in texts
 assert not any("Частота экрана не равна частоте опроса сенсора." in t for t in texts)
 oled = screen["card_eye_care"]

@@ -115,15 +115,15 @@
     <string name="toast_copied">Команда ADB скопирована в буфер обмена!</string>
 
     <!-- Section: Touch Control -->
-    <string name="section_touch_title">Скорость указателя (мышь/трекпад)</string>
-    <string name="touch_badge">Android pointer_speed</string>
-    <string name="touch_desc" formatted="false">pointer_speed изменяет скорость мыши/трекпада от -7 до +7. Чувствительность сенсорного экрана и его опрос этим не регулируются.</string>
-    <string name="touch_speed_label">Скорость указателя:</string>
+    <string name="section_touch_title">Частота дисплея и анимации</string>
+    <string name="touch_badge">Настройки дисплея</string>
+    <string name="touch_desc" formatted="false">Изменение частоты обновления экрана и длительности системных анимаций. Не влияет на частоту опроса сенсорной панели.</string>
+    <string name="touch_speed_label">Частота и анимации:</string>
     <string name="btn_touch_turbo" formatted="false">Указатель +7</string>
     <string name="btn_touch_stock" formatted="false">Указатель 0</string>
     <string name="btn_touch_game" formatted="false">Указатель +5</string>
     <string name="btn_apply_full_turbo">Запросить 144 Гц и анимации 0.5x</string>
-    <string name="btn_reset_full_stock" formatted="false">Сбросить герцовку, указатель и анимации</string>
+    <string name="btn_reset_full_stock" formatted="false">Сбросить герцовку и анимации</string>
     <string name="anim_boost_title">🚀 Ускорение системных анимаций (0.5x)</string>
     <string name="anim_boost_desc">Снижает задержку системных переходов и окон в 2 раза, ускоряя визуальный отклик интерфейса.</string>
     <string name="btn_anim_05">🚀 Ускорить (0.5x)</string>
