@@ -3,6 +3,7 @@ package com.moto.resolutionmaster;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
+import android.content.res.ColorStateList;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -16,6 +17,7 @@ import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -322,6 +324,7 @@ public class MainMenuActivity extends Activity {
         setupEyeCareControls();
         setupAudioControls();
         setupPowerControls();
+        setupDashboardShortcuts();
         setupNetworkSpeedControls();
 
         try {
@@ -356,6 +359,90 @@ public class MainMenuActivity extends Activity {
         } catch (Throwable ignored) {}
 
         updateStatus();
+    }
+
+    /**
+     * Homepage actions are actual navigation/launch actions. We deliberately
+     * do not infer that Motorola Touch Boost or Bypass is enabled from a HAL.
+     */
+    private void setupDashboardShortcuts() {
+        final Button display = findViewById(R.id.btn_quick_display);
+        final Button games = findViewById(R.id.btn_quick_games);
+        final Button audio = findViewById(R.id.btn_quick_audio);
+        final Button apps = findViewById(R.id.btn_quick_apps);
+        final Button gameLaunch = findViewById(R.id.btn_game_launch_wildrift);
+        final Button touchDetails = findViewById(R.id.btn_main_game_touch_details);
+        final Button capture = findViewById(R.id.btn_main_game_capture);
+
+        if (display != null) display.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainMenuActivity.this, MainActivity.class));
+            }
+        });
+        if (games != null) games.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGameModule(); }
+        });
+        if (apps != null) apps.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainMenuActivity.this, DebloatActivity.class));
+            }
+        });
+        if (audio != null) audio.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showBottomTab(3);
+                final ScrollView system = findViewById(R.id.page_tab_system);
+                final View card = findViewById(R.id.card_audio_control);
+                if (system != null && card != null) {
+                    system.post(new Runnable() {
+                        @Override public void run() {
+                            // Coordinates are relative to the scroll content.
+                            system.smoothScrollTo(0, card.getTop());
+                        }
+                    });
+                }
+            }
+        });
+        if (gameLaunch != null) gameLaunch.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                try {
+                    Intent launch = getPackageManager().getLaunchIntentForPackage(
+                        MotorolaCaptureFormat.GAME_PACKAGE);
+                    if (launch == null) {
+                        Toast.makeText(MainMenuActivity.this,
+                            "Wild Rift не установлен или запуск недоступен",
+                            Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    startActivity(launch);
+                } catch (RuntimeException error) {
+                    Toast.makeText(MainMenuActivity.this,
+                        "Запуск Wild Rift не удался: " +
+                        error.getClass().getSimpleName(), Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        if (touchDetails != null) touchDetails.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGameModule(); }
+        });
+        if (capture != null) capture.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGameModule(); }
+        });
+        updateMainGameAccess();
+    }
+
+    private void openGameModule() {
+        startActivity(new Intent(this, MotorolaGameActivity.class));
+    }
+
+    private void updateMainGameAccess() {
+        TextView access = findViewById(R.id.tv_game_main_access);
+        if (access == null) return;
+        boolean unavailable = MotorolaDirectAccessGate.isBlocked(this);
+        access.setText(unavailable
+            ? "Прямой API: Binder недоступен нашему APK"
+            : "Прямой API: доступ ещё не подтверждён");
+        access.setTextColor(getColor(unavailable
+            ? R.color.accent_yellow : R.color.accent_purple));
     }
 
     private int mLastDensityDpi = -1;
@@ -397,10 +484,15 @@ public class MainMenuActivity extends Activity {
                 ? R.drawable.nav_tab_active : R.drawable.nav_tab_idle);
             bottomButtons[i].setTextColor(getColor(active
                 ? R.color.legion_foreground : R.color.legion_muted));
+            // Tint the same vector icon rather than replacing it with an
+            // unrelated glyph when the selected tab changes.
+            bottomButtons[i].setCompoundDrawableTintList(ColorStateList.valueOf(
+                getColor(active ? R.color.legion_red : R.color.legion_muted)));
             bottomButtons[i].setContentDescription(
                 bottomButtons[i].getText().toString() +
                 (active ? ", выбрана" : ", перейти"));
         }
+        if (selected == 2) updateMainGameAccess();
     }
 
     @Override
