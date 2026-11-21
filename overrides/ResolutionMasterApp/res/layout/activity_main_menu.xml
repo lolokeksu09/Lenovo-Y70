@@ -9,7 +9,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="22dp">
 
         <!-- App Header -->
         <LinearLayout
@@ -54,10 +57,10 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="10dp"
             android:background="@drawable/card_bg"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -162,10 +165,10 @@
             android:id="@+id/card_featured_game"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="9dp"
             android:background="@drawable/legion_panel"
             android:orientation="vertical"
-            android:padding="18dp">
+            android:padding="13dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -182,14 +185,14 @@
                 android:layout_marginTop="7dp"
                 android:text="Wild Rift и GameTime"
                 android:textColor="@color/legion_foreground"
-                android:textSize="21sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="Touch Boost, Bypass и запись игрового сеанса — в одном месте."
+                android:text="GameTime · Touch Boost · Bypass"
                 android:lineSpacingExtra="2dp"
                 android:textColor="@color/legion_muted"
                 android:textSize="12sp" />
@@ -198,15 +201,15 @@
                 android:id="@+id/btn_open_motorola_game"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                    android:minHeight="54dp"
+                    android:minHeight="48dp"
                     android:gravity="center"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/btn_primary"
-                android:text="Открыть игровые функции"
+                android:text="Игровые функции"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
@@ -217,7 +220,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="12dp"
             android:text="Инструменты"
             android:textColor="@color/text_muted"
             android:textSize="12sp"
@@ -243,9 +246,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🖥️ Настройки дисплея"
+                    android:text="Экран"
                     android:textColor="@color/text_primary"
-                    android:textSize="17sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -256,7 +259,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="144Hz • 2K/FHD+"
+                    android:text="Дисплей"
                     android:textColor="@color/accent_blue"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -266,7 +269,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Герцовка дисплея не гарантирует частоту опроса сенсора."
+                android:text="Разрешение, DPI и частота обновления"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:lineSpacingExtra="3dp" />
@@ -283,13 +286,99 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/btn_primary"
-                android:text="Открыть настройки дисплея →"
+                android:text="Настроить экран"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <!-- Card 2: Отключение APK (Debloater) -->
+        <LinearLayout
+            android:id="@+id/card_nav_debloat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:background="@drawable/card_bg"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Приложения"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/btn_chip"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:text="APK"
+                    android:textColor="@color/accent_green"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Управление установленными пакетами и восстановление отключённых."
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp" />
+
+            <Button
+                android:id="@+id/btn_open_debloat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:gravity="center"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/btn_secondary"
+                android:text="Открыть приложения"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Secondary tools stay accessible but are collapsed by default. -->
+        <Button
+            android:id="@+id/btn_menu_advanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:minHeight="48dp"
+            android:background="@drawable/legion_action_secondary"
+            android:text="Остальные настройки"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textAllCaps="false" />
+
+        <LinearLayout
+            android:id="@+id/layout_menu_advanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
         <!-- Card: Управление откликом сенсора и тача -->
         <LinearLayout
             android:id="@+id/card_touch_control"
@@ -1546,73 +1635,6 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Card 2: Отключение APK (Debloater) -->
-        <LinearLayout
-            android:id="@+id/card_nav_debloat"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="🚫 Отключение APK (Debloater)"
-                    android:textColor="@color/text_primary"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/btn_chip"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
-                    android:text="Очистка памяти"
-                    android:textColor="@color/accent_green"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="• Сценарий очистки (пакетное отключение 27 нежелательных служб)\n• Удаление кредитных трекеров, телеметрии и рекламы\n• Ручной менеджер приложений с описанием служб\n• Полная обратимость — включение обратно в 1 клик"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
-
-            <Button
-                android:id="@+id/btn_open_debloat"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:gravity="center"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/btn_secondary"
-                android:text="Управление приложениями (APK) →"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
         <!-- Card 3: Эксперименты: Фикс NFC (Magisk / Root) -->
         <LinearLayout
             android:id="@+id/card_nfc_fix"
@@ -1746,6 +1768,8 @@
                     android:textStyle="bold"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
+        </LinearLayout>
+
         </LinearLayout>
 
         <!-- Community Footer with Author Credits -->
