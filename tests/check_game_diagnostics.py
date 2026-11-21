@@ -91,8 +91,8 @@ assert 'android:id="@+id/btn_open_motorola_game"' in layout
 assert "MotorolaGameActivity.class" in main
 assert 'R.id.btn_open_motorola_game' in main
 assert "btnOpenMotorolaGame.setEnabled(false)" not in main
-assert '"3.3.2-game"' in manifest
-assert '"LenovoMotorolovichY70 v3.3.2-game"' in layout
+assert '"3.3.3-game"' in manifest
+assert '"LenovoMotorolovichY70 v3.3.3-game"' in layout
 xml = ET.fromstring(manifest)
 screen = [a for a in xml.findall(".//activity")
           if a.attrib.get(ns + "name") == ".MotorolaGameActivity"]
