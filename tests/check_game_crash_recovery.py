@@ -6,6 +6,7 @@ src = root / "src/com/moto/resolutionmaster"
 activity = (src / "MotorolaGameActivity.java").read_text(encoding="utf-8")
 controller = (src / "MotoGameController.java").read_text(encoding="utf-8")
 trace = (src / "MotorolaControlTrace.java").read_text(encoding="utf-8")
+crash_filter = (src / "MotorolaCrashLogFilter.java").read_text(encoding="utf-8")
 
 assert 'context.getPackageManager().getPackageInfo(gamePackage, 0);' in controller
 assert 'catch (SecurityException e)' in controller
@@ -27,8 +28,9 @@ assert '.putString(KEY_LAST,' in trace
 assert 'new Thread(new Runnable()' in activity
 assert '"logcat -d -b crash -v threadtime -t 600"' in activity
 assert 'relevantCrashExcerpt(raw)' in activity
-assert '"Process: com.moto.resolutionmaster"' in activity
-assert '"Cmdline: com.moto.resolutionmaster"' in activity
+assert '"Process: com.moto.resolutionmaster"' in crash_filter
+assert '"Cmdline: com.moto.resolutionmaster"' in crash_filter
+assert 'MotorolaCrashLogFilter.relevantCrashExcerpt(raw)' in activity
 assert 'ShellHelper.copyToClipboard(' in activity
 assert 'Last relevant crash:' in activity
 
