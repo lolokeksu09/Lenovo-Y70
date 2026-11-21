@@ -202,6 +202,10 @@ jobs:
       - name: Overlay corrected sources
         shell: pwsh
         run: Copy-Item 'overrides/ResolutionMasterApp/*' 'upstream/ResolutionMasterApp/' -Recurse -Force
+      - name: Verify Windows D8 input archive patch
+        run: python tests/check_d8_argfile.py
+      - name: Adapt pinned upstream D8 for Windows command limits
+        run: python scripts/patch_upstream_d8.py upstream/build_apk.py
       - name: Build signed debug APK
         working-directory: upstream
         run: python build_apk.py
