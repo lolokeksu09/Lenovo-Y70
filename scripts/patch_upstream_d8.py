@@ -21,7 +21,7 @@ with zipfile.ZipFile(d8_inputs_jar, 'w', zipfile.ZIP_DEFLATED) as archive:
             if not name.endswith('.class'):
                 continue
             absolute = os.path.join(classes_root, name)
-            relative = os.path.relpath(absolute, bin_dir).replace('\\\\', '/')
+            relative = os.path.relpath(absolute, bin_dir).replace(os.sep, '/')
             archive.write(absolute, relative)
 d8_cmd = [java, '-cp', r8, 'com.android.tools.r8.D8', '--min-api', '26', '--lib', android_jar, '--output', bin_dir, d8_inputs_jar] + shizuku_jars'''
 
