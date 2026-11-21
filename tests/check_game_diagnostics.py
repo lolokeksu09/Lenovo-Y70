@@ -38,7 +38,9 @@ assert 'getInstance", Context.class' in controller
 # The 3.2.1 failure path was a non-null SDK manager with a NULL Core.
 # Require a genuine typed AIDL/Core fallback before any call.
 assert 'klass.getDeclaredField("mMotoExtendManagerCore")' in controller
-assert 'if (coreField.get(instance) != null) return instance;' in controller
+assert 'if (coreField.get(instance) != null) {' in controller
+assert 'MotorolaDirectAccessGate.reset(context);' in controller
+assert 'return instance;' in controller
 assert "return coreFromRegisteredService(context);" in controller
 assert '"android.os.ServiceManager"' in controller
 assert '"getService", String.class' in controller
@@ -89,8 +91,8 @@ assert 'android:id="@+id/btn_open_motorola_game"' in layout
 assert "MotorolaGameActivity.class" in main
 assert 'R.id.btn_open_motorola_game' in main
 assert "btnOpenMotorolaGame.setEnabled(false)" not in main
-assert '"3.3.1-game"' in manifest
-assert '"LenovoMotorolovichY70 v3.3.1-game"' in layout
+assert '"3.3.2-game"' in manifest
+assert '"LenovoMotorolovichY70 v3.3.2-game"' in layout
 xml = ET.fromstring(manifest)
 screen = [a for a in xml.findall(".//activity")
           if a.attrib.get(ns + "name") == ".MotorolaGameActivity"]
