@@ -16,170 +16,49 @@
         android:fillViewport="true"
         android:overScrollMode="never"
         android:visibility="visible">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="20dp">
-
-
-        <!-- App Header -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="8dp">
-
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_launcher"
-                android:layout_marginEnd="14dp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tv_app_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="LEGION Y70"
-                    android:textColor="@color/text_primary"
-                    android:textSize="23sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="MOTOROLA BUILD  ·  DEVICE CONTROL"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="2dp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Current Status Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
-            android:orientation="vertical"
-            android:padding="14dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Устройство сейчас"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="10dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Экран и DPI"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/tv_menu_res"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="1080 × 2376"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_menu_dpi"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="390 DPI"
-                        android:textColor="@color/accent_blue"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Герцовка"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/tv_menu_fps"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="144 Гц"
-                        android:textColor="@color/accent_purple"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_menu_shizuku"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Shizuku: Подключен ✓"
-                        android:textColor="@color/accent_green"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tv_menu_secure"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Тайлы шторки: Активны ✓"
-                        android:textColor="@color/accent_green"
-                        android:textSize="11sp"
-                        android:layout_marginTop="3dp" />
-
-                    <TextView
-                        android:id="@+id/tv_menu_touch_status"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Скорость указателя (мышь/трекпад)"
-                        android:textColor="@color/accent_purple"
-                        android:textSize="11sp"
-                        android:layout_marginTop="3dp" />
-                </LinearLayout>
-            </LinearLayout>
-        </LinearLayout>
-
-
-
-                <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="Быстрый доступ — во вкладках снизу"
-            android:textColor="@color/legion_muted"
-            android:textSize="12sp" />
-        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="16dp" android:paddingBottom="20dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="9dp">
+<ImageView android:layout_width="44dp" android:layout_height="44dp" android:src="@drawable/ic_launcher" android:contentDescription="Логотип LenovoMotorolovichY70" android:layout_marginEnd="12dp"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LEGION Y70" android:textColor="@color/text_primary" android:textSize="21sp" android:id="@+id/tv_app_title" android:textStyle="bold"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MOTOROLA BUILD · DEVICE CONTROL" android:textColor="@color/legion_muted" android:textSize="10sp" android:layout_marginTop="2dp"/>
+</LinearLayout>
+</LinearLayout><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/legion_surface_hero" android:padding="16dp" android:layout_marginTop="12dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="УСТРОЙСТВО" android:textColor="@color/legion_muted" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Lenovo Legion Y70" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold" android:layout_marginTop="5dp"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="15dp" android:baselineAligned="false">
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginEnd="5dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Экран · разрешение" android:textColor="@color/legion_muted" android:textSize="11sp"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Определение…" android:textColor="@color/text_primary" android:textSize="18sp" android:id="@+id/tv_menu_res" android:textStyle="bold" android:layout_marginTop="5dp"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DPI: —" android:textColor="@color/accent_blue" android:textSize="12sp" android:id="@+id/tv_menu_dpi" android:layout_marginTop="3dp"/>
+</LinearLayout>
+</LinearLayout>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginStart="5dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Обновление" android:textColor="@color/legion_muted" android:textSize="11sp"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Проверка…" android:textColor="@color/text_primary" android:textSize="18sp" android:id="@+id/tv_menu_fps" android:textStyle="bold" android:layout_marginTop="5dp"/>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/legion_surface_neutral" android:padding="16dp" android:layout_marginTop="12dp">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ДОСТУП И УПРАВЛЕНИЕ" android:textColor="@color/legion_muted" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.1"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Shizuku: проверка…" android:textColor="@color/accent_green" android:textSize="13sp" android:id="@+id/tv_menu_shizuku" android:layout_marginTop="9dp"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Тайлы: проверка…" android:textColor="@color/accent_green" android:textSize="13sp" android:id="@+id/tv_menu_secure" android:layout_marginTop="7dp"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Указатель: проверка…" android:textColor="@color/accent_purple" android:textSize="13sp" android:id="@+id/tv_menu_touch_status" android:layout_marginTop="7dp"/>
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Shizuku не заменяет разрешения Motorola для Touch Boost и Bypass." android:textColor="@color/legion_subtle" android:textSize="11sp" android:layout_marginTop="10dp"/>
+</LinearLayout><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Быстрые действия" android:textColor="@color/text_primary" android:textSize="17sp" android:textStyle="bold" android:layout_marginTop="23dp"/><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:baselineAligned="false">
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginEnd="5dp">
+<Button android:id="@+id/btn_quick_display" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="82dp" android:text="Экран и частота" android:textColor="#F8F8F9" android:textSize="13sp" android:textAllCaps="false" android:background="@drawable/legion_surface_violet" android:gravity="center" android:drawableTop="@drawable/nav_icon_display" android:drawablePadding="7dp" android:padding="9dp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginStart="5dp">
+<Button android:id="@+id/btn_quick_games" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="82dp" android:text="GameTime и игры" android:textColor="#F8F8F9" android:textSize="13sp" android:textAllCaps="false" android:background="@drawable/legion_surface_hero" android:gravity="center" android:drawableTop="@drawable/nav_icon_games" android:drawablePadding="7dp" android:padding="9dp"/>
+</LinearLayout>
+</LinearLayout><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:baselineAligned="false">
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginEnd="5dp">
+<Button android:id="@+id/btn_quick_audio" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="82dp" android:text="Звук и Bluetooth" android:textColor="#F8F8F9" android:textSize="13sp" android:textAllCaps="false" android:background="@drawable/legion_surface_blue" android:gravity="center" android:drawableTop="@drawable/nav_icon_system" android:drawablePadding="7dp" android:padding="9dp"/>
+</LinearLayout>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1" android:layout_marginStart="5dp">
+<Button android:id="@+id/btn_quick_apps" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="82dp" android:text="Приложения" android:textColor="#F8F8F9" android:textSize="13sp" android:textAllCaps="false" android:background="@drawable/legion_surface_green" android:gravity="center" android:drawableTop="@drawable/nav_icon_system" android:drawablePadding="7dp" android:padding="9dp"/>
+</LinearLayout>
+</LinearLayout><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Показаны доступные настройки, а не измерения производительности." android:textColor="@color/legion_subtle" android:textSize="11sp" android:layout_marginTop="15dp"/>
+</LinearLayout>
     </ScrollView>
     <ScrollView
         android:id="@+id/page_tab_display"
@@ -196,6 +75,13 @@
             android:paddingEnd="16dp"
             android:paddingTop="16dp"
             android:paddingBottom="20dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="9dp">
+<ImageView android:layout_width="44dp" android:layout_height="44dp" android:src="@drawable/ic_launcher" android:contentDescription="Логотип LenovoMotorolovichY70" android:layout_marginEnd="12dp"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LEGION Y70" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MOTOROLA BUILD · DEVICE CONTROL" android:textColor="@color/legion_muted" android:textSize="10sp" android:layout_marginTop="2dp"/>
+</LinearLayout>
+</LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -216,7 +102,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_blue"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -230,7 +116,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🖥️ Настройки дисплея"
+                    android:drawableStart="@drawable/nav_icon_display"
+                    android:drawablePadding="8dp"
+                    android:text="Настройки дисплея"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -243,7 +131,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="144Hz • 2K/FHD+"
+                    android:text="OLED · 2K/FHD+"
                     android:textColor="@color/accent_blue"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -253,10 +141,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Герцовка дисплея не гарантирует частоту опроса сенсора."
+                android:text="Разрешение, плотность пикселей и частота обновления."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_open_display"
@@ -270,7 +158,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/btn_primary"
-                android:text="Открыть настройки дисплея →"
+                android:text="Открыть параметры дисплея"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
@@ -283,7 +171,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_violet"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -297,7 +185,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="⚡ Управление откликом сенсора (Тач)"
+                    android:drawableStart="@drawable/legion_icon_touch"
+                    android:drawablePadding="8dp"
+                    android:text="Настройки отклика"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -310,7 +200,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Герцовка дисплея не гарантирует частоту опроса сенсора."
+                    android:text="Частота экрана не равна частоте опроса сенсора."
                     android:textColor="@color/accent_purple"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -320,10 +210,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Запросить 144 Гц и анимации 0.5x"
+                android:text="Запрос 144 Гц · анимации 0.5×"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <!-- Slider Container -->
             <LinearLayout
@@ -433,10 +323,10 @@
                     android:layout_marginTop="10dp"
                     android:background="#0D1117"
                     android:padding="8dp"
-                    android:text="pointer_speed регулирует мышь и трекпад, а не сенсорный экран."
+                    android:text="Регулятор влияет на мышь и трекпад, не на тачскрин."
                     android:textColor="@color/text_muted"
                     android:textSize="11sp"
-                    android:lineSpacingExtra="3dp" />
+                    android:lineSpacingExtra="2dp" />
             </LinearLayout>
 
             <!-- Master Action Buttons -->
@@ -452,7 +342,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="12dp"
                 android:background="@drawable/btn_purple"
-                android:text="Запросить 144 Гц и анимации 0.5x"
+                android:text="Запрос 144 Гц · анимации 0.5×"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
@@ -512,7 +402,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Ускорение анимаций в 2 раза (0.5x) убирает визуальные задержки системы."
+                    android:text="0.5× сокращает длительность анимаций, не задержку сенсора."
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
 
@@ -568,7 +458,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_blue"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -582,7 +472,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="👁️ Защита глаз и экран (OLED)"
+                    android:drawableStart="@drawable/legion_icon_touch"
+                    android:drawablePadding="8dp"
+                    android:text="OLED · Защита глаз"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -595,7 +487,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="DC Dimming • ШИМ"
+                    android:text="OLED · Яркость"
                     android:textColor="@color/accent_blue"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -605,10 +497,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Аппаратный DC Dimming (Анти-ШИМ): устраняет мерцание OLED-матрицы на низкой яркости, снижает нагрузку на зрение\n• Ночной режим: фильтрация синего спектра для комфорта в темноте\n• Экстра-затемнение: снижение яркости ниже системного порога"
+                android:text="DC Dimming, ночной режим и экстра-затемнение. Доступность зависит от прошивки."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_toggle_dc_dimming"
@@ -1067,6 +959,13 @@
             android:paddingEnd="16dp"
             android:paddingTop="16dp"
             android:paddingBottom="20dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="9dp">
+<ImageView android:layout_width="44dp" android:layout_height="44dp" android:src="@drawable/ic_launcher" android:contentDescription="Логотип LenovoMotorolovichY70" android:layout_marginEnd="12dp"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LEGION Y70" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MOTOROLA BUILD · DEVICE CONTROL" android:textColor="@color/legion_muted" android:textSize="10sp" android:layout_marginTop="2dp"/>
+</LinearLayout>
+</LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -1081,60 +980,77 @@
             android:text="GameTime · Touch Boost · Bypass"
             android:textColor="@color/legion_muted"
             android:textSize="12sp" />
-<!-- Featured primary navigation, same original control ID and listener. -->
+        <!-- Real game commands: normal app tools and the installed game only. -->
         <LinearLayout
             android:id="@+id/card_featured_game"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/legion_panel"
+            android:layout_marginTop="13dp"
             android:orientation="vertical"
-            android:padding="14dp">
-
-            <TextView
-                android:layout_width="match_parent"
+            android:padding="16dp"
+            android:background="@drawable/legion_surface_hero">
+            <TextView android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="GAME CONTROL"
                 android:letterSpacing="0.12"
                 android:textColor="@color/legion_red"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-
-            <TextView
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="7dp"
-                android:text="Wild Rift и GameTime"
-                android:textColor="@color/legion_foreground"
-                android:textSize="21sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="6dp"
-                android:text="Touch Boost, Bypass и запись игрового сеанса — в одном месте."
-                android:lineSpacingExtra="2dp"
-                android:textColor="@color/legion_muted"
-                android:textSize="12sp" />
-
+                android:gravity="center_vertical">
+                <LinearLayout android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Wild Rift и GameTime"
+                        android:textSize="20sp"
+                        android:textColor="@color/legion_foreground"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Игровое управление и диагностика"
+                        android:layout_marginTop="5dp"
+                        android:textColor="@color/legion_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+                <ImageView
+                    android:layout_width="112dp"
+                    android:layout_height="86dp"
+                    android:src="@drawable/legion_gamepad_hero"
+                    android:contentDescription="Геймпад Legion"
+                    android:importantForAccessibility="no"/>
+            </LinearLayout>
             <Button
                 android:id="@+id/btn_open_motorola_game"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                    android:minHeight="54dp"
-                    android:gravity="center"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                android:layout_marginTop="11dp"
+                android:layout_marginTop="8dp"
+                android:minHeight="50dp"
                 android:background="@drawable/btn_primary"
                 android:text="Открыть игровые функции"
+                android:textColor="@color/legion_foreground"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:textSize="14sp"/>
+            <Button
+                android:id="@+id/btn_game_launch_wildrift"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:minHeight="48dp"
+                android:background="@drawable/legion_action_secondary"
+                android:text="Запустить Wild Rift"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textColor="@color/legion_foreground"/>
         </LinearLayout>
 
         <!-- Card: Управление питанием и сквозная зарядка -->
@@ -1143,7 +1059,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_neutral"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1157,7 +1073,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="⚡ Питание и Bypass Charging"
+                    android:text="Питание и Bypass"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1170,7 +1086,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="GameTime · Direct Power"
+                    android:text="Состояние устройства"
                     android:textColor="@color/accent_green"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1180,7 +1096,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Контроллер Motorola подтверждает поддержку Bypass. Ниже можно проверить аппаратное состояние питания и запрос Touch Boost через Shizuku."
+                android:text="Питание, энергосбережение и проверка Bypass в игровом модуле."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:lineSpacingExtra="3dp" />
@@ -1252,6 +1168,74 @@
         </LinearLayout>
 
         
+
+        <!-- Capabilities are discovered by OEM readback; never advertise
+             Touch Boost as active just because HAL declares its methods. -->
+        <LinearLayout android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:padding="15dp"
+            android:orientation="vertical"
+            android:background="@drawable/legion_surface_violet">
+            <TextView android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Touch Boost"
+                android:textColor="@color/legion_foreground"
+                android:textSize="17sp"
+                android:textStyle="bold"/>
+            <TextView android:id="@+id/tv_game_main_access"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Проверка доступа Motorola…"
+                android:textColor="@color/accent_purple"
+                android:textSize="12sp"
+                android:layout_marginTop="7dp"/>
+            <TextView android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Настройка Touch Boost доступна через штатный GameTime при поддержке прошивки."
+                android:textColor="@color/legion_muted"
+                android:textSize="12sp"
+                android:layout_marginTop="6dp"/>
+            <Button android:id="@+id/btn_main_game_touch_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="48dp"
+                android:background="@drawable/legion_action_secondary"
+                android:text="Проверить игровой режим"
+                android:textSize="13sp"
+                android:textAllCaps="false"
+                android:textColor="@color/legion_foreground"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:padding="15dp"
+            android:orientation="vertical"
+            android:background="@drawable/legion_surface_blue">
+            <TextView android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Запись и диагностика"
+                android:textColor="@color/legion_foreground"
+                android:textSize="17sp"
+                android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="12 системных замеров за сеанс. Результат копируется из игрового модуля."
+                android:textColor="@color/legion_muted"
+                android:textSize="12sp"/>
+            <Button android:id="@+id/btn_main_game_capture"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:background="@drawable/legion_action_secondary"
+                android:text="Открыть запись Wild Rift"
+                android:textSize="13sp"
+                android:textAllCaps="false"
+                android:textColor="@color/legion_foreground"/>
+        </LinearLayout>
         </LinearLayout>
     </ScrollView>
     <ScrollView
@@ -1269,6 +1253,13 @@
             android:paddingEnd="16dp"
             android:paddingTop="16dp"
             android:paddingBottom="20dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="9dp">
+<ImageView android:layout_width="44dp" android:layout_height="44dp" android:src="@drawable/ic_launcher" android:contentDescription="Логотип LenovoMotorolovichY70" android:layout_marginEnd="12dp"/>
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LEGION Y70" android:textColor="@color/text_primary" android:textSize="21sp" android:textStyle="bold"/><TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MOTOROLA BUILD · DEVICE CONTROL" android:textColor="@color/legion_muted" android:textSize="10sp" android:layout_marginTop="2dp"/>
+</LinearLayout>
+</LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -1289,7 +1280,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_hero"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1303,7 +1294,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🚫 Отключение APK (Debloater)"
+                    android:drawableStart="@drawable/legion_icon_apps"
+                    android:drawablePadding="8dp"
+                    android:text="Приложения · Debloater"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1316,7 +1309,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Очистка памяти"
+                    android:text="Менеджер APK"
                     android:textColor="@color/accent_green"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1326,10 +1319,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Сценарий очистки (пакетное отключение 27 нежелательных служб)\n• Удаление кредитных трекеров, телеметрии и рекламы\n• Ручной менеджер приложений с описанием служб\n• Полная обратимость — включение обратно в 1 клик"
+                android:text="Проверка и отключение пакетов с возможностью восстановления."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_open_debloat"
@@ -1343,7 +1336,7 @@
                     android:paddingBottom="8dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/btn_secondary"
-                android:text="Управление приложениями (APK) →"
+                android:text="Управление APK"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
@@ -1356,7 +1349,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_violet"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1370,7 +1363,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="🔊 Звук и Bluetooth"
+                    android:drawableStart="@drawable/legion_icon_audio"
+                    android:drawablePadding="8dp"
+                    android:text="Звук и Bluetooth"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1383,7 +1378,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Dolby • Multi-Volume"
+                    android:text="Звук · BT"
                     android:textColor="@color/accent_purple"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1393,10 +1388,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Раздельная громкость BT (Disable Absolute Volume): отвязка громкости телефона от наушников/колонок (решает проблему тихого звука)\n• Обход лимита громкости: отключение всплывающего предупреждения и принудительного занижения уровня звука\n• Доступ к расширенному микшеру и эффектам Dolby Atmos"
+                android:text="Громкость Bluetooth, системные ограничения и Dolby Atmos."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -1536,7 +1531,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_blue"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1550,7 +1545,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="📶 Скорость сети в статус-баре"
+                    android:drawableStart="@drawable/legion_icon_network"
+                    android:drawablePadding="8dp"
+                    android:text="Скорость сети"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -1563,7 +1560,7 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
-                    android:text="Status Bar • Live"
+                    android:text="Статус-бар"
                     android:textColor="@color/accent_cyan"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -1573,10 +1570,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Живой индикатор скорости прямо в системном статус-баре (KB/s, MB/s) с автоадаптацией цвета под тему\n• В шторке: раздельно ↓ Загрузка / ↑ Отдача и трафик за сессию (Wi-Fi / Моб.)\n• 0% расхода в режиме ожидания (автопауза при выключении экрана); с Root активирует нативный слот Motorola"
+                android:text="Индикатор трафика в статус-баре и шторке. Настройка отображения и автозапуска."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <Button
                 android:id="@+id/btn_toggle_net_speed"
@@ -1726,7 +1723,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
-            android:background="@drawable/card_bg"
+            android:background="@drawable/legion_surface_green"
             android:orientation="vertical"
             android:padding="14dp">
 
@@ -1763,10 +1760,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Маршрутизация NFC не гарантирует оплату. Проверяйте совместимость на устройстве и терминале."
+                android:drawableStart="@drawable/legion_icon_nfc"
+                    android:drawablePadding="8dp"
+                    android:text="Маршрутизация NFC экспериментальна; совместимость оплаты не подтверждена."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:lineSpacingExtra="2dp" />
 
             <TextView
                 android:id="@+id/tv_nfc_author"
@@ -1870,7 +1869,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LenovoMotorolovichY70 v3.5.0-game"
+                android:text="LenovoMotorolovichY70 v3.6.0-game"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -1903,57 +1902,77 @@
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="56dp"
+        android:minHeight="64dp"
         android:orientation="horizontal"
         android:background="@color/legion_panel"
         android:baselineAligned="false">
         <Button
             android:id="@+id/btn_nav_overview"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_active"
             android:text="Обзор"
             android:textColor="@color/legion_foreground"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp" />
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
+            android:drawableTop="@drawable/nav_icon_home"
+            android:drawablePadding="3dp"
+            android:gravity="center"
+            android:contentDescription="Обзор" />
         <Button
             android:id="@+id/btn_nav_display"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_idle"
             android:text="Экран"
             android:textColor="@color/legion_muted"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp" />
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
+            android:drawableTop="@drawable/nav_icon_display"
+            android:drawablePadding="3dp"
+            android:gravity="center"
+            android:contentDescription="Экран" />
         <Button
             android:id="@+id/btn_nav_games"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_idle"
             android:text="Игры"
             android:textColor="@color/legion_muted"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp" />
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
+            android:drawableTop="@drawable/nav_icon_games"
+            android:drawablePadding="3dp"
+            android:gravity="center"
+            android:contentDescription="Игры" />
         <Button
             android:id="@+id/btn_nav_system"
             android:layout_width="0dp"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:minHeight="56dp"
+            android:minHeight="64dp"
             android:background="@drawable/nav_tab_idle"
             android:text="Система"
             android:textColor="@color/legion_muted"
             android:textSize="12sp"
             android:textAllCaps="false"
-            android:padding="0dp" />
+            android:paddingTop="4dp"
+            android:paddingBottom="3dp"
+            android:drawableTop="@drawable/nav_icon_system"
+            android:drawablePadding="3dp"
+            android:gravity="center"
+            android:contentDescription="Система" />
     </LinearLayout>
 </LinearLayout>

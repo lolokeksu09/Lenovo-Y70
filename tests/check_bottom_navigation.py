@@ -17,7 +17,7 @@ assert frame.attrib[ns + "layout_weight"] == "1"
 assert bottom.tag == "LinearLayout"
 assert bottom.attrib[ns + "id"] == "@+id/bottom_navigation"
 assert bottom.attrib[ns + "orientation"] == "horizontal"
-assert bottom.attrib[ns + "minHeight"] == "56dp"
+assert bottom.attrib[ns + "minHeight"] == "64dp"
 expected = ["overview", "display", "games", "system"]
 page_ids = ["page_tab_" + x for x in expected]
 button_ids = ["btn_nav_" + x for x in expected]
@@ -25,7 +25,7 @@ assert [el.attrib[ns + "id"].removeprefix("@+id/") for el in list(frame)] == pag
 assert [el.attrib[ns + "id"].removeprefix("@+id/") for el in list(bottom)] == button_ids
 assert list(frame)[0].attrib[ns + "visibility"] == "visible"
 assert all(el.attrib[ns + "visibility"] == "gone" for el in list(frame)[1:])
-assert all(el.attrib[ns + "layout_height"] == "56dp" for el in list(bottom))
+assert all(el.attrib[ns + "layout_height"] == "64dp" for el in list(bottom))
 assert all(el.attrib[ns + "layout_weight"] == "1" for el in list(bottom))
 
 def all_ids(parent):
@@ -58,4 +58,4 @@ for item in ("R.id.page_tab_overview", "R.id.page_tab_display",
 for drawable in ("nav_tab_active", "nav_tab_idle"):
     ET.parse(res / "drawable" / (drawable + ".xml"))
 assert "setOnClickListener" in java
-print("PASS: four persistent bottom tabs, 56dp touch targets, preserved settings, restored selection")
+print("PASS: four persistent bottom tabs, 64dp touch targets, preserved settings, restored selection")

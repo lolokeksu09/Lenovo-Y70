@@ -1,4 +1,4 @@
-name: Build Lenovo Y70 v3.5.0 crash diagnostics
+name: Build Lenovo Y70 v3.6.0 crash diagnostics
 
 on:
   push:
@@ -181,6 +181,8 @@ jobs:
         run: python tests/check_legion_amoled_redesign.py
       - name: Verify fixed bottom navigation and preserved controls
         run: python tests/check_bottom_navigation.py
+      - name: Verify premium Legion dashboard native actions and live state
+        run: python tests/check_legion_dashboard_v360.py
       - name: Prepare Android SDK standalone build tools
         shell: pwsh
         run: |
@@ -200,18 +202,22 @@ jobs:
       - name: Overlay corrected sources
         shell: pwsh
         run: Copy-Item 'overrides/ResolutionMasterApp/*' 'upstream/ResolutionMasterApp/' -Recurse -Force
+      - name: Verify Windows D8 input archive patch
+        run: python tests/check_d8_argfile.py
+      - name: Adapt pinned upstream D8 for Windows command limits
+        run: python scripts/patch_upstream_d8.py upstream/build_apk.py
       - name: Build signed debug APK
         working-directory: upstream
         run: python build_apk.py
       - name: Rename APK to current version
         shell: pwsh
-        run: Move-Item 'upstream/LenovoMotorolovichY70_v2.9.apk' 'upstream/LenovoMotorolovichY70_v3.5.0-game.apk'
+        run: Move-Item 'upstream/LenovoMotorolovichY70_v2.9.apk' 'upstream/LenovoMotorolovichY70_v3.6.0-game.apk'
       - name: Check APK format
         run: |
-          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v3.5.0-game.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
+          python -c "import zipfile; z=zipfile.ZipFile('upstream/LenovoMotorolovichY70_v3.6.0-game.apk'); assert {'classes.dex','AndroidManifest.xml'} <= set(z.namelist()); print('APK ZIP: PASS')"
       - uses: actions/upload-artifact@v4
         with:
-          name: Lenovo-Y70-v3.5.0-game-debug
-          path: upstream/LenovoMotorolovichY70_v3.5.0-game.apk
+          name: Lenovo-Y70-v3.6.0-game-debug
+          path: upstream/LenovoMotorolovichY70_v3.6.0-game.apk
           if-no-files-found: error
           retention-days: 14
