@@ -82,6 +82,9 @@ public class MainMenuActivity extends Activity {
     // Power & Bypass Controls
     private TextView tvBatteryStatus;
     private Button btnOpenMotorolaGame;
+    private Button btnMenuAdvanced;
+    private View layoutMenuAdvanced;
+    private boolean menuAdvancedExpanded;
     private Button btnTogglePowerSaver;
     private Button btnOpenBatteryCare;
 
@@ -129,6 +132,18 @@ public class MainMenuActivity extends Activity {
         } catch (Throwable ignored) {}
         DisplayManagerHelper.bypassHiddenApi(this);
         setContentView(R.layout.activity_main_menu);
+
+        layoutMenuAdvanced = findViewById(R.id.layout_menu_advanced);
+        btnMenuAdvanced = findViewById(R.id.btn_menu_advanced);
+        menuAdvancedExpanded = savedInstanceState != null &&
+            savedInstanceState.getBoolean("menu.advanced_expanded", false);
+        updateAdvancedMenu();
+        btnMenuAdvanced.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                menuAdvancedExpanded = !menuAdvancedExpanded;
+                updateAdvancedMenu();
+            }
+        });
 
         tvMenuRes = findViewById(R.id.tv_menu_res);
         tvMenuDpi = findViewById(R.id.tv_menu_dpi);
@@ -352,6 +367,22 @@ public class MainMenuActivity extends Activity {
     }
 
     private int mLastDensityDpi = -1;
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("menu.advanced_expanded", menuAdvancedExpanded);
+        super.onSaveInstanceState(state);
+    }
+
+    private void updateAdvancedMenu() {
+        if (layoutMenuAdvanced == null || btnMenuAdvanced == null) return;
+        layoutMenuAdvanced.setVisibility(menuAdvancedExpanded ? View.VISIBLE : View.GONE);
+        btnMenuAdvanced.setText(menuAdvancedExpanded
+            ? "Свернуть остальные настройки" : "Остальные настройки");
+        btnMenuAdvanced.setContentDescription(menuAdvancedExpanded
+            ? "Свернуть расширенные параметры устройства"
+            : "Показать расширенные параметры устройства");
+    }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
