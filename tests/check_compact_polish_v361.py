@@ -43,7 +43,8 @@ touch_button = game["btn_main_game_touch_details"]
 capture_button = game["btn_main_game_capture"]
 game_status = game["tv_game_main_access"]
 assert touch_button.attrib[ns+"text"] == "Проверить Touch"
-assert capture_button.attrib[ns+"text"] == "Перейти к записи"
+assert capture_button.attrib[ns+"text"] == "Сеанс"
+assert "btn_game_diag_status" in game and "btn_game_diag_log" in game
 assert all(int(x.attrib[ns+"minHeight"].removesuffix("dp")) >= 48
            for x in (touch_button,capture_button))
 assert "Проверка доступа" in game_status.attrib[ns+"text"]
