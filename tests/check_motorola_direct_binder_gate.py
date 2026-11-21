@@ -17,6 +17,11 @@ assert 'MotorolaTouchRoute.useOfficialGameTime(' in activity
 assert 'MotorolaTouchRoute.actionLabel(' in activity
 assert 'MotorolaTouchRoute.accessSummary(' in activity
 assert 'MotorolaDirectAccessGate.reset(this)' in activity
+assert 'MotorolaDirectAccessGate.migrateLegacyFailure(' in activity
+assert 'KEY_LEGACY_IMPORTED' in gate
+assert 'if (storage.getBoolean(KEY_LEGACY_IMPORTED, false)) return;' in gate
+assert 'lastAction.contains(' in gate
+assert 'edit.putString(KEY_DENIED_BUILD, Build.FINGERPRINT)' in gate
 assert 'openGameTime();' in activity
 assert 'btn_game_direct_retry' in activity and '@+id/btn_game_direct_retry' in layout
 assert 'Build.FINGERPRINT' in gate and 'MODE_PRIVATE' in gate
