@@ -32,6 +32,9 @@ public final class MotorolaGameActivity extends Activity {
     private TextView tvObserved;
     private Button btnRefresh;
     private Button btnGameTime;
+    private Button btnGameDetails;
+    private View layoutGameTechnical;
+    private boolean technicalExpanded;
     private Button btnShizuku;
     private Button btnCopyReport;
     private Button btnDpsSet;
@@ -83,6 +86,17 @@ public final class MotorolaGameActivity extends Activity {
         tvObserved = findViewById(R.id.tv_game_observed);
         btnRefresh = findViewById(R.id.btn_game_refresh);
         btnGameTime = findViewById(R.id.btn_game_gametime);
+        btnGameDetails = findViewById(R.id.btn_game_details);
+        layoutGameTechnical = findViewById(R.id.layout_game_technical);
+        technicalExpanded = state != null &&
+            state.getBoolean("motorola.game.technical_expanded", false);
+        updateTechnicalPanel();
+        btnGameDetails.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                technicalExpanded = !technicalExpanded;
+                updateTechnicalPanel();
+            }
+        });
         btnShizuku = findViewById(R.id.btn_game_shizuku);
         btnCopyReport = findViewById(R.id.btn_game_copy_report);
         btnCopyReport.setOnClickListener(new View.OnClickListener() {
@@ -124,6 +138,22 @@ public final class MotorolaGameActivity extends Activity {
                 }
             }
         });
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("motorola.game.technical_expanded", technicalExpanded);
+        super.onSaveInstanceState(state);
+    }
+
+    private void updateTechnicalPanel() {
+        if (layoutGameTechnical == null || btnGameDetails == null) return;
+        layoutGameTechnical.setVisibility(
+            technicalExpanded ? View.VISIBLE : View.GONE);
+        btnGameDetails.setText(technicalExpanded
+            ? "Скрыть технические данные" : "Показать технические данные");
+        btnGameDetails.setContentDescription(technicalExpanded
+            ? "Свернуть расширенную диагностику"
+            : "Раскрыть расширенную диагностику");
     }
 
     @Override protected void onResume() {
@@ -317,6 +347,9 @@ public final class MotorolaGameActivity extends Activity {
         }
         boolean ownBinderMissing = MotorolaDirectAccessGate.isBlocked(this);
         btnDirectRetry.setVisibility(ownBinderMissing ? View.VISIBLE : View.GONE);
+        // Once direct access is known unavailable, the Touch action already
+        // routes to GameTime. Hide the second identical destination.
+        btnGameTime.setVisibility(ownBinderMissing ? View.GONE : View.VISIBLE);
         btnTouchSet.setText(ownBinderMissing
             ? MotorolaTouchRoute.actionLabel(true, s.ownTouchRequested)
             : s.readable && s.touchServiceConnected
