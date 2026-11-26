@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(ramwiper_next LANGUAGES CXX)
+add_library(ramwiper_next SHARED wiper.cpp)
+target_compile_features(ramwiper_next PRIVATE cxx_std_17)
+target_compile_options(ramwiper_next PRIVATE -Wall -Wextra)
