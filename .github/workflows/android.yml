@@ -9,8 +9,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+      - name: Install Android SDK components
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$SDKMANAGER" ]]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
