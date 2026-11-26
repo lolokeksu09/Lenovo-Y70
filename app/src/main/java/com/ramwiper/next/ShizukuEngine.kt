@@ -8,12 +8,12 @@ import android.os.IBinder
 import kotlinx.coroutines.flow.MutableStateFlow
 import rikka.shizuku.Shizuku
 
-class ShizukuEngine(context: Context) : AutoCloseable {
+class ShizukuEngine(context: Context) : AutoCloseable, BackgroundControl {
     val status = MutableStateFlow("Shizuku недоступен")
     @Volatile private var service: IMemoryShell? = null
     private var bound = false
     private val args = Shizuku.UserServiceArgs(ComponentName(context.packageName, MemoryShellService::class.java.name))
-        .daemon(false).processNameSuffix("memory_shell").version(200).debuggable(false)
+        .daemon(false).processNameSuffix("memory_shell").version(201).debuggable(false)
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             service = IMemoryShell.Stub.asInterface(binder); status.value = "Shizuku подключён"
@@ -30,7 +30,7 @@ class ShizukuEngine(context: Context) : AutoCloseable {
         Shizuku.addRequestPermissionResultListener(permission)
         Shizuku.addBinderReceivedListenerSticky(received)
     }
-    fun ready(): Boolean = service?.asBinder()?.isBinderAlive == true
+    override fun ready(): Boolean = service?.asBinder()?.isBinderAlive == true
     fun request() {
         runCatching {
             if (!Shizuku.pingBinder()) { status.value = "Запусти Shizuku"; return }
@@ -44,7 +44,7 @@ class ShizukuEngine(context: Context) : AutoCloseable {
             if (!bound) { bound = true; status.value = "Подключение…"; Shizuku.bindUserService(args, connection) }
         }.onFailure { bound = false; status.value = "Ошибка подключения: ${it.message}" }
     }
-    fun kill(pkg: String, userId: Int): Int = service?.killBackground(pkg, userId) ?: -5
+    override fun kill(pkg: String, userId: Int): Int = service?.killBackground(pkg, userId) ?: -5
     fun memoryInfo(pkg: String): String = service?.memoryInfo(pkg) ?: "Shizuku не подключён"
     override fun close() {
         Shizuku.removeBinderReceivedListener(received); Shizuku.removeBinderDeadListener(dead); Shizuku.removeRequestPermissionResultListener(permission)

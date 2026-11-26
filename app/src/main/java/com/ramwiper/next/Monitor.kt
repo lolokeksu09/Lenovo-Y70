@@ -6,10 +6,10 @@ import android.os.Build
 import android.os.PowerManager
 import java.io.File
 
-class Monitor(context: Context) {
+class Monitor(context: Context) : MemorySource {
     private val am = requireNotNull(context.getSystemService(ActivityManager::class.java))
     private val power = requireNotNull(context.getSystemService(PowerManager::class.java))
-    fun read(): Snapshot {
+    override fun read(): Snapshot {
         val m = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         val swap = runCatching { File("/proc/meminfo").useLines { lines ->
             lines.mapNotNull { line ->

@@ -12,7 +12,15 @@ data class Snapshot(val total: Long, val available: Long, val threshold: Long, v
 object Policy {
     const val BLOCK = 16 * 1024 * 1024
     fun reserve(s: Snapshot): Long = maxOf(512 * MIB, s.threshold * 2, s.total / 12)
-    fun safe(s: Snapshot): Boolean = !s.low && s.available > reserve(s) && (s.thermal ?: 0) < 3 && (s.psiSome ?: 0.0) < 10.0
+    fun blockReason(s: Snapshot): String? = when {
+        s.total <= 0 || s.available !in 0..s.total || s.threshold !in 0..s.total -> "Некорректные данные памяти"
+        s.low -> "Android сообщает о нехватке памяти"
+        s.thermal != null && s.thermal >= 3 -> "Высокий тепловой статус"
+        s.psiSome != null && (!s.psiSome.isFinite() || s.psiSome >= 10.0 || s.psiSome < 0) -> "Высокое или некорректное давление PSI"
+        s.available <= reserve(s) -> "Достигнут защитный резерв"
+        else -> null
+    }
+    fun safe(s: Snapshot): Boolean = blockReason(s) == null
     fun budget(s: Snapshot, p: Profile): Long {
         if (!safe(s)) return 0
         return minOf(p.capMiB * MIB, s.total / 100 * p.fraction, (s.available - reserve(s)) / 2)

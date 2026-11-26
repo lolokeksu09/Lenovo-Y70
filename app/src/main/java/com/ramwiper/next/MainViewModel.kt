@@ -1,9 +1,8 @@
 package com.ramwiper.next
 
 import android.app.Application
-import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.os.Process
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -15,8 +14,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
 
 data class AppTarget(val name: String, val pkg: String)
@@ -25,7 +22,7 @@ data class ScreenState(val snapshot: Snapshot? = null, val engine: Engine = Engi
     val selected: Set<String> = emptySet(), val protected: Set<String> = emptySet(),
     val progress: Progress? = null, val history: List<Result> = emptyList(), val message: String = "",
     val diagnostic: String = "", val diagnosticBusy: Boolean = false,
-    val samples: List<Long> = emptyList(), val loadingApps: Boolean = true, val appError: String? = null, val monitorError: String? = null)
+    val samples: List<Long> = emptyList(), val loadingApps: Boolean = true, val appError: String? = null, val monitorError: String? = null, val cooldownSeconds: Int = 0)
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("memory", 0)
     private val monitor = Monitor(app)
@@ -35,6 +32,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val stop = AtomicBoolean(false)
     private val historyStore = HistoryStore(prefs)
     private val catalog = AppCatalog(app)
+    private var nextRunAt = 0L
     private var polling: Job? = null
     private var appLoad: Job? = null
     private val mutable = MutableStateFlow(ScreenState(
@@ -44,15 +42,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val state = mutable.asStateFlow()
     init { refreshApps() }
     fun setVisible(visible: Boolean) {
-        if (!visible) { polling?.cancel(); polling = null; return }
+        if (!visible) { polling?.cancel(); polling = null; stop.set(true); return }
         if (polling?.isActive == true) return
         polling = viewModelScope.launch {
             while (true) {
                 try {
                     val snap = withContext(Dispatchers.IO) { monitor.read() }
-                    mutable.update { it.copy(snapshot = snap, samples = (it.samples + snap.available).takeLast(40), monitorError = null) }
+                    mutable.update { it.copy(snapshot = snap, samples = (it.samples + snap.available).takeLast(40), monitorError = null, cooldownSeconds = remainingCooldown()) }
                 } catch (e: CancellationException) { throw e }
-                  catch (e: Exception) { mutable.update { it.copy(monitorError = e.message ?: "Не удалось прочитать память") } }
+                  catch (e: Exception) { mutable.update { it.copy(monitorError = e.message ?: "Не удалось прочитать память", cooldownSeconds = remainingCooldown()) } }
                 delay(2000)
             }
         }
@@ -77,9 +75,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun protect(pkg: String, checked: Boolean) { if (state.value.progress != null) return; mutable.update {
         it.copy(protected = if (checked) it.protected + pkg else it.protected - pkg, selected = if (checked) it.selected - pkg else it.selected)
     }; prefs.edit().putStringSet("protected", state.value.protected).apply() }
+    private fun remainingCooldown(): Int = ((nextRunAt - SystemClock.elapsedRealtime()).coerceAtLeast(0) + 999).div(1000).toInt()
     fun start() {
         val current = state.value
-        if (current.progress != null || current.diagnosticBusy) return
+        if (current.progress != null || current.diagnosticBusy || remainingCooldown() > 0) return
         if (current.engine == Engine.SHIZUKU && (!shizuku.ready() || current.selected.isEmpty())) {
             mutable.update { it.copy(message = "Подключи Shizuku и выбери приложения") }; return
         }
@@ -90,11 +89,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val result = withContext(Dispatchers.IO) { controller.run(current.engine, current.profile, current.selected - current.protected, stop) { p -> mutable.update { it.copy(progress = p) } } }
                 val history = (listOf(result) + state.value.history).take(100)
                 withContext(Dispatchers.IO) { historyStore.save(history) }
-                mutable.update { it.copy(history = history, message = if (result.cancelled) "Операция отменена" else "Операция завершена") }
+                mutable.update { it.copy(history = history, message = result.outcome.label()) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
               catch (e: Exception) { mutable.update { it.copy(message = "Ошибка: ${e.message}") } }
               catch (e: LinkageError) { mutable.update { it.copy(message = "Нативная библиотека недоступна: ${e.message}") } }
-            finally { mutable.update { it.copy(progress = null) } }
+            finally { nextRunAt = SystemClock.elapsedRealtime() + 15_000; mutable.update { it.copy(progress = null, cooldownSeconds = remainingCooldown()) } }
         }
     }
     fun cancel() { stop.set(true) }

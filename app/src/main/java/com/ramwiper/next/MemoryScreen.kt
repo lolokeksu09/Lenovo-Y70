@@ -12,6 +12,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
+internal fun Outcome.label() = when(this) {
+    Outcome.COMPLETED -> "Операция выполнена"
+    Outcome.PARTIAL -> "Выполнено частично"
+    Outcome.SKIPPED -> "Действия не выполнены"
+    Outcome.CANCELLED -> "Отменено"
+    Outcome.FAILED -> "Ошибка операции"
+    Outcome.LEGACY -> "Старый формат записи"
+}
 internal fun gb(bytes: Long) = String.format(Locale.getDefault(), "%.2f ГиБ", bytes / (1024.0 * 1024 * 1024))
 internal fun delta(bytes: Long) = (if(bytes > 0) "+" else "") + String.format(Locale.getDefault(), "%.0f МиБ", bytes / (1024.0 * 1024))
 internal fun engineName(e: Engine) = when(e) { Engine.NATIVE -> "Rust"; Engine.SHIZUKU -> "Shizuku"; Engine.HYBRID -> "Hybrid" }
@@ -39,12 +47,8 @@ internal fun profileName(p: Profile) = when(p) { Profile.SOFT -> "Мягкий";
                     Trend(s.samples, m.total)
                     Text("Последние измерения · шкала 0–${gb(m.total)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Metric("Резерв Rust", gb(Policy.reserve(m)))
-                Metric("Swap", if(m.swapTotal != null && m.swapFree != null) "${gb(m.swapTotal-m.swapFree)} / ${gb(m.swapTotal)}" else "Недоступно")
-                Metric("PSI avg10", m.psiSome?.let { "$it%" } ?: "Недоступно")
-                Metric("Тепловой статус", m.thermal?.let { when(it) { 0 -> "Норма"; 1 -> "Лёгкий"; 2 -> "Умеренный"; else -> "Высокий ($it)" } } ?: "Недоступно")
                 s.monitorError?.let { Text("Последнее измерение: $it", color = MaterialTheme.colorScheme.error) }
-                if (!Policy.safe(m)) Text("Rust заблокирован защитой памяти или температуры", color = MaterialTheme.colorScheme.error)
+                Policy.blockReason(m)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         }
         item { HorizontalDivider(); SectionLabel("Очистка"); Text(sh, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -52,9 +56,10 @@ internal fun profileName(p: Profile) = when(p) { Profile.SOFT -> "Мягкий";
                 Engine.entries.forEach { e -> FilterChip(selected = s.engine == e, onClick = { vm.engine(e) }, label = { Text(engineName(e)) }, enabled = s.progress == null) }
             }
             Metric("Профиль", profileName(s.profile))
+            if(s.engine != Engine.SHIZUKU) s.snapshot?.let { Metric("Текущий лимит Rust", "${Policy.budget(it,s.profile)/MIB} МиБ") }
             if(s.engine != Engine.NATIVE) Metric("Выбрано приложений", "${s.selected.size}/12")
             val p = s.progress
-            if (p == null) Button(onClick = vm::start, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !s.diagnosticBusy) { Text("Очистить память") }
+            if (p == null) Button(onClick = vm::start, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !s.diagnosticBusy && s.cooldownSeconds == 0) { Text(if(s.cooldownSeconds > 0) "Повтор через ${s.cooldownSeconds} с" else "Очистить память") }
             else {
                 Text(p.stage)
                 if (p.target > 0) LinearProgressIndicator(progress = { (p.allocated.toFloat()/p.target).coerceIn(0f,1f) }, modifier = Modifier.fillMaxWidth()) else LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -62,6 +67,17 @@ internal fun profileName(p: Profile) = when(p) { Profile.SOFT -> "Мягкий";
             }
             if(s.message.isNotBlank()) Text(s.message, style = MaterialTheme.typography.bodyMedium)
             Text("Результат зависит от Android. Исключения не защищают от LMKD.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        item {
+            HorizontalDivider()
+            SectionLabel("Диагностика")
+            s.snapshot?.let { m ->
+                Metric("Резерв Rust", gb(Policy.reserve(m)))
+                Metric("Swap", if(m.swapTotal != null && m.swapFree != null) "${gb(m.swapTotal-m.swapFree)} / ${gb(m.swapTotal)}" else "Недоступно")
+                Metric("PSI avg10", m.psiSome?.let { "$it%" } ?: "Недоступно")
+                Metric("Тепловой статус", m.thermal?.let { when(it) { 0 -> "Норма"; 1 -> "Лёгкий"; 2 -> "Умеренный"; else -> "Высокий ($it)" } } ?: "Недоступно")
+
+            } ?: Text("Нет измерений", style = MaterialTheme.typography.bodySmall)
         }
         s.history.firstOrNull()?.let { r -> item { HorizontalDivider(); SectionLabel("Последняя операция"); ResultRow(r) } }
     }

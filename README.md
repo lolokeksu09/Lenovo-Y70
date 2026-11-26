@@ -1,4 +1,4 @@
-# RAM Wiper 2.0.0-alpha.2
+# RAM Wiper 2.0.0-alpha.3
 
 Независимая реализация по принципу RAM Wiper 1.2-1. Оригинальный APK не изменён. Новый applicationId: com.ramwiper.next (устанавливается отдельно).
 
@@ -28,3 +28,5 @@ Android-сборка и тестирование на устройстве об�
 Эта отдельная ветка ram-wiper предназначена для независимой разработки RAM Wiper; не сливать с main Lenovo-Y70.
 
 Для локальной сборки: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android; cargo test --manifest-path native/Cargo.toml. Gradle запускает tools/build-rust.sh до preBuild.
+
+Alpha.3: scoped Rust session, explicit outcomes, immediate + 3-second measurement, Swap delta, 15-second cooldown and foreground cancellation. Legacy history retained. No guarantee of RAM improvement.

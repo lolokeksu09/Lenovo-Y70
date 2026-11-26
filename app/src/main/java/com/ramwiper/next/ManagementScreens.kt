@@ -55,10 +55,14 @@ import java.util.Date
         Column(Modifier.weight(1f)) {
             Text(DateFormat.getDateTimeInstance().format(Date(r.time)), style = MaterialTheme.typography.labelMedium)
             Text("${r.engine} · ${r.profile}", style = MaterialTheme.typography.bodySmall)
+            Text(r.outcome.label(), style = MaterialTheme.typography.labelSmall)
         }
         Text(delta(r.delta), style = MaterialTheme.typography.titleLarge)
     }
     Metric("Доступная RAM", "${gb(r.before)} → ${gb(r.after)}")
+    r.settledDelta?.let { Metric("Изменение через 3 с", delta(it)) }
+    r.swapDelta?.let { Metric("Изменение Swap", delta(it)) }
+    r.durationMs?.let { Metric("Длительность", "${it/1000.0} с") }
     Metric("Выделено Rust", "${r.allocated/MIB} МиБ")
     Metric("Команды приняты", "${r.accepted}/${r.attempted}")
     if(r.cancelled) Text("Отменено")
@@ -69,8 +73,9 @@ import java.util.Date
         if(s.history.isEmpty()) item { Text("История пока пуста. Результаты появятся после первой операции.") }
         else item {
             SectionLabel("Последние ${s.history.size} операций")
-            val done = s.history.filterNot { it.cancelled }
-            Metric("Положительное изменение", "${done.count { it.delta > 0 }}/${done.size}")
+            val done = s.history.filter { it.outcome == Outcome.COMPLETED || it.outcome == Outcome.PARTIAL }
+            val measured = done.filter { it.settledDelta != null }
+            Metric("Положительное изменение через 3 с", "${measured.count { (it.settledDelta ?: 0) > 0 }}/${measured.size}")
             Text("Изменение доступной RAM — не доказательство причинности и не прирост FPS.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
         }
@@ -87,6 +92,6 @@ import java.util.Date
             } }
             Text("Лимит динамически снижается с учётом резерва, PSI и температуры.", style = MaterialTheme.typography.bodySmall); HorizontalDivider()
         }
-        item { SectionLabel("Диагностика"); TextButton(onClick = vm::refreshApps) { Text("Обновить список приложений") }; Metric("Версия", "2.0.0-alpha.2"); Metric("Движок", "Rust JNI"); Text("Мониторинг активен только на видимом экране.", style = MaterialTheme.typography.bodySmall) }
+        item { SectionLabel("Диагностика"); TextButton(onClick = vm::refreshApps) { Text("Обновить список приложений") }; Metric("Версия", "2.0.0-alpha.3"); Metric("Движок", "Rust JNI"); Text("Мониторинг активен только на видимом экране.", style = MaterialTheme.typography.bodySmall) }
     }
 }
