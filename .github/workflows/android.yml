@@ -27,9 +27,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - run: gradle --no-daemon :domain:test :data:testDebugUnitTest :presentation:testDebugUnitTest :app:assembleDebug
+      - name: Verify native libraries and APK identity
+        run: |
+          python3 tools/verify-apk.py app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk > /tmp/ramwiper-apk-badging.txt
+          grep "^package: name='com.ramwiper.next' " /tmp/ramwiper-apk-badging.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ram-wiper-2-alpha3-debug
+          name: ram-wiper-2-alpha4-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

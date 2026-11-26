@@ -1,0 +1,2 @@
+-keep class com.ramwiper.next.MemoryShellService { *; }
+-keep class com.ramwiper.next.IMemoryShell$* { *; }

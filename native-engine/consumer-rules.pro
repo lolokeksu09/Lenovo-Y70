@@ -1,0 +1,1 @@
+-keep class com.ramwiper.next.NativeWiper { native <methods>; }

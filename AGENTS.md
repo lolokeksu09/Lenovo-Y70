@@ -6,3 +6,6 @@ Before claiming completion, run focused policy tests and Android assembleDebug i
 
 ## Engineering completion standard
 Quality and depth take precedence over speed. Audit the affected architecture and dependencies before a large patch; address root causes; consolidate rather than duplicate. Implement working behavior before UI, verify actual states and failure paths, and review the exact revision iteratively. Do not equate changed file counts, a commit, or CI with device verification. Report untested behavior and release blockers. Avoid artificial delays and premature completion.
+
+## Module boundary
+`:domain` is Kotlin/JVM only and owns policy, models and ports. `:data`, `:native-engine`, and `:presentation` depend on domain, not each other. `:app` wires concrete adapters into ViewModel. Preserve JNI and AIDL fully qualified names, preference keys and applicationId. UI receives state and callbacks, not repositories or privileged services.

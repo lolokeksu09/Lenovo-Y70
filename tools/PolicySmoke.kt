@@ -1,4 +1,4 @@
-package com.ramwiper.next
+package com.ramwiper.next.domain
 fun main() {
     val n = Snapshot(16L*1024*MIB,6L*1024*MIB,256*MIB,false)
     check(Policy.budget(n,Profile.BALANCED)==512*MIB)
