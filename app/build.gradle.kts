@@ -11,13 +11,14 @@ android {
         applicationId = "com.ramwiper.next"
         minSdk = 26
         targetSdk = 35
-        versionCode = 200
-        versionName = "2.0.0-alpha.1"
+        versionCode = 201
+        versionName = "2.0.0-alpha.2"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
-        externalNativeBuild { cmake { cppFlags += "-std=c++17" } }
+
     }
     buildFeatures { compose = true; aidl = true }
-    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
+    sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/rustJniLibs"))
+
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }
@@ -33,3 +34,13 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     testImplementation("junit:junit:4.13.2")
 }
+
+val rustJni = tasks.register<Exec>("buildRustJni") {
+    val output = layout.buildDirectory.dir("generated/rustJniLibs")
+    inputs.dir(rootProject.file("native/src"))
+    inputs.file(rootProject.file("native/Cargo.toml"))
+    inputs.file(rootProject.file("tools/build-rust.sh"))
+    outputs.dir(output)
+    commandLine("bash", rootProject.file("tools/build-rust.sh").absolutePath, output.get().asFile.absolutePath)
+}
+tasks.named("preBuild").configure { dependsOn(rustJni) }

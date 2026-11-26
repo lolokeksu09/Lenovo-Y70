@@ -25,8 +25,3 @@ class Monitor(context: Context) {
         return Snapshot(m.totalMem, m.availMem, m.threshold, m.lowMemory, swap?.get("SwapTotal"), swap?.get("SwapFree"), thermal, psi)
     }
 }
-object NativeWiper {
-    init { System.loadLibrary("ramwiper_next") }
-    external fun allocate(bytes: Int): Long
-    external fun release(address: Long, bytes: Int): Boolean
-}

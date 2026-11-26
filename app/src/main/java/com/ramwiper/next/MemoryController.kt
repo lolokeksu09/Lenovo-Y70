@@ -36,16 +36,14 @@ class MemoryController(private val monitor: Monitor, private val shell: ShizukuE
         val native = engine == Engine.NATIVE || (engine == Engine.HYBRID && Policy.shouldRunNative(before, middle))
         if (native && !stop.get()) {
             val budget = Policy.budget(middle, profile)
-            val blocks = mutableListOf<Pair<Long, Int>>()
+            val session = NativeWiper.Session()
             try {
                 if (budget == 0L) notes += "Недостаточный резерв или высокое давление/нагрев"
                 while (!stop.get() && allocated < budget) {
                     coroutineContext.ensureActive()
                     val size = Policy.next(monitor.read(), budget - allocated)
                     if (size == 0) { notes += "Сработало защитное ограничение"; break }
-                    val address = NativeWiper.allocate(size)
-                    if (address == 0L) { notes += "mmap не выделил блок"; break }
-                    blocks.add(address to size)
+                    if (!session.add(size)) { notes += "Rust: не удалось выделить блок"; break }
                     allocated += size
                     progress(Progress("Native: выделение памяти", allocated, budget))
                     delay(35)
@@ -53,9 +51,7 @@ class MemoryController(private val monitor: Monitor, private val shell: ShizukuE
                 if (!stop.get() && allocated > 0 && Policy.safe(monitor.read())) delay(profile.holdMs)
             } finally {
                 progress(Progress("Освобождение памяти", allocated, budget))
-                for ((addr, size) in blocks.asReversed()) {
-                    if (!NativeWiper.release(addr, size)) notes += "Ошибка munmap"
-                }
+                session.close()
             }
         }
         progress(Progress("Измерение результата"))

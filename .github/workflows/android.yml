@@ -17,13 +17,19 @@ jobs:
           set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null
           set -o pipefail
-          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+      - name: Rust toolchain and native tests
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal
+          rustup override set 1.90.0
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          cargo test --manifest-path native/Cargo.toml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
       - run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: ram-wiper-2-alpha-debug
+          name: ram-wiper-2-alpha2-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
