@@ -24,3 +24,6 @@ NativeLimits is part of UserSettings; the cleanup port receives validated overri
 
 ## Alpha.6
 AppMemorySampler revalidates the catalog, performs a read-only bounded sequential batch via PrivilegedAccess, and returns typed samples. RunCleanupUseCase optionally records paired measurements for explicitly selected apps. CSV generation is pure domain; Activity owns the SAF result contract and output stream, ViewModel freezes the records and owns single-flight export. Stored comparison keys are optional; no change to applicationId, JNI or native limits.
+
+## Alpha.7
+AdaptivePolicy is a pure domain planner used by controller and UI. NativeLimits retains opt-in adaptive flag. Actual allocated profile, plan budget, reason and starting available percentage are nullable history fields and CSV columns. StrategyAnalytics groups measured manual operations by observed allocation and accepted commands, not a claimed killed-process count.

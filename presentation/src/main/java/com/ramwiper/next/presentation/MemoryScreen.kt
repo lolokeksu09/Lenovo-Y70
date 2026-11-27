@@ -59,7 +59,15 @@ internal fun profileName(p: Profile) = when(p) { Profile.SOFT -> "Мягкий";
             }
             Metric("Профиль", profileName(s.profile))
             if (s.settings.automation.foregroundEnabled) Text("Автоочистка · SOFT · до ${s.settings.automation.thresholdPercent}% доступной RAM", style = MaterialTheme.typography.bodySmall)
-            if(s.engine != Engine.SHIZUKU) s.snapshot?.let { Metric("Текущий лимит Rust", "${Policy.budget(it,s.profile,s.settings.nativeLimits)/MIB} МиБ") }
+            if (s.engine != Engine.SHIZUKU) s.snapshot?.let { snapshot ->
+                val plan = AdaptivePolicy.plan(snapshot, s.profile, s.settings.nativeLimits)
+                Metric("Расчётный лимит Rust", "${plan.budget/MIB} МиБ")
+                if (s.settings.nativeLimits.adaptive) {
+                    Metric("Адаптивный профиль", if (plan.budget == 0L) "Пропуск" else profileName(plan.profile))
+                    Text(plan.reason, style = MaterialTheme.typography.bodySmall)
+                    if (s.engine == Engine.HYBRID) Text("После Shizuku план пересчитывается.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if(s.engine != Engine.NATIVE) Metric("Выбрано приложений", "${s.selected.size}/${SelectionPolicy.LIMIT}")
             val p = s.progress
             if (p == null) Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = s.canStart) { Text(if(s.cooldownSeconds > 0) "Повтор через ${s.cooldownSeconds} с" else "Очистить память") }
@@ -80,7 +88,16 @@ internal fun profileName(p: Profile) = when(p) { Profile.SOFT -> "Мягкий";
                 val swapTotal = m.swapTotal
                 val swapFree = m.swapFree
                 Metric("Swap", if(swapTotal != null && swapFree != null) "${gb(swapTotal-swapFree)} / ${gb(swapTotal)}" else "Недоступно")
-                Metric("PSI avg10", m.psiSome?.let { "$it%" } ?: "Недоступно")
+                Metric("PSI some avg10", m.psiSome?.let { "$it%" } ?: "Недоступно")
+                Metric("PSI full avg10", m.details.psiFullAvg10?.let { "$it%" } ?: "Недоступно")
+                SectionLabel("Счётчики ядра")
+                Metric("Свободные страницы", m.details.freeBytes?.let(::gb) ?: "Недоступно")
+                Metric("Файловый кэш (Cached)", m.details.cachedBytes?.let(::gb) ?: "Недоступно")
+                Metric("Возвращаемый Slab", m.details.reclaimableSlabBytes?.let(::gb) ?: "Недоступно")
+                Metric("Анонимные страницы", m.details.anonymousBytes?.let(::gb) ?: "Недоступно")
+                Metric("Dirty", m.details.dirtyBytes?.let(::gb) ?: "Недоступно")
+                Metric("SwapCached", m.details.swapCachedBytes?.let(::gb) ?: "Недоступно")
+                Text("Счётчики могут пересекаться. Их сумма не равна занятой RAM.", style = MaterialTheme.typography.bodySmall)
                 Metric("Тепловой статус", m.thermal?.let { when(it) { 0 -> "Норма"; 1 -> "Лёгкий"; 2 -> "Умеренный"; else -> "Высокий ($it)" } } ?: "Недоступно")
 
             } ?: Text("Нет измерений", style = MaterialTheme.typography.bodySmall)

@@ -1,7 +1,6 @@
 package com.ramwiper.next.data
 
 import com.ramwiper.next.domain.*
-
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
@@ -13,17 +12,14 @@ class Monitor(context: Context) : MemorySource {
     private val power = requireNotNull(context.getSystemService(PowerManager::class.java))
     override fun read(): Snapshot {
         val m = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
-        val swap = runCatching { File("/proc/meminfo").useLines { lines ->
-            lines.mapNotNull { line ->
-                val k = line.substringBefore(':')
-                if (k !in setOf("SwapTotal", "SwapFree")) null else
-                    line.substringAfter(':').trim().substringBefore(' ').toLongOrNull()?.let { k to it * 1024 }
-            }.toMap()
-        } }.getOrNull()
-        val psi = runCatching { File("/proc/pressure/memory").useLines { lines ->
-            lines.firstOrNull { it.startsWith("some ") }?.let { Regex("avg10=([0-9.]+)").find(it)?.groupValues?.get(1)?.toDoubleOrNull() }
-        } }.getOrNull()
-        val thermal = if (Build.VERSION.SDK_INT >= 29) power.currentThermalStatus else null
-        return Snapshot(m.totalMem, m.availMem, m.threshold, m.lowMemory, swap?.get("SwapTotal"), swap?.get("SwapFree"), thermal, psi)
+        val mem = runCatching { File("/proc/meminfo").useLines { KernelMemoryParser.meminfo(it) } }.getOrNull().orEmpty()
+        val pressure = runCatching { File("/proc/pressure/memory").readLines() }.getOrNull().orEmpty()
+        val thermal = if (Build.VERSION.SDK_INT >= 29) runCatching { power.currentThermalStatus }.getOrNull() else null
+        val swapTotal = mem["SwapTotal"]
+        val swapFree = mem["SwapFree"]?.takeIf { swapTotal != null && it <= swapTotal }
+        return Snapshot(m.totalMem, m.availMem, m.threshold, m.lowMemory, swapTotal, swapFree, thermal,
+            KernelMemoryParser.pressureAvg10(pressure, "some"), SystemMemoryDetails(
+                mem["MemFree"], mem["Cached"], mem["SReclaimable"], mem["AnonPages"], mem["Dirty"],
+                mem["SwapCached"], KernelMemoryParser.pressureAvg10(pressure,"full")))
     }
 }

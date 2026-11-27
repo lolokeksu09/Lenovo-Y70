@@ -21,6 +21,7 @@ class MemoryController(
         var allocated = 0L
         var attempted = 0
         var accepted = 0
+        var nativePlan: NativePlan? = null
         var partial = false
         var failed = false
         fun active() = !stop.get()
@@ -49,8 +50,10 @@ class MemoryController(
         val useNative = engine == Engine.NATIVE || engine == Engine.HYBRID &&
             (accepted == 0 || Policy.shouldRunNative(before, middle))
         if (useNative && active()) {
-            val budget = Policy.budget(middle, profile, limits)
-            if (budget == 0L) notes += Policy.blockReason(middle) ?: "Резерв недостаточен для блока"
+            val plan = AdaptivePolicy.plan(middle, profile, limits)
+            nativePlan = plan
+            val budget = plan.budget
+            if (budget == 0L) notes += if (limits.adaptive || Policy.blockReason(middle) != null) plan.reason else "Резерв недостаточен для блока"
             else {
                 try {
                     openSession().use { session ->
@@ -65,7 +68,7 @@ class MemoryController(
                                 progress(Progress("Выделение памяти", allocated, budget))
                                 if (active()) pause(35)
                             }
-                            var hold = limits.hold(profile)
+                            var hold = limits.hold(plan.profile)
                             while (active() && allocated > 0 && hold > 0 && !failed) {
                                 if (!Policy.safe(monitor.read())) { partial = true; notes += "Удержание прекращено защитой"; break }
                                 val interval = minOf(hold, 50)
@@ -103,6 +106,9 @@ class MemoryController(
         return CleanupResult(System.currentTimeMillis(), engine.name, profile.name, before.available, after.available,
             allocated, accepted, attempted, !active(), notes.distinct().joinToString("; "), outcome,
             settled?.available, (clock()-start).coerceAtLeast(0),
-            if (swapBefore != null && swapAfter != null) swapAfter - swapBefore else null)
+            if (swapBefore != null && swapAfter != null) swapAfter - swapBefore else null,
+            effectiveNativeProfile = nativePlan?.takeIf { allocated > 0 }?.profile?.name,
+            plannedNativeBytes = nativePlan?.budget, nativeDecision = nativePlan?.reason,
+            availablePercentBefore = if (before.total > 0 && before.available in 0..before.total) before.available.toDouble()/before.total*100 else null)
     }
 }

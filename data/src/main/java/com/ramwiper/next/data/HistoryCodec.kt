@@ -58,6 +58,10 @@ internal object HistoryCodec {
                 put("settled", r.settled ?: JSONObject.NULL)
                 put("durationMs", r.durationMs ?: JSONObject.NULL)
                 put("swapDelta", r.swapDelta ?: JSONObject.NULL)
+                put("effectiveNativeProfile", r.effectiveNativeProfile ?: JSONObject.NULL)
+                put("plannedNativeBytes", r.plannedNativeBytes ?: JSONObject.NULL)
+                put("nativeDecision", r.nativeDecision ?: JSONObject.NULL)
+                put("availablePercentBefore", r.availablePercentBefore ?: JSONObject.NULL)
                 put("comparisons", JSONArray().apply { r.comparisons.take(12).forEach { c ->
                     put(JSONObject().apply { put("pkg", c.pkg); put("before", encodeSample(c.before)); put("after", encodeSample(c.after)) })
                 } })
@@ -77,7 +81,11 @@ internal object HistoryCodec {
                     runCatching { Outcome.valueOf(r.optString("outcome")) }.getOrDefault(Outcome.LEGACY),
                     r.optionalLong("settled"), r.optionalLong("durationMs"), r.optionalLong("swapDelta"),
                     runCatching { CleanupTrigger.valueOf(r.optString("trigger")) }.getOrDefault(CleanupTrigger.MANUAL),
-                    comparisons(r)
+                    comparisons(r),
+                    if (r.isNull("effectiveNativeProfile")) null else r.getString("effectiveNativeProfile"),
+                    r.optionalLong("plannedNativeBytes"),
+                    if (r.isNull("nativeDecision")) null else r.getString("nativeDecision"),
+                    if (r.isNull("availablePercentBefore")) null else r.optDouble("availablePercentBefore").takeIf { it.isFinite() && it in 0.0..100.0 }
                 )
             }.getOrNull()
         }.take(100).toList()

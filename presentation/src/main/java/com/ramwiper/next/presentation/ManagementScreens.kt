@@ -97,6 +97,9 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
     r.swapDelta?.let { Metric("Изменение Swap", delta(it)) }
     r.durationMs?.let { Metric("Длительность очистки", "${it/1000.0} с") }
     Metric("Выделено Rust", "${r.allocated/MIB} МиБ")
+    r.plannedNativeBytes?.let { Metric("План Rust", "${it/MIB} МиБ") }
+    r.effectiveNativeProfile?.let { Metric("Фактический профиль", it) }
+    r.nativeDecision?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     Metric("Команды приняты", "${r.accepted}/${r.attempted}")
     if (r.comparisons.isNotEmpty()) {
         var expanded by remember(r) { mutableStateOf(false) }
@@ -116,6 +119,8 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
         filter == 0 || filter == 1 && it.trigger == CleanupTrigger.MANUAL || filter == 2 && it.trigger == CleanupTrigger.AUTOMATIC
     } }
     val stats = remember(records) { HistoryAnalytics.summarize(records) }
+    val strategies = remember(s.history) { StrategyAnalytics.compare(s.history) }
+    var showStrategies by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -133,6 +138,23 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
             Metric("Медиана через 3 с", stats.medianDelta?.let { delta(it) } ?: "Нет данных")
             Text("Учитываются только сохранённые замеры выполненных и частичных операций. Изменение RAM не доказывает прирост FPS.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
+        }
+        item {
+            TextButton(onClick = { showStrategies = !showStrategies }) {
+                Text(if (showStrategies) "Скрыть сравнение режимов" else "Сравнить режимы")
+            }
+            if (showStrategies) {
+                Text("Ручные операции с контрольным замером; группировка по фактическим действиям. Команда Shizuku не доказывает остановку процесса. Условия замеров различаются.", style = MaterialTheme.typography.bodySmall)
+                if (strategies.isEmpty()) Text("Недостаточно данных")
+                strategies.forEach { strategy ->
+                    HorizontalDivider()
+                    Text("${strategy.engine} · ${strategy.profile}", style = MaterialTheme.typography.titleSmall)
+                    Metric("Положительные замеры", "${strategy.positive}/${strategy.count}")
+                    Metric("Медиана RAM", strategy.medianDelta?.let { delta(it) } ?: "—")
+                    Metric("Медиана Swap", strategy.medianSwapDelta?.let { delta(it) } ?: "—")
+                    Metric("Медиана времени", strategy.medianDurationMs?.let { "${it/1000.0} с" } ?: "—")
+                }
+            }
         }
         if (records.isEmpty()) item { Text("Нет операций по этому фильтру") }
         items(records) { r -> Column { ResultRow(r); HorizontalDivider() } }
@@ -162,6 +184,13 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
         item {
             val limits = s.settings.nativeLimits
             SectionLabel("Ручные ограничения Rust")
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Адаптивный профиль")
+                    Text("Снижает нагрузку при нагреве, PSI и неизвестной телеметрии; пропускает Rust при доступной RAM от 40%.", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(checked = limits.adaptive, enabled = s.canEdit, onCheckedChange = { onLimits(limits.copy(adaptive = it)) })
+            }
             Metric("Максимум профиля с ограничением", "${limits.cap(s.profile)} МиБ")
             Metric("Удержание", "${limits.hold(s.profile)} мс")
             Text("Предел выделения", style = MaterialTheme.typography.bodyMedium)

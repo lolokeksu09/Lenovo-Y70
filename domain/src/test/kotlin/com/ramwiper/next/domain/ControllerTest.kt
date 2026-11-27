@@ -83,6 +83,30 @@ class ControllerTest {
         assertEquals(3440L, elapsed)
         assertTrue(session.closed)
     }
+    @Test fun adaptiveModeSkipsHighAvailableRamWithoutOpeningSession() = runBlocking {
+        val r = MemoryController(Source(healthy),Shell(),0,{ error("unnecessary native") },{})
+            .run(Engine.NATIVE,Profile.STRONG,emptySet(),AtomicBoolean(false),NativeLimits(adaptive=true)) {}
+        assertEquals(Outcome.SKIPPED,r.outcome); assertEquals(0L,requireNotNull(r.plannedNativeBytes))
+        assertNull(r.effectiveNativeProfile)
+    }
+    @Test fun adaptiveModeUsesActualLowerProfile() = runBlocking {
+        val session = Session()
+        val r = MemoryController(Source(healthy.copy(available=2L*1024*MIB)),Shell(),0,{session},{})
+            .run(Engine.NATIVE,Profile.STRONG,emptySet(),AtomicBoolean(false),NativeLimits(adaptive=true)) {}
+        assertEquals("STRONG",r.profile); assertEquals("SOFT",r.effectiveNativeProfile)
+        assertEquals(128*MIB,r.allocated); assertTrue(session.closed)
+    }
+    @Test fun hybridReplansAfterShellStage() = runBlocking {
+        val source = Source(healthy.copy(available=3200*MIB))
+        val shell = Shell()
+        val r = MemoryController(source,shell,0,{error("native should be skipped")},{
+            source.sample = source.sample.copy(available=3300*MIB)
+        }).run(Engine.HYBRID,Profile.STRONG,setOf("test.app"),AtomicBoolean(false),NativeLimits(adaptive=true)) {}
+        assertEquals(1,r.accepted)
+        assertEquals(0L,r.allocated)
+        assertNull(r.effectiveNativeProfile)
+        assertEquals(0L,requireNotNull(r.plannedNativeBytes))
+    }
     @Test fun invalidReadingsAreRejected() {
         assertFalse(Policy.safe(healthy.copy(total = 0))); assertFalse(Policy.safe(healthy.copy(available = healthy.total + 1)))
         assertFalse(Policy.safe(healthy.copy(psiSome = Double.NaN))); assertFalse(Policy.safe(healthy.copy(psiSome = -1.0)))

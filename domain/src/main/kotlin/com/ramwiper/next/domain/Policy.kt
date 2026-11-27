@@ -8,7 +8,7 @@ enum class Profile(val capMiB: Long, val fraction: Int, val holdMs: Long) {
 enum class Engine { NATIVE, SHIZUKU, HYBRID }
 data class Snapshot(val total: Long, val available: Long, val threshold: Long, val low: Boolean,
                     val swapTotal: Long? = null, val swapFree: Long? = null, val thermal: Int? = null,
-                    val psiSome: Double? = null)
+                    val psiSome: Double? = null, val details: SystemMemoryDetails = SystemMemoryDetails())
 object Policy {
     const val BLOCK = 16 * 1024 * 1024
     fun reserve(s: Snapshot): Long = maxOf(512 * MIB, s.threshold * 2, s.total / 12)

@@ -28,6 +28,13 @@ class HistoryCodecTest {
         assertEquals(listOf(r), HistoryCodec.decode(HistoryCodec.encode(listOf(r))))
         assertTrue(HistoryCodec.decode("[$legacy]").single().comparisons.isEmpty())
     }
+    @Test fun nativePlanFieldsRoundTrip() {
+        val r = CleanupResult(1,"NATIVE","STRONG",100,200,16,0,0,false,"",
+            Outcome.COMPLETED, effectiveNativeProfile="SOFT", plannedNativeBytes=128L*MIB,
+            nativeDecision="Неполная телеметрия", availablePercentBefore=25.5)
+        assertEquals(listOf(r), HistoryCodec.decode(HistoryCodec.encode(listOf(r))))
+        assertNull(HistoryCodec.decode("[$legacy]").single().effectiveNativeProfile)
+    }
     @Test fun malformedItemDoesNotHideValidRecords() {
         assertEquals(1, HistoryCodec.decode("[{},$legacy]").size)
     }

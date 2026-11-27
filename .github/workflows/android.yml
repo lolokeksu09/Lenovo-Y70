@@ -35,6 +35,6 @@ jobs:
           grep "^package: name='com.ramwiper.next' " /tmp/ramwiper-apk-badging.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ram-wiper-2-alpha6-debug
+          name: ram-wiper-2-alpha7-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

@@ -6,7 +6,9 @@ data class CleanupResult(val time: Long, val engine: String, val profile: String
                   val allocated: Long, val accepted: Int, val attempted: Int, val cancelled: Boolean, val note: String,
                   val outcome: Outcome = Outcome.LEGACY, val settled: Long? = null, val durationMs: Long? = null,
                   val swapDelta: Long? = null, val trigger: CleanupTrigger = CleanupTrigger.MANUAL,
-                  val comparisons: List<AppMemoryComparison> = emptyList()) {
+                  val comparisons: List<AppMemoryComparison> = emptyList(),
+                  val effectiveNativeProfile: String? = null, val plannedNativeBytes: Long? = null,
+                  val nativeDecision: String? = null, val availablePercentBefore: Double? = null) {
     val delta get() = after - before
     val settledDelta get() = settled?.minus(before)
 }
