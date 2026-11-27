@@ -18,7 +18,8 @@ data class AppTarget(val name: String, val pkg: String)
 data class UserSettings(val engine: Engine = Engine.HYBRID, val profile: Profile = Profile.BALANCED,
                         val protected: Set<String> = emptySet(),
                         val automation: AutomationSettings = AutomationSettings(),
-                        val nativeLimits: NativeLimits = NativeLimits())
+                        val nativeLimits: NativeLimits = NativeLimits(),
+                        val compareSelected: Boolean = false)
 interface AppRepository { fun read(): List<AppTarget> }
 interface SettingsRepository {
     fun load(): UserSettings

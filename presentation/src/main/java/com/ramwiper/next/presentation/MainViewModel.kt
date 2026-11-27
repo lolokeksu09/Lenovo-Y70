@@ -17,6 +17,7 @@ class MainViewModel(
     versionName: String,
     private val clock: () -> Long,
     private val background: BackgroundMonitor,
+    private val sampler: AppMemorySampler,
     private val io: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
     private val mutable = MutableStateFlow(ScreenState(versionName = versionName, access = access.status.value))
@@ -31,6 +32,8 @@ class MainViewModel(
     private var foreground = false
     private var nextRunAt = 0L
     private val autoGate = AutomationGate()
+    private var scanStop: AtomicBoolean? = null
+    private var pendingExport: List<CleanupResult>? = null
 
     init {
         viewModelScope.launch { access.status.collect { status -> mutable.update { it.copy(access = status) } } }
@@ -55,7 +58,7 @@ class MainViewModel(
 
     fun setVisible(visible: Boolean) {
         foreground = visible
-        if (!visible) { polling?.cancel(); polling = null; stop?.set(true); autoGate.resetSamples(); closeDiagnostic(); return }
+        if (!visible) { polling?.cancel(); polling = null; stop?.set(true); autoGate.resetSamples(); closeDiagnostic(); scanStop?.set(true); return }
         if (polling?.isActive == true) return
         polling = viewModelScope.launch {
             while (isActive) {
@@ -80,7 +83,8 @@ class MainViewModel(
         appLoad = viewModelScope.launch {
             try {
                 val apps = withContext(io) { catalog.read() }
-                mutable.update { it.copy(targets = apps, selected = SelectionPolicy.eligible(it.selected, it.protected, apps), loadingApps = false) }
+                mutable.update { it.copy(targets = apps, selected = SelectionPolicy.eligible(it.selected, it.protected, apps),
+                    appSamples = it.appSamples.filterKeys { pkg -> apps.any { a -> a.pkg == pkg } }, loadingApps = false) }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { mutable.update { it.copy(loadingApps = false, appError = e.message ?: "Ошибка списка приложений") } }
         }
@@ -110,6 +114,7 @@ class MainViewModel(
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { mutable.update { it.copy(message = "Ошибка фонового мониторинга: ${e.message}") } }
     }
+    fun setCompareSelected(enabled: Boolean) = updateSettings { it.copy(compareSelected = enabled) }
     fun setNativeLimits(value: NativeLimits) = updateSettings { it.copy(nativeLimits = value.normalized()) }
     fun setAutomation(value: AutomationSettings) = updateSettings { it.copy(automation = value.normalized()) }
     fun setBackgroundAlerts(enabled: Boolean) = updateSettings { it.copy(automation = it.automation.copy(backgroundAlerts = enabled)) }
@@ -140,7 +145,7 @@ class MainViewModel(
         autoGate.recordAttempt(clock())
         val token = AtomicBoolean(false)
         stop = token
-        val request = if (automatic) CleanupRequest(current.settings.copy(engine = Engine.NATIVE, profile = Profile.SOFT, nativeLimits = NativeLimits()), emptySet())
+        val request = if (automatic) CleanupRequest(current.settings.copy(engine = Engine.NATIVE, profile = Profile.SOFT, nativeLimits = NativeLimits(), compareSelected = false), emptySet())
             else CleanupRequest(current.settings, current.selected)
         mutable.update { it.copy(progress = Progress(if (automatic) "Автоматическая очистка" else "Подготовка"), message = "") }
         viewModelScope.launch {
@@ -168,6 +173,64 @@ class MainViewModel(
     }
 
     fun cancel() { stop?.set(true) }
+    fun scan(packages: List<String>) {
+        val current = state.value
+        if (!foreground || !current.canEdit || current.diagnosticBusy || !access.ready()) return
+        val allowed = current.targets.map { it.pkg }.toSet()
+        val targets = packages.distinct().filter { it in allowed }.take(AppMemorySampler.BATCH_LIMIT)
+        if (targets.isEmpty()) return
+        val token = AtomicBoolean(false)
+        scanStop = token
+        mutable.update { it.copy(diagnosticBusy = true, scanProgress = "0/${targets.size}", message = "") }
+        viewModelScope.launch {
+            try {
+                val result = withContext(io) {
+                    sampler.measure(targets, token) { done, total ->
+                        mutable.update { it.copy(scanProgress = "$done/$total") }
+                    }
+                }
+                ensureActive()
+                val message = if (result.cancelled) "Замер прерван; сохранены полученные данные"
+                    else "Измерено ${result.samples.size} приложений"
+                mutable.update { it.copy(appSamples = it.appSamples + result.samples.associateBy { sample -> sample.pkg }, message = message) }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { mutable.update { it.copy(message = "Ошибка замера: ${e.message}") } }
+            finally {
+                scanStop = null
+                mutable.update { it.copy(diagnosticBusy = false, scanProgress = null) }
+            }
+        }
+    }
+    fun cancelScan() { scanStop?.set(true) }
+    fun clearSamples() {
+        if (!state.value.diagnosticBusy) mutable.update { it.copy(appSamples = emptyMap()) }
+    }
+
+    /** Freeze the export at explicit request; a result after process death is rejected. */
+    fun prepareExport(): Boolean {
+        val current = state.value
+        if (!current.canEdit || current.diagnosticBusy || current.history.isEmpty() || pendingExport != null) return false
+        pendingExport = current.history.toList()
+        mutable.update { it.copy(exportBusy = true, message = "") }
+        return true
+    }
+    fun finishExport(writer: ((String) -> Unit)?) {
+        val records = pendingExport
+        pendingExport = null
+        if (records == null && state.value.exportBusy) return // Ignore a duplicate callback during an active write.
+        if (writer == null || records == null) {
+            mutable.update { it.copy(exportBusy = false, message = if (writer != null) "Экспорт устарел. Повтори действие." else "Экспорт отменён") }
+            return
+        }
+        viewModelScope.launch {
+            try {
+                withContext(io) { writer(HistoryCsv.encode(records)) }
+                mutable.update { it.copy(message = "CSV сохранён: ${records.size} операций") }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { mutable.update { it.copy(message = "Ошибка записи CSV: ${e.message}") } }
+            finally { mutable.update { it.copy(exportBusy = false) } }
+        }
+    }
     fun inspect(pkg: String) {
         val current = state.value
         if (!foreground || current.progress != null || current.diagnosticBusy || !access.ready() || current.targets.none { it.pkg == pkg }) return
@@ -193,6 +256,7 @@ class MainViewModel(
     }
     override fun onCleared() {
         stop?.set(true)
+        scanStop?.set(true)
         polling?.cancel()
         appLoad?.cancel()
         initialLoad?.cancel()

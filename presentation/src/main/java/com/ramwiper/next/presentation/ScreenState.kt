@@ -20,6 +20,9 @@ data class ScreenState(
     val diagnosticReport: AppMemoryReport? = null,
     val diagnosticPackage: String? = null,
     val diagnosticBusy: Boolean = false,
+    val appSamples: Map<String, AppMemorySample> = emptyMap(),
+    val scanProgress: String? = null,
+    val exportBusy: Boolean = false,
     val samples: List<Long> = emptyList(),
     val loadingApps: Boolean = true,
     val appError: String? = null,
@@ -29,7 +32,7 @@ data class ScreenState(
     val engine get() = settings.engine
     val profile get() = settings.profile
     val protected get() = settings.protected
-    val canEdit get() = settingsLoaded && !settingsBusy && progress == null
+    val canEdit get() = settingsLoaded && !settingsBusy && !exportBusy && progress == null
     val canStart get() = canEdit && !diagnosticBusy && cooldownSeconds == 0 &&
         (engine != Engine.SHIZUKU || access.state == AccessState.CONNECTED && selected.isNotEmpty())
 }

@@ -21,3 +21,6 @@ Preserve applicationId com.ramwiper.next, preference file memory, existing prefe
 AutomationPolicy, AutomationGate and HistoryAnalytics are domain-only. WorkManager integration, AppWidgetProvider and TileService live in app; the worker reads the data adapter and cannot call native cleanup. BackgroundMonitor is a domain port injected into presentation. Existing module boundaries retained.
 
 NativeLimits is part of UserSettings; the cleanup port receives validated overrides and the controller applies the stricter preset or user bound. MeminfoParser and diagnostic models live in domain; the bounded command remains in data and the structured view in presentation.
+
+## Alpha.6
+AppMemorySampler revalidates the catalog, performs a read-only bounded sequential batch via PrivilegedAccess, and returns typed samples. RunCleanupUseCase optionally records paired measurements for explicitly selected apps. CSV generation is pure domain; Activity owns the SAF result contract and output stream, ViewModel freezes the records and owns single-flight export. Stored comparison keys are optional; no change to applicationId, JNI or native limits.

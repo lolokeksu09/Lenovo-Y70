@@ -20,9 +20,24 @@ class MainActivity : ComponentActivity() {
         val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) vm.setBackgroundAlerts(true) else vm.notifyPermissionDenied()
         }
+        val resolver = applicationContext.contentResolver
+        val export = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+            if (uri == null) vm.finishExport(null)
+            else vm.finishExport { csv ->
+                requireNotNull(resolver.openOutputStream(uri, "wt")) { "Не удалось открыть документ" }.use { stream ->
+                    stream.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                    stream.write(csv.toByteArray(Charsets.UTF_8))
+                }
+            }
+        }
         setContent {
             RamTheme {
-                RamApp(vm) { enabled ->
+                RamApp(vm, onExport = {
+                    if (vm.prepareExport()) {
+                        try { export.launch("ram-wiper-history.csv") }
+                        catch (_: Exception) { vm.finishExport(null) }
+                    }
+                }) { enabled ->
                     if (!enabled) vm.setBackgroundAlerts(false)
                     else if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                         permission.launch(Manifest.permission.POST_NOTIFICATIONS)

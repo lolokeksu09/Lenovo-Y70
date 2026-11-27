@@ -15,20 +15,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.text.DateFormat
 import java.util.Date
+import java.util.Locale
 
-@Composable fun ApplicationsScreen(s: ScreenState, onSelect: (String, Boolean) -> Unit, onProtect: (String, Boolean) -> Unit, onInspect: (String) -> Unit, onRefresh: () -> Unit) {
+@Composable fun ApplicationsScreen(s: ScreenState, onSelect: (String, Boolean) -> Unit, onProtect: (String, Boolean) -> Unit, onInspect: (String) -> Unit, onRefresh: () -> Unit, onScan: (List<String>) -> Unit, onCancelScan: () -> Unit, onClearSamples: () -> Unit) {
     var search by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableIntStateOf(0) }
-    val visible = remember(s.targets, s.selected, s.protected, search, filter) { s.targets.filter {
+    var byMemory by rememberSaveable { mutableStateOf(false) }
+    val filtered = remember(s.targets, s.selected, s.protected, search, filter) { s.targets.filter {
         (it.name.contains(search,true) || it.pkg.contains(search,true)) &&
         (filter == 0 || filter == 1 && it.pkg in s.selected || filter == 2 && it.pkg in s.protected)
     } }
+    val visible = remember(filtered, byMemory, s.appSamples) {
+        if (!byMemory) filtered else {
+            val ranked = AppMemoryRanking.order(filtered.mapNotNull { s.appSamples[it.pkg] })
+                .mapIndexed { index, sample -> sample.pkg to index }.toMap()
+            filtered.sortedWith(compareBy<AppTarget> { ranked[it.pkg] ?: Int.MAX_VALUE }.thenBy { it.name.lowercase() })
+        }
+    }
+    val nextBatch = remember(filtered, s.appSamples) { filtered.filter { it.pkg !in s.appSamples }.ifEmpty { filtered }.take(AppMemorySampler.BATCH_LIMIT) }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 20.dp)) {
             Text("${s.access.label()} · ${s.selected.size}/${SelectionPolicy.LIMIT}", style = MaterialTheme.typography.bodySmall)
             OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("Найти приложение") }, singleLine = true)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("Все", "Выбраны", "Исключены").forEachIndexed { i, label -> FilterChip(selected = filter == i, onClick = { filter = i }, label = { Text(label) }) }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(selected = byMemory, onClick = { byMemory = !byMemory }, label = { Text("По PSS") })
+                if (s.scanProgress == null) {
+                    TextButton(onClick = { onScan(nextBatch.map { it.pkg }) }, enabled = s.canEdit && !s.diagnosticBusy && s.access.state == AccessState.CONNECTED && nextBatch.isNotEmpty()) {
+                        Text("Замерить ${nextBatch.size}")
+                    }
+                    TextButton(onClick = onClearSamples, enabled = !s.diagnosticBusy && s.appSamples.isNotEmpty()) { Text("Сброс") }
+                } else TextButton(onClick = onCancelScan) { Text("Остановить") }
+            }
+            s.scanProgress?.let { Text("Замер $it", style = MaterialTheme.typography.bodySmall); LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            if (byMemory || s.appSamples.isNotEmpty()) {
+                Text("PSS: ${filtered.count { s.appSamples[it.pkg]?.pssKiB != null }}/${filtered.size} подтверждено. Замеры не одновременные.", style = MaterialTheme.typography.bodySmall)
             }
             if (s.loadingApps) LinearProgressIndicator(Modifier.fillMaxWidth())
             s.appError?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = onRefresh) { Text("Повторить") } }
@@ -44,6 +67,11 @@ import java.util.Date
                         TextButton(onClick = { onProtect(a.pkg,a.pkg !in s.protected) }, enabled = s.canEdit) { Text(if(a.pkg in s.protected) "Вернуть в список" else "Исключить") }
                         TextButton(onClick = { onInspect(a.pkg) }, enabled = s.access.state == AccessState.CONNECTED && !s.diagnosticBusy && s.progress == null) { Text("RAM") }
                     }
+                    s.appSamples[a.pkg]?.let { sample ->
+                        Text("PSS ${kib(sample.pssKiB)} · RSS ${kib(sample.rssKiB)}", style = MaterialTheme.typography.bodySmall)
+                        Text("Замер ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(sample.measuredAt))}", style = MaterialTheme.typography.labelSmall)
+                        sample.issue?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+                    }
                     if(a.pkg in s.protected) Text("Исключено из команд Shizuku", style = MaterialTheme.typography.labelSmall)
                 }
                 HorizontalDivider()
@@ -52,6 +80,8 @@ import java.util.Date
         }
     }
 }
+private fun kib(value: Long?): String = value?.let { String.format(Locale.getDefault(), "%.1f МиБ", it / 1024.0) } ?: "—"
+
 @Composable internal fun ResultRow(r: CleanupResult) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -65,13 +95,22 @@ import java.util.Date
     Metric("Доступная RAM", "${gb(r.before)} → ${gb(r.after)}")
     r.settledDelta?.let { Metric("Изменение через 3 с", delta(it)) }
     r.swapDelta?.let { Metric("Изменение Swap", delta(it)) }
-    r.durationMs?.let { Metric("Длительность", "${it/1000.0} с") }
+    r.durationMs?.let { Metric("Длительность очистки", "${it/1000.0} с") }
     Metric("Выделено Rust", "${r.allocated/MIB} МиБ")
     Metric("Команды приняты", "${r.accepted}/${r.attempted}")
+    if (r.comparisons.isNotEmpty()) {
+        var expanded by remember(r) { mutableStateOf(false) }
+        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Скрыть сравнение PSS" else "Сравнение PSS · ${r.comparisons.size}") }
+        if (expanded) r.comparisons.forEach { c ->
+            Text(c.pkg, style = MaterialTheme.typography.labelMedium)
+            Metric("До → после", "${kib(c.before?.pssKiB)} → ${kib(c.after?.pssKiB)}")
+            Metric("Изменение PSS", c.pssDeltaKiB?.let { delta(it * 1024) } ?: "Нет парного замера")
+        }
+    }
     if(r.cancelled) Text("Отменено")
     if(r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodySmall)
 }
-@Composable fun JournalScreen(s: ScreenState) {
+@Composable fun JournalScreen(s: ScreenState, onExport: () -> Unit) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
     val records = remember(s.history, filter) { s.history.filter {
         filter == 0 || filter == 1 && it.trigger == CleanupTrigger.MANUAL || filter == 2 && it.trigger == CleanupTrigger.AUTOMATIC
@@ -84,6 +123,7 @@ import java.util.Date
                     FilterChip(selected = filter == index, onClick = { filter = index }, label = { Text(label) })
                 }
             }
+            OutlinedButton(onClick = onExport, enabled = s.canEdit && !s.diagnosticBusy && s.history.isNotEmpty()) { Text(if (s.exportBusy) "Экспорт…" else "Экспорт всего журнала · CSV") }
             SectionLabel("Статистика · ${stats.count} операций")
             Metric("Выполнено / частично", "${stats.completed} / ${stats.partial}")
             Metric("Пропущено / отменено", "${stats.skipped} / ${stats.cancelled}")
@@ -98,7 +138,7 @@ import java.util.Date
         items(records) { r -> Column { ResultRow(r); HorizontalDivider() } }
     }
 }
-@Composable fun SettingsScreen(s: ScreenState, onRequestAccess: () -> Unit, onProfile: (Profile) -> Unit, onRefresh: () -> Unit, onAutomation: (AutomationSettings) -> Unit, onBackground: (Boolean) -> Unit, onLimits: (NativeLimits) -> Unit) {
+@Composable fun SettingsScreen(s: ScreenState, onRequestAccess: () -> Unit, onProfile: (Profile) -> Unit, onRefresh: () -> Unit, onAutomation: (AutomationSettings) -> Unit, onBackground: (Boolean) -> Unit, onLimits: (NativeLimits) -> Unit, onCompare: (Boolean) -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item { SectionLabel("Доступ"); Metric("Shizuku", s.access.label()); OutlinedButton(onClick = onRequestAccess, enabled = s.canEdit) { Text("Подключить") }; HorizontalDivider() }
         item { SectionLabel("Профиль Rust")
@@ -107,6 +147,17 @@ import java.util.Date
                 Column { Text(profileName(p)); Text("До ${p.capMiB} МиБ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } }
             Text("Лимит динамически снижается с учётом резерва, PSI и температуры.", style = MaterialTheme.typography.bodySmall); HorizontalDivider()
+        }
+        item {
+            SectionLabel("Сравнительная диагностика")
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("PSS до и после очистки")
+                    Text("До 12 выбранных приложений через Shizuku. Последовательные замеры увеличивают время операции.", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(checked = s.settings.compareSelected, enabled = s.canEdit, onCheckedChange = onCompare)
+            }
+            HorizontalDivider()
         }
         item {
             val limits = s.settings.nativeLimits

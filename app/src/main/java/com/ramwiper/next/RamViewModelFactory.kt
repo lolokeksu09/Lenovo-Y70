@@ -6,6 +6,7 @@ import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.ramwiper.next.data.*
+import com.ramwiper.next.domain.AppMemorySampler
 import com.ramwiper.next.domain.MemoryController
 import com.ramwiper.next.domain.RunCleanupUseCase
 import com.ramwiper.next.presentation.MainViewModel
@@ -20,7 +21,8 @@ class RamViewModelFactory(private val app: Application) : ViewModelProvider.Fact
         val access = ShizukuEngine(app)
         val runner = MemoryController(monitor, access, Process.myUid() / 100000, { NativeWiper.Session() })
         val catalog = AppCatalog(app)
-        return MainViewModel(monitor, access, RunCleanupUseCase(runner, catalog), SettingsStore(prefs), HistoryStore(prefs),
-            catalog, BuildConfig.VERSION_NAME, SystemClock::elapsedRealtime, AndroidBackgroundMonitor(app)) as T
+        val sampler = AppMemorySampler(catalog, access)
+        return MainViewModel(monitor, access, RunCleanupUseCase(runner, catalog, sampler), SettingsStore(prefs), HistoryStore(prefs),
+            catalog, BuildConfig.VERSION_NAME, SystemClock::elapsedRealtime, AndroidBackgroundMonitor(app), sampler) as T
     }
 }

@@ -21,6 +21,13 @@ class HistoryCodecTest {
             Outcome.PARTIAL, 180, 4000, -20, CleanupTrigger.AUTOMATIC)
         assertEquals(listOf(record), HistoryCodec.decode(HistoryCodec.encode(listOf(record))))
     }
+    @Test fun comparisonRoundTripsWithMissingMeasurement() {
+        val sample = AppMemorySample("test.app", 2048, null, 0, 1, 123, null)
+        val r = CleanupResult(1,"NATIVE","SOFT",100,200,16,0,0,false,"",
+            Outcome.COMPLETED, comparisons = listOf(AppMemoryComparison(sample.pkg, sample, null)))
+        assertEquals(listOf(r), HistoryCodec.decode(HistoryCodec.encode(listOf(r))))
+        assertTrue(HistoryCodec.decode("[$legacy]").single().comparisons.isEmpty())
+    }
     @Test fun malformedItemDoesNotHideValidRecords() {
         assertEquals(1, HistoryCodec.decode("[{},$legacy]").size)
     }
