@@ -58,7 +58,8 @@ internal fun profileName(p: Profile) = when(p) { Profile.SOFT -> "Мягкий";
                 Engine.entries.forEach { e -> FilterChip(selected = s.engine == e, onClick = { onEngine(e) }, label = { Text(engineName(e)) }, enabled = s.canEdit) }
             }
             Metric("Профиль", profileName(s.profile))
-            if(s.engine != Engine.SHIZUKU) s.snapshot?.let { Metric("Текущий лимит Rust", "${Policy.budget(it,s.profile)/MIB} МиБ") }
+            if (s.settings.automation.foregroundEnabled) Text("Автоочистка · SOFT · до ${s.settings.automation.thresholdPercent}% доступной RAM", style = MaterialTheme.typography.bodySmall)
+            if(s.engine != Engine.SHIZUKU) s.snapshot?.let { Metric("Текущий лимит Rust", "${Policy.budget(it,s.profile,s.settings.nativeLimits)/MIB} МиБ") }
             if(s.engine != Engine.NATIVE) Metric("Выбрано приложений", "${s.selected.size}/${SelectionPolicy.LIMIT}")
             val p = s.progress
             if (p == null) Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = s.canStart) { Text(if(s.cooldownSeconds > 0) "Повтор через ${s.cooldownSeconds} с" else "Очистить память") }

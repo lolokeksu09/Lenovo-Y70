@@ -1,0 +1,17 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="12dp" android:background="@drawable/widget_bg">
+    <TextView android:id="@+id/widget_open" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="RAM Wiper · открыть" android:textColor="#B7BDC5" android:textSize="12sp" android:minHeight="32dp" android:gravity="center_vertical"/>
+    <TextView android:id="@+id/widget_available" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Нет данных" android:textColor="#F0F1F3" android:textSize="21sp" android:textStyle="bold" android:maxLines="1"/>
+    <ProgressBar android:id="@+id/widget_progress" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="8dp" android:max="100" android:progress="0"
+        android:progressTint="#A8C8F8" android:progressBackgroundTint="#30363D"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/widget_time" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:text="Замер недоступен" android:textSize="11sp" android:textColor="#B7BDC5" android:maxLines="2"/>
+        <TextView android:id="@+id/widget_refresh" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minHeight="48dp" android:gravity="center" android:text="Обновить" android:textColor="#A8C8F8" android:textSize="12sp" android:paddingHorizontal="8dp"/>
+    </LinearLayout>
+</LinearLayout>

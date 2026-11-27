@@ -2,6 +2,8 @@ package com.ramwiper.next
 
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.FutureTask
+import java.io.ByteArrayOutputStream
 import kotlin.system.exitProcess
 
 // Instantiated by Shizuku, not exported as an Android component. No arbitrary shell API.
@@ -22,17 +24,30 @@ class MemoryShellService : IMemoryShell.Stub() {
         if (!valid(packageName)) return "Недопустимый пакет"
         return runCatching {
             val p = ProcessBuilder("/system/bin/dumpsys", "-t", "4", "meminfo", packageName).redirectErrorStream(true).start()
-            try {
-                // Limit returned Binder payload; timeout is imposed by dumpsys itself.
-                val bytes = ByteArray(48 * 1024)
-                var used = 0
-                while (used < bytes.size) {
-                    val n = p.inputStream.read(bytes, used, bytes.size - used)
-                    if (n <= 0) break
-                    used += n
+            val capture = FutureTask {
+                val out = ByteArrayOutputStream()
+                val chunk = ByteArray(4096)
+                var truncated = false
+                p.inputStream.use { input ->
+                    while (true) {
+                        val n = input.read(chunk)
+                        if (n <= 0) break
+                        val take = minOf(n, 48 * 1024 - out.size())
+                        if (take > 0) out.write(chunk, 0, take)
+                        if (take < n) truncated = true
+                    }
                 }
-                String(bytes, 0, used, Charsets.UTF_8)
-            } finally { p.destroyForcibly() }
+                (if (truncated) "Вывод усечён; числовой отчёт недоступен.\n" else "") + out.toString("UTF-8")
+            }
+            Thread(capture, "ram-meminfo-reader").apply { isDaemon = true; start() }
+            try {
+                if (!p.waitFor(5, TimeUnit.SECONDS)) "Ошибка диагностики: превышен лимит времени"
+                else if (p.exitValue() != 0) "Ошибка диагностики: dumpsys завершился с кодом ${p.exitValue()}"
+                else capture.get(500, TimeUnit.MILLISECONDS)
+            } finally {
+                p.destroyForcibly()
+                capture.cancel(true)
+            }
         }.getOrElse { "Ошибка диагностики: ${it.message}" }
     }
 }

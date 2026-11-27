@@ -21,7 +21,7 @@ class RunCleanupUseCase(private val runner: CleanupRunner, private val catalog: 
             warning = "Не удалось проверить список приложений; команды Shizuku не выполняются"
             emptySet()
         }
-        val result = runner.run(settings.engine, settings.profile, targets, stop, progress)
+        val result = runner.run(settings.engine, settings.profile, targets, stop, settings.nativeLimits, progress)
         return if (warning == null) result else result.copy(note = listOf(result.note, warning).filter { !it.isNullOrBlank() }.joinToString("; "))
     }
 }

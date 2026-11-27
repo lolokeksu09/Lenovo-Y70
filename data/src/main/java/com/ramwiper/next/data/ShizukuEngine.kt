@@ -21,7 +21,7 @@ class ShizukuEngine(context: Context) : PrivilegedAccess {
     @Volatile private var service: IMemoryShell? = null
     @Volatile private var bound = false
     private val args = Shizuku.UserServiceArgs(ComponentName(context.packageName, MemoryShellService::class.java.name))
-        .daemon(false).processNameSuffix("memory_shell").version(201).debuggable(false)
+        .daemon(false).processNameSuffix("memory_shell").version(202).debuggable(false)
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             if (closed) return

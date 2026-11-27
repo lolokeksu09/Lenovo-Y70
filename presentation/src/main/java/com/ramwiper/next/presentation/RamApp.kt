@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@Composable fun RamApp(vm: MainViewModel) {
+@Composable fun RamApp(vm: MainViewModel, onBackground: (Boolean) -> Unit) {
     val s by vm.state.collectAsStateWithLifecycle()
     LifecycleStartEffect(vm) { vm.setVisible(true); onStopOrDispose { vm.setVisible(false) } }
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -51,11 +51,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
                 0 -> MemoryScreen(s, vm::engine, vm::start, vm::cancel)
                 1 -> ApplicationsScreen(s, vm::select, vm::protect, vm::inspect, vm::refreshApps)
                 2 -> JournalScreen(s)
-                3 -> SettingsScreen(s, vm::requestAccess, vm::profile, vm::refreshApps)
+                3 -> SettingsScreen(s, vm::requestAccess, vm::profile, vm::refreshApps, vm::setAutomation, onBackground, vm::setNativeLimits)
             }
         }
     }
-    if (s.diagnostic.isNotEmpty()) AlertDialog(onDismissRequest = vm::closeDiagnostic, title = { Text("Память процесса") },
-        text = { Text(s.diagnostic, Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), style = MaterialTheme.typography.bodySmall) },
-        confirmButton = { TextButton(onClick = vm::closeDiagnostic) { Text("Закрыть") } })
+    if (s.diagnosticPackage != null) MemoryDiagnosticDialog(s, vm::closeDiagnostic)
 }

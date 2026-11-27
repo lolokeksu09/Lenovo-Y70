@@ -21,9 +21,9 @@ object Policy {
         else -> null
     }
     fun safe(s: Snapshot): Boolean = blockReason(s) == null
-    fun budget(s: Snapshot, p: Profile): Long {
+    fun budget(s: Snapshot, p: Profile, limits: NativeLimits = NativeLimits()): Long {
         if (!safe(s)) return 0
-        return minOf(p.capMiB * MIB, s.total / 100 * p.fraction, (s.available - reserve(s)) / 2)
+        return minOf(limits.cap(p) * MIB, s.total / 100 * p.fraction, (s.available - reserve(s)) / 2)
             .coerceAtLeast(0) / BLOCK * BLOCK
     }
     fun next(s: Snapshot, remaining: Long): Int = if (safe(s) && remaining >= BLOCK && s.available - reserve(s) >= BLOCK * 2L) BLOCK else 0

@@ -11,12 +11,14 @@ interface BackgroundControl {
 interface AllocationSession : AutoCloseable { fun add(bytes: Int): Boolean }
 interface CleanupRunner {
     suspend fun run(engine: Engine, profile: Profile, packages: Set<String>, stop: AtomicBoolean,
-                    progress: (Progress) -> Unit): CleanupResult
+                    limits: NativeLimits = NativeLimits(), progress: (Progress) -> Unit): CleanupResult
 }
 
 data class AppTarget(val name: String, val pkg: String)
 data class UserSettings(val engine: Engine = Engine.HYBRID, val profile: Profile = Profile.BALANCED,
-                        val protected: Set<String> = emptySet())
+                        val protected: Set<String> = emptySet(),
+                        val automation: AutomationSettings = AutomationSettings(),
+                        val nativeLimits: NativeLimits = NativeLimits())
 interface AppRepository { fun read(): List<AppTarget> }
 interface SettingsRepository {
     fun load(): UserSettings

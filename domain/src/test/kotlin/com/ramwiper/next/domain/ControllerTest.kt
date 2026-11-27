@@ -73,6 +73,16 @@ class ControllerTest {
         val r = MemoryController(source,Shell(),0,{ source.sample = healthy.copy(low = true); session },{}).run(Engine.NATIVE,Profile.SOFT,emptySet(),AtomicBoolean(false)) {}
         assertTrue(session.closed); assertEquals(0,session.blocks); assertEquals(Outcome.SKIPPED,r.outcome)
     }
+    @Test fun customLimitsReachAllocatorAndHold() = runBlocking {
+        val session = Session()
+        var elapsed = 0L
+        val r = MemoryController(Source(healthy), Shell(), 0, { session }, { elapsed += it }, { elapsed })
+            .run(Engine.NATIVE, Profile.STRONG, emptySet(), AtomicBoolean(false), NativeLimits(64, 0)) {}
+        assertEquals(64 * MIB, r.allocated)
+        assertEquals(4, session.blocks)
+        assertEquals(3440L, elapsed)
+        assertTrue(session.closed)
+    }
     @Test fun invalidReadingsAreRejected() {
         assertFalse(Policy.safe(healthy.copy(total = 0))); assertFalse(Policy.safe(healthy.copy(available = healthy.total + 1)))
         assertFalse(Policy.safe(healthy.copy(psiSome = Double.NaN))); assertFalse(Policy.safe(healthy.copy(psiSome = -1.0)))

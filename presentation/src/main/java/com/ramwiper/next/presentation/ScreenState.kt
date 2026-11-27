@@ -17,6 +17,8 @@ data class ScreenState(
     val history: List<CleanupResult> = emptyList(),
     val message: String = "",
     val diagnostic: String = "",
+    val diagnosticReport: AppMemoryReport? = null,
+    val diagnosticPackage: String? = null,
     val diagnosticBusy: Boolean = false,
     val samples: List<Long> = emptyList(),
     val loadingApps: Boolean = true,

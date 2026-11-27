@@ -16,3 +16,8 @@
 
 ## Compatibility and acceptance
 Preserve applicationId com.ramwiper.next, preference file memory, existing preference keys and JSON record schema, selected-app limit, 15-second cooldown and foreground cancellation. No automatic cleanup or broader privileges. Initial preferences/history load off-main; mutations are serialized and errors visible. Revalidate selected targets before execution. CI runs pure JVM domain tests, data codec compatibility tests, presentation state guards, Rust tests, Android assembleDebug and packaged native ABI/export/alignment checks. The host JSON dependency is test-only; production still uses Android org.json. Invalid JSON root fails loading instead of silently overwriting the journal. Device behavior, APK update compatibility and visual verification require target testing. Module migration is not a claim that device behavior has been verified.
+
+## Alpha.5
+AutomationPolicy, AutomationGate and HistoryAnalytics are domain-only. WorkManager integration, AppWidgetProvider and TileService live in app; the worker reads the data adapter and cannot call native cleanup. BackgroundMonitor is a domain port injected into presentation. Existing module boundaries retained.
+
+NativeLimits is part of UserSettings; the cleanup port receives validated overrides and the controller applies the stricter preset or user bound. MeminfoParser and diagnostic models live in domain; the bounded command remains in data and the structured view in presentation.

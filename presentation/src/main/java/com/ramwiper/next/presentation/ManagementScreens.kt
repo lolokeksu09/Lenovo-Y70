@@ -3,6 +3,8 @@ package com.ramwiper.next.presentation
 import com.ramwiper.next.domain.*
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -56,6 +58,7 @@ import java.util.Date
             Text(DateFormat.getDateTimeInstance().format(Date(r.time)), style = MaterialTheme.typography.labelMedium)
             Text("${r.engine} · ${r.profile}", style = MaterialTheme.typography.bodySmall)
             Text(r.outcome.label(), style = MaterialTheme.typography.labelSmall)
+            if (r.trigger == CleanupTrigger.AUTOMATIC) Text("Автоматически", style = MaterialTheme.typography.labelSmall)
         }
         Text(delta(r.delta), style = MaterialTheme.typography.titleLarge)
     }
@@ -69,20 +72,33 @@ import java.util.Date
     if(r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodySmall)
 }
 @Composable fun JournalScreen(s: ScreenState) {
+    var filter by rememberSaveable { mutableIntStateOf(0) }
+    val records = remember(s.history, filter) { s.history.filter {
+        filter == 0 || filter == 1 && it.trigger == CleanupTrigger.MANUAL || filter == 2 && it.trigger == CleanupTrigger.AUTOMATIC
+    } }
+    val stats = remember(records) { HistoryAnalytics.summarize(records) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if(s.history.isEmpty()) item { Text("История пока пуста. Результаты появятся после первой операции.") }
-        else item {
-            SectionLabel("Последние ${s.history.size} операций")
-            val done = s.history.filter { it.outcome == Outcome.COMPLETED || it.outcome == Outcome.PARTIAL }
-            val measured = done.filter { it.settledDelta != null }
-            Metric("Положительное изменение через 3 с", "${measured.count { (it.settledDelta ?: 0) > 0 }}/${measured.size}")
-            Text("Изменение доступной RAM — не доказательство причинности и не прирост FPS.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("Все", "Ручные", "Авто").forEachIndexed { index, label ->
+                    FilterChip(selected = filter == index, onClick = { filter = index }, label = { Text(label) })
+                }
+            }
+            SectionLabel("Статистика · ${stats.count} операций")
+            Metric("Выполнено / частично", "${stats.completed} / ${stats.partial}")
+            Metric("Пропущено / отменено", "${stats.skipped} / ${stats.cancelled}")
+            Metric("Ошибки", "${stats.failed}")
+            Metric("Автоматические", "${stats.automatic}")
+            Metric("Положительные замеры", "${stats.positive}/${stats.measured}")
+            Metric("Медиана через 3 с", stats.medianDelta?.let { delta(it) } ?: "Нет данных")
+            Text("Учитываются только сохранённые замеры выполненных и частичных операций. Изменение RAM не доказывает прирост FPS.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
         }
-        items(s.history) { r -> Column { ResultRow(r); HorizontalDivider() } }
+        if (records.isEmpty()) item { Text("Нет операций по этому фильтру") }
+        items(records) { r -> Column { ResultRow(r); HorizontalDivider() } }
     }
 }
-@Composable fun SettingsScreen(s: ScreenState, onRequestAccess: () -> Unit, onProfile: (Profile) -> Unit, onRefresh: () -> Unit) {
+@Composable fun SettingsScreen(s: ScreenState, onRequestAccess: () -> Unit, onProfile: (Profile) -> Unit, onRefresh: () -> Unit, onAutomation: (AutomationSettings) -> Unit, onBackground: (Boolean) -> Unit, onLimits: (NativeLimits) -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item { SectionLabel("Доступ"); Metric("Shizuku", s.access.label()); OutlinedButton(onClick = onRequestAccess, enabled = s.canEdit) { Text("Подключить") }; HorizontalDivider() }
         item { SectionLabel("Профиль Rust")
@@ -92,6 +108,65 @@ import java.util.Date
             } }
             Text("Лимит динамически снижается с учётом резерва, PSI и температуры.", style = MaterialTheme.typography.bodySmall); HorizontalDivider()
         }
-        item { SectionLabel("Диагностика"); TextButton(onClick = onRefresh) { Text("Обновить список приложений") }; Metric("Версия", s.versionName); Metric("Движок", "Rust JNI"); Text("Мониторинг активен только на видимом экране.", style = MaterialTheme.typography.bodySmall) }
+        item {
+            val limits = s.settings.nativeLimits
+            SectionLabel("Ручные ограничения Rust")
+            Metric("Максимум профиля с ограничением", "${limits.cap(s.profile)} МиБ")
+            Metric("Удержание", "${limits.hold(s.profile)} мс")
+            Text("Предел выделения", style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                NativeLimits.CAPS.forEach { cap ->
+                    FilterChip(selected = limits.capMiB == cap, enabled = s.canEdit,
+                        onClick = { onLimits(limits.copy(capMiB = cap)) },
+                        label = { Text(if (cap == 0) "Профиль" else "$cap МиБ") })
+                }
+            }
+            Text("Время удержания", style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                NativeLimits.HOLDS.forEach { ms ->
+                    FilterChip(selected = limits.holdMs == ms, enabled = s.canEdit,
+                        onClick = { onLimits(limits.copy(holdMs = ms)) },
+                        label = { Text(if (ms < 0) "Профиль" else "$ms мс") })
+                }
+            }
+            Text("Настройки только уменьшают лимит выбранного профиля; резерв, нагрев и PSI остаются обязательными. Автоочистка использует SOFT.", style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider()
+        }
+        item {
+            val auto = s.settings.automation
+            SectionLabel("Автоматизация")
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Автоочистка")
+                    Text("Только при открытом приложении · мягкий Rust", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(checked = auto.foregroundEnabled, enabled = s.canEdit, onCheckedChange = { onAutomation(auto.copy(foregroundEnabled = it)) })
+            }
+            Text("Доступная RAM не выше", style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                AutomationSettings.THRESHOLDS.forEach { percent ->
+                    FilterChip(selected = auto.thresholdPercent == percent, enabled = s.canEdit,
+                        onClick = { onAutomation(auto.copy(thresholdPercent = percent)) }, label = { Text("$percent%") })
+                }
+            }
+            Text("Минимальный интервал", style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                AutomationSettings.INTERVALS.forEach { minutes ->
+                    FilterChip(selected = auto.intervalMinutes == minutes, enabled = s.canEdit,
+                        onClick = { onAutomation(auto.copy(intervalMinutes = minutes)) }, label = { Text("$minutes мин") })
+                }
+            }
+            Text("Два последовательных замера. Защита RAM, нагрева и PSI сохраняется. Shizuku автоматически не запускается.", style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Фоновые уведомления")
+                    Text("Проверка примерно каждые 15 мин; Android может отложить запуск. Только уведомление, без очистки.", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(checked = auto.backgroundAlerts, enabled = s.canEdit, onCheckedChange = onBackground)
+            }
+            HorizontalDivider()
+        }
+        item { SectionLabel("Диагностика"); TextButton(onClick = onRefresh) { Text("Обновить список приложений") }; Metric("Версия", s.versionName); Metric("Движок", "Rust JNI"); Text("График обновляется на видимом экране. Виджет и плитку можно добавить средствами Android.", style = MaterialTheme.typography.bodySmall) }
     }
 }

@@ -14,7 +14,7 @@ class MemoryController(
     private val clock: () -> Long = { System.nanoTime() / 1_000_000 }
 ) : CleanupRunner {
     override suspend fun run(engine: Engine, profile: Profile, packages: Set<String>, stop: AtomicBoolean,
-                    progress: (Progress) -> Unit): CleanupResult {
+                    limits: NativeLimits, progress: (Progress) -> Unit): CleanupResult {
         val start = clock()
         val before = monitor.read()
         val notes = mutableListOf<String>()
@@ -49,7 +49,7 @@ class MemoryController(
         val useNative = engine == Engine.NATIVE || engine == Engine.HYBRID &&
             (accepted == 0 || Policy.shouldRunNative(before, middle))
         if (useNative && active()) {
-            val budget = Policy.budget(middle, profile)
+            val budget = Policy.budget(middle, profile, limits)
             if (budget == 0L) notes += Policy.blockReason(middle) ?: "Резерв недостаточен для блока"
             else {
                 try {
@@ -65,7 +65,7 @@ class MemoryController(
                                 progress(Progress("Выделение памяти", allocated, budget))
                                 if (active()) pause(35)
                             }
-                            var hold = profile.holdMs
+                            var hold = limits.hold(profile)
                             while (active() && allocated > 0 && hold > 0 && !failed) {
                                 if (!Policy.safe(monitor.read())) { partial = true; notes += "Удержание прекращено защитой"; break }
                                 val interval = minOf(hold, 50)

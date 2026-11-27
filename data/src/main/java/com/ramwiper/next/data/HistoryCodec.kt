@@ -2,6 +2,7 @@ package com.ramwiper.next.data
 
 import com.ramwiper.next.domain.CleanupResult
 import com.ramwiper.next.domain.Outcome
+import com.ramwiper.next.domain.CleanupTrigger
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -23,6 +24,7 @@ internal object HistoryCodec {
                 put("cancelled", r.cancelled)
                 put("note", r.note)
                 put("outcome", r.outcome.name)
+                put("trigger", r.trigger.name)
                 put("settled", r.settled ?: JSONObject.NULL)
                 put("durationMs", r.durationMs ?: JSONObject.NULL)
                 put("swapDelta", r.swapDelta ?: JSONObject.NULL)
@@ -40,7 +42,8 @@ internal object HistoryCodec {
                     r.getLong("after"), r.getLong("allocated"), r.getInt("accepted"), r.getInt("attempted"),
                     r.getBoolean("cancelled"), r.getString("note"),
                     runCatching { Outcome.valueOf(r.optString("outcome")) }.getOrDefault(Outcome.LEGACY),
-                    r.optionalLong("settled"), r.optionalLong("durationMs"), r.optionalLong("swapDelta")
+                    r.optionalLong("settled"), r.optionalLong("durationMs"), r.optionalLong("swapDelta"),
+                    runCatching { CleanupTrigger.valueOf(r.optString("trigger")) }.getOrDefault(CleanupTrigger.MANUAL)
                 )
             }.getOrNull()
         }.take(100).toList()

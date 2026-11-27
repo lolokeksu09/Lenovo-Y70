@@ -12,12 +12,13 @@ class HistoryCodecTest {
         assertEquals(123L, record.time)
         assertEquals(100L, record.delta)
         assertEquals(Outcome.LEGACY, record.outcome)
+        assertEquals(CleanupTrigger.MANUAL, record.trigger)
         assertNull(record.settled)
         assertNull(record.durationMs)
     }
     @Test fun newRecordRoundTrips() {
         val record = CleanupResult(123L, "HYBRID", "SOFT", 100, 200, 16, 1, 2, false, "test",
-            Outcome.PARTIAL, 180, 4000, -20)
+            Outcome.PARTIAL, 180, 4000, -20, CleanupTrigger.AUTOMATIC)
         assertEquals(listOf(record), HistoryCodec.decode(HistoryCodec.encode(listOf(record))))
     }
     @Test fun malformedItemDoesNotHideValidRecords() {

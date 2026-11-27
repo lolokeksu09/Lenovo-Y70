@@ -9,7 +9,7 @@ class RunCleanupUseCaseTest {
     private class Runner : CleanupRunner {
         var received: Set<String>? = null
         override suspend fun run(engine: Engine, profile: Profile, packages: Set<String>, stop: AtomicBoolean,
-                                 progress: (Progress) -> Unit): CleanupResult {
+                                 limits: NativeLimits, progress: (Progress) -> Unit): CleanupResult {
             received = packages
             return CleanupResult(1, engine.name, profile.name, 1, 1, 0, 0, 0, false, "", Outcome.SKIPPED)
         }

@@ -21,6 +21,6 @@ class RamViewModelFactory(private val app: Application) : ViewModelProvider.Fact
         val runner = MemoryController(monitor, access, Process.myUid() / 100000, { NativeWiper.Session() })
         val catalog = AppCatalog(app)
         return MainViewModel(monitor, access, RunCleanupUseCase(runner, catalog), SettingsStore(prefs), HistoryStore(prefs),
-            catalog, BuildConfig.VERSION_NAME, SystemClock::elapsedRealtime) as T
+            catalog, BuildConfig.VERSION_NAME, SystemClock::elapsedRealtime, AndroidBackgroundMonitor(app)) as T
     }
 }
