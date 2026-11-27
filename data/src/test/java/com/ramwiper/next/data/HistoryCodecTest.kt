@@ -35,6 +35,12 @@ class HistoryCodecTest {
         assertEquals(listOf(r), HistoryCodec.decode(HistoryCodec.encode(listOf(r))))
         assertNull(HistoryCodec.decode("[$legacy]").single().effectiveNativeProfile)
     }
+    @Test fun extendedCheckRoundTripsAndOldRowsRemainUnknown() {
+        val r=CleanupResult(1,"NATIVE","SOFT",100,200,16,0,0,false,"",Outcome.COMPLETED,
+            settled=180,extendedAvailable=160,extendedSwapDelta=-12)
+        assertEquals(listOf(r),HistoryCodec.decode(HistoryCodec.encode(listOf(r))))
+        assertNull(HistoryCodec.decode("[$legacy]").single().extendedAvailable)
+    }
     @Test fun malformedItemDoesNotHideValidRecords() {
         assertEquals(1, HistoryCodec.decode("[{},$legacy]").size)
     }

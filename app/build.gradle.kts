@@ -10,8 +10,8 @@ android {
         applicationId = "com.ramwiper.next"
         minSdk = 26
         targetSdk = 35
-        versionCode = 206
-        versionName = "2.0.0-alpha.7"
+        versionCode = 207
+        versionName = "2.0.0-alpha.8"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
     buildFeatures { compose = true; buildConfig = true }

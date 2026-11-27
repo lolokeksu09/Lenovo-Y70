@@ -107,6 +107,25 @@ class ControllerTest {
         assertNull(r.effectiveNativeProfile)
         assertEquals(0L,requireNotNull(r.plannedNativeBytes))
     }
+    @Test fun extendedCheckRunsAfterReleaseAndPreservesThreeSecondResult() = runBlocking {
+        val source = Source(healthy)
+        val session = Session()
+        var elapsed = 0L
+        val r = MemoryController(source,Shell(),0,{session},{ elapsed += it; if(elapsed >= 10000) source.sample = healthy.copy(available=healthy.available+64*MIB) },{elapsed})
+            .run(Engine.NATIVE,Profile.SOFT,emptySet(),AtomicBoolean(false),NativeLimits(64,0,extendedCheck=true)) {}
+        assertTrue(session.closed); assertEquals(healthy.available,requireNotNull(r.settled))
+        assertEquals(64*MIB,requireNotNull(r.extendedDelta)); assertEquals(10440L,elapsed)
+    }
+    @Test fun stoppingOptionalCheckDoesNotEraseCompletedCleanup() = runBlocking {
+        val stop=AtomicBoolean(false)
+        val session=Session()
+        val r=MemoryController(Source(healthy),Shell(),0,{session},{})
+            .run(Engine.NATIVE,Profile.SOFT,emptySet(),stop,NativeLimits(64,0,extendedCheck=true)) {
+                if(it.stage.startsWith("Дополнительный")) { assertTrue(session.closed); stop.set(true) }
+            }
+        assertEquals(Outcome.COMPLETED,r.outcome); assertFalse(r.cancelled); assertNull(r.extendedAvailable)
+        assertNotNull(r.settled)
+    }
     @Test fun invalidReadingsAreRejected() {
         assertFalse(Policy.safe(healthy.copy(total = 0))); assertFalse(Policy.safe(healthy.copy(available = healthy.total + 1)))
         assertFalse(Policy.safe(healthy.copy(psiSome = Double.NaN))); assertFalse(Policy.safe(healthy.copy(psiSome = -1.0)))

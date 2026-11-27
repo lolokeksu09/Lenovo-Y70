@@ -19,7 +19,8 @@ data class UserSettings(val engine: Engine = Engine.HYBRID, val profile: Profile
                         val protected: Set<String> = emptySet(),
                         val automation: AutomationSettings = AutomationSettings(),
                         val nativeLimits: NativeLimits = NativeLimits(),
-                        val compareSelected: Boolean = false)
+                        val compareSelected: Boolean = false,
+                        val presets: List<SelectionPreset> = emptyList())
 interface AppRepository { fun read(): List<AppTarget> }
 interface SettingsRepository {
     fun load(): UserSettings

@@ -114,6 +114,25 @@ class MainViewModel(
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { mutable.update { it.copy(message = "Ошибка фонового мониторинга: ${e.message}") } }
     }
+    fun savePreset(name: String) {
+        val current = state.value
+        if (!current.canEdit || current.loadingApps || current.appError != null) return
+        try {
+            val presets = SelectionPresets.add(current.settings.presets,name,current.selected,current.protected,current.targets)
+            updateSettings { it.copy(presets = presets) }
+        } catch (e: IllegalArgumentException) {
+            mutable.update { it.copy(message = e.message ?: "Не удалось создать набор") }
+        }
+    }
+    fun applyPreset(name: String) {
+        val current = state.value
+        if (!current.canEdit || current.loadingApps || current.appError != null) return
+        val preset = current.settings.presets.firstOrNull { it.name == name } ?: return
+        val selected = SelectionPresets.apply(preset,current.protected,current.targets)
+        mutable.update { it.copy(selected = selected, message = "Выбрано ${selected.size} из ${preset.packages.size}; очистка не запущена") }
+    }
+    fun deletePreset(name: String) = updateSettings { it.copy(presets = SelectionPresets.remove(it.presets,name)) }
+    fun clearSelection() { mutable.update { if(it.canEdit) it.copy(selected = emptySet()) else it } }
     fun setCompareSelected(enabled: Boolean) = updateSettings { it.copy(compareSelected = enabled) }
     fun setNativeLimits(value: NativeLimits) = updateSettings { it.copy(nativeLimits = value.normalized()) }
     fun setAutomation(value: AutomationSettings) = updateSettings { it.copy(automation = value.normalized()) }

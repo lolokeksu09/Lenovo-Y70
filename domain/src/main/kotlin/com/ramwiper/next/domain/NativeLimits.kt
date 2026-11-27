@@ -1,7 +1,7 @@
 package com.ramwiper.next.domain
 
 /** Optional lower limits for manual operations. Never exceed a selected profile. */
-data class NativeLimits(val capMiB: Int = 0, val holdMs: Int = -1, val adaptive: Boolean = false) {
+data class NativeLimits(val capMiB: Int = 0, val holdMs: Int = -1, val adaptive: Boolean = false, val extendedCheck: Boolean = false) {
     companion object {
         val CAPS = listOf(0, 64, 128, 256, 512, 768)
         val HOLDS = listOf(-1, 0, 50, 100, 250, 350)
@@ -9,7 +9,7 @@ data class NativeLimits(val capMiB: Int = 0, val holdMs: Int = -1, val adaptive:
     fun normalized() = NativeLimits(
         capMiB.takeIf { it in CAPS } ?: 0,
         holdMs.takeIf { it in HOLDS } ?: -1,
-        adaptive
+        adaptive, extendedCheck
     )
     fun cap(profile: Profile): Long = normalized().capMiB.let {
         if (it == 0) profile.capMiB else minOf(profile.capMiB, it.toLong())

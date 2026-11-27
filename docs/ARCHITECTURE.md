@@ -27,3 +27,6 @@ AppMemorySampler revalidates the catalog, performs a read-only bounded sequentia
 
 ## Alpha.7
 AdaptivePolicy is a pure domain planner used by controller and UI. NativeLimits retains opt-in adaptive flag. Actual allocated profile, plan budget, reason and starting available percentage are nullable history fields and CSV columns. StrategyAnalytics groups measured manual operations by observed allocation and accepted commands, not a claimed killed-process count.
+
+## Alpha.8
+SelectionPresets provides bounded reusable selections, validated on save and apply. PresetCodec stores names and packages in preferences; applying does not execute cleanup. Optional extended measurement lives in the existing controller and records separate nullable RAM/Swap results at approximately 10 seconds after the initial post-release sample. RetentionAnalytics compares only paired valid measurements. Automation retains default limits and no extra measurement.

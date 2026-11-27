@@ -17,10 +17,11 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-@Composable fun ApplicationsScreen(s: ScreenState, onSelect: (String, Boolean) -> Unit, onProtect: (String, Boolean) -> Unit, onInspect: (String) -> Unit, onRefresh: () -> Unit, onScan: (List<String>) -> Unit, onCancelScan: () -> Unit, onClearSamples: () -> Unit) {
+@Composable fun ApplicationsScreen(s: ScreenState, onSelect: (String, Boolean) -> Unit, onProtect: (String, Boolean) -> Unit, onInspect: (String) -> Unit, onRefresh: () -> Unit, onScan: (List<String>) -> Unit, onCancelScan: () -> Unit, onClearSamples: () -> Unit, onSavePreset: (String) -> Unit, onApplyPreset: (String) -> Unit, onDeletePreset: (String) -> Unit, onClearSelection: () -> Unit) {
     var search by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableIntStateOf(0) }
     var byMemory by rememberSaveable { mutableStateOf(false) }
+    var showPresets by rememberSaveable { mutableStateOf(false) }
     val filtered = remember(s.targets, s.selected, s.protected, search, filter) { s.targets.filter {
         (it.name.contains(search,true) || it.pkg.contains(search,true)) &&
         (filter == 0 || filter == 1 && it.pkg in s.selected || filter == 2 && it.pkg in s.protected)
@@ -35,7 +36,12 @@ import java.util.Locale
     val nextBatch = remember(filtered, s.appSamples) { filtered.filter { it.pkg !in s.appSamples }.ifEmpty { filtered }.take(AppMemorySampler.BATCH_LIMIT) }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 20.dp)) {
-            Text("${s.access.label()} · ${s.selected.size}/${SelectionPolicy.LIMIT}", style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("${s.selected.size}/${SelectionPolicy.LIMIT} выбрано", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { showPresets = true }, enabled = s.settingsLoaded) { Text("Наборы") }
+            }
+            if(s.selected.isNotEmpty()) TextButton(onClick = onClearSelection, enabled = s.canEdit) { Text("Снять выбор") }
+            Text(s.access.label(), style = MaterialTheme.typography.bodySmall)
             OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("Найти приложение") }, singleLine = true)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("Все", "Выбраны", "Исключены").forEachIndexed { i, label -> FilterChip(selected = filter == i, onClick = { filter = i }, label = { Text(label) }) }
@@ -79,6 +85,7 @@ import java.util.Locale
             if (visible.isEmpty() && !s.loadingApps) item { Text("Нет приложений по этому фильтру", Modifier.padding(20.dp)) }
         }
     }
+    if(showPresets) SelectionPresetsDialog(s,onSavePreset,onApplyPreset,onDeletePreset) { showPresets = false }
 }
 private fun kib(value: Long?): String = value?.let { String.format(Locale.getDefault(), "%.1f МиБ", it / 1024.0) } ?: "—"
 
@@ -95,7 +102,9 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
     Metric("Доступная RAM", "${gb(r.before)} → ${gb(r.after)}")
     r.settledDelta?.let { Metric("Изменение через 3 с", delta(it)) }
     r.swapDelta?.let { Metric("Изменение Swap", delta(it)) }
-    r.durationMs?.let { Metric("Длительность очистки", "${it/1000.0} с") }
+    r.extendedDelta?.let { Metric("Изменение через 10 с", delta(it)) }
+    r.extendedSwapDelta?.let { Metric("Swap через 10 с", delta(it)) }
+    r.durationMs?.let { Metric("Время очистки и замеров", "${it/1000.0} с") }
     Metric("Выделено Rust", "${r.allocated/MIB} МиБ")
     r.plannedNativeBytes?.let { Metric("План Rust", "${it/MIB} МиБ") }
     r.effectiveNativeProfile?.let { Metric("Фактический профиль", it) }
@@ -119,6 +128,7 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
         filter == 0 || filter == 1 && it.trigger == CleanupTrigger.MANUAL || filter == 2 && it.trigger == CleanupTrigger.AUTOMATIC
     } }
     val stats = remember(records) { HistoryAnalytics.summarize(records) }
+    val retention = remember(records) { RetentionAnalytics.summarize(records) }
     val strategies = remember(s.history) { StrategyAnalytics.compare(s.history) }
     var showStrategies by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -136,6 +146,12 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
             Metric("Автоматические", "${stats.automatic}")
             Metric("Положительные замеры", "${stats.positive}/${stats.measured}")
             Metric("Медиана через 3 с", stats.medianDelta?.let { delta(it) } ?: "Нет данных")
+            if(retention.count > 0) {
+                SectionLabel("Устойчивость результата · ${retention.count} пар")
+                Metric("Прирост через 3 с", "${retention.positiveAtThree}/${retention.count}")
+                Metric("Прирост через 10 с", "${retention.positiveAtTen}/${retention.count}")
+                Metric("Медиана изменения между замерами", retention.medianChange?.let { delta(it) } ?: "—")
+            }
             Text("Учитываются только сохранённые замеры выполненных и частичных операций. Изменение RAM не доказывает прирост FPS.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
         }
@@ -178,6 +194,14 @@ private fun kib(value: Long?): String = value?.let { String.format(Locale.getDef
                     Text("До 12 выбранных приложений через Shizuku. Последовательные замеры увеличивают время операции.", style = MaterialTheme.typography.bodySmall)
                 }
                 Switch(checked = s.settings.compareSelected, enabled = s.canEdit, onCheckedChange = onCompare)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Контроль через 10 секунд")
+                    Text("Дополнительный замер после освобождения памяти. Только ручные операции.", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(checked = s.settings.nativeLimits.extendedCheck, enabled = s.canEdit,
+                    onCheckedChange = { onLimits(s.settings.nativeLimits.copy(extendedCheck = it)) })
             }
             HorizontalDivider()
         }

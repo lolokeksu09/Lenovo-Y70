@@ -92,8 +92,21 @@ class MemoryController(
             repeat(30) { if (active()) pause(100) }
             if (active()) settled = monitor.read()
         }
+        val cancelledDuringCleanup = !active()
+        var extended: Snapshot? = null
+        if (limits.extendedCheck && settled != null && !cancelledDuringCleanup) {
+            progress(Progress("Дополнительный замер (10 с)"))
+            // No allocations remain held. Seven seconds after the existing 3-second sample.
+            repeat(70) { if (active()) pause(100) }
+            if (active()) {
+                try { extended = monitor.read().takeIf { it.total > 0 && it.available in 0..it.total }
+                    if (extended == null) notes += "Некорректный дополнительный замер" }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { notes += "Дополнительный замер недоступен" }
+            } else notes += "Дополнительный замер отменён"
+        }
         val outcome = when {
-            !active() -> Outcome.CANCELLED
+            cancelledDuringCleanup -> Outcome.CANCELLED
             failed && !acted -> Outcome.FAILED
             failed || attempted > accepted -> if (acted) Outcome.PARTIAL else Outcome.FAILED
             partial -> if (acted) Outcome.PARTIAL else Outcome.SKIPPED
@@ -104,11 +117,13 @@ class MemoryController(
         val swapBefore = swapUsed(before)
         val swapAfter = swapUsed(settled ?: after)
         return CleanupResult(System.currentTimeMillis(), engine.name, profile.name, before.available, after.available,
-            allocated, accepted, attempted, !active(), notes.distinct().joinToString("; "), outcome,
+            allocated, accepted, attempted, cancelledDuringCleanup, notes.distinct().joinToString("; "), outcome,
             settled?.available, (clock()-start).coerceAtLeast(0),
             if (swapBefore != null && swapAfter != null) swapAfter - swapBefore else null,
             effectiveNativeProfile = nativePlan?.takeIf { allocated > 0 }?.profile?.name,
             plannedNativeBytes = nativePlan?.budget, nativeDecision = nativePlan?.reason,
-            availablePercentBefore = if (before.total > 0 && before.available in 0..before.total) before.available.toDouble()/before.total*100 else null)
+            availablePercentBefore = if (before.total > 0 && before.available in 0..before.total) before.available.toDouble()/before.total*100 else null,
+            extendedAvailable = extended?.available,
+            extendedSwapDelta = extended?.let { swapUsed(it) }?.let { value -> swapBefore?.let { value - it } })
     }
 }

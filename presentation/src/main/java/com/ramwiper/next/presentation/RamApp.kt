@@ -57,7 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
             }
             when(tab) {
                 0 -> MemoryScreen(s, vm::engine, vm::start, vm::cancel)
-                1 -> ApplicationsScreen(s, vm::select, vm::protect, vm::inspect, vm::refreshApps, vm::scan, vm::cancelScan, vm::clearSamples)
+                1 -> ApplicationsScreen(s, vm::select, vm::protect, vm::inspect, vm::refreshApps, vm::scan, vm::cancelScan, vm::clearSamples, vm::savePreset, vm::applyPreset, vm::deletePreset, vm::clearSelection)
                 2 -> JournalScreen(s, onExport)
                 3 -> SettingsScreen(s, vm::requestAccess, vm::profile, vm::refreshApps, vm::setAutomation, onBackground, vm::setNativeLimits, vm::setCompareSelected)
             }

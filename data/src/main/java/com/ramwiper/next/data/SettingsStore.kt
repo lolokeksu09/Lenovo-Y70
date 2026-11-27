@@ -11,8 +11,9 @@ class SettingsStore(private val prefs: SharedPreferences) : SettingsRepository {
         automation = AutomationSettings(prefs.getBoolean("auto_foreground", false),
             prefs.getInt("auto_threshold", 20), prefs.getInt("auto_interval", 5),
             prefs.getBoolean("background_alerts", false)).normalized(),
-        nativeLimits = NativeLimits(prefs.getInt("native_cap_mib", 0), prefs.getInt("native_hold_ms", -1), prefs.getBoolean("native_adaptive", false)).normalized(),
-        compareSelected = prefs.getBoolean("compare_selected", false)
+        nativeLimits = NativeLimits(prefs.getInt("native_cap_mib", 0), prefs.getInt("native_hold_ms", -1), prefs.getBoolean("native_adaptive", false), prefs.getBoolean("extended_check", false)).normalized(),
+        compareSelected = prefs.getBoolean("compare_selected", false),
+        presets = PresetCodec.decode(prefs.getString("selection_presets", "[]") ?: "[]")
     )
     override fun save(settings: UserSettings) {
         check(prefs.edit().putString("engine", settings.engine.name)
@@ -25,6 +26,8 @@ class SettingsStore(private val prefs: SharedPreferences) : SettingsRepository {
             .putInt("native_cap_mib", settings.nativeLimits.normalized().capMiB)
             .putInt("native_hold_ms", settings.nativeLimits.normalized().holdMs)
             .putBoolean("native_adaptive", settings.nativeLimits.adaptive)
+            .putBoolean("extended_check", settings.nativeLimits.extendedCheck)
+            .putString("selection_presets", PresetCodec.encode(settings.presets))
             .putBoolean("compare_selected", settings.compareSelected).commit()) { "Не удалось сохранить настройки" }
     }
 }
